@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
 import { useUser, useSupabaseClient } from "@supabase/auth-helpers-react";
 
@@ -24,6 +24,11 @@ export default function ReservePage() {
   ];
 
   const handleReserve = async () => {
+    if (!user) {
+      alert("ユーザー情報が取得できません。ログインしてください。");
+      return;
+    }
+
     if (!date || !timeSlot || !teacher) {
       alert("日付、時間帯、担当講師を選択してください");
       return;
@@ -34,7 +39,7 @@ export default function ReservePage() {
       .from('reservations')
       .insert([
         {
-          user_id: user.id,
+          user_id: user.id,  // userがnullでない場合のみuser.idを使用
           date,
           timeSlot,
           teacher,
