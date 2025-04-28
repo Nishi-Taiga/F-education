@@ -1,23 +1,32 @@
 import { type Booking } from "@shared/schema";
 import { format, parse } from "date-fns";
 import { ja } from "date-fns/locale";
-import { BookOpen, User } from "lucide-react";
+import { BookOpen, User, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface BookingCardProps {
   booking: Booking & {
     studentName?: string;
   };
+  onCancelClick?: (booking: Booking & { studentName?: string }) => void;
 }
 
-export function BookingCard({ booking }: BookingCardProps) {
+export function BookingCard({ booking, onCancelClick }: BookingCardProps) {
   // Parse the date from string (YYYY-MM-DD) to a Date object
   const dateObj = parse(booking.date, "yyyy-MM-dd", new Date());
   
   // Format the date with Japanese locale
   const formattedDate = format(dateObj, "M月d日 (E)", { locale: ja });
 
+  // 現在の日付と予約日を比較（過去の予約はキャンセル不可）
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const bookingDate = new Date(booking.date);
+  bookingDate.setHours(0, 0, 0, 0);
+  const isInPast = bookingDate < today;
+
   return (
-    <div className="flex items-center p-2 bg-gray-50 rounded-md">
+    <div className="flex items-center p-3 bg-gray-50 rounded-md">
       <div className="w-10 h-10 flex-shrink-0 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mr-3">
         <BookOpen className="h-4 w-4 text-primary" />
       </div>
@@ -33,6 +42,18 @@ export function BookingCard({ booking }: BookingCardProps) {
           </div>
         )}
       </div>
+      
+      {onCancelClick && !isInPast && (
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="text-gray-400 hover:text-red-500 h-8 w-8 shrink-0" 
+          onClick={() => onCancelClick(booking)}
+          title="この予約をキャンセル"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 }

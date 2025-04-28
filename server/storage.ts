@@ -31,6 +31,8 @@ export interface IStorage {
   getBookingByDateAndTimeSlot(userId: number, date: string, timeSlot: string, studentId?: number): Promise<Booking | undefined>;
   getBookingByDateAndTimeSlotOnly(date: string, timeSlot: string): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
+  getBookingById(id: number): Promise<Booking | undefined>;
+  deleteBooking(id: number): Promise<void>;
   
   sessionStore: any; // sessionエラー回避のためany型を使用
 }
@@ -43,6 +45,19 @@ export class MemStorage implements IStorage {
   currentUserId: number;
   currentBookingId: number;
   currentStudentId: number;
+  
+  // 予約IDで予約を取得
+  async getBookingById(id: number): Promise<Booking | undefined> {
+    return this.bookings.get(id);
+  }
+  
+  // 予約をキャンセル（削除）
+  async deleteBooking(id: number): Promise<void> {
+    if (!this.bookings.has(id)) {
+      throw new Error("Booking not found");
+    }
+    this.bookings.delete(id);
+  }
 
   constructor() {
     this.users = new Map();

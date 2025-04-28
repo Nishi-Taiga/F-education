@@ -79,6 +79,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Invalid booking data", error });
     }
   });
+  
+  // 予約キャンセルエンドポイント
+  app.delete("/api/bookings/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const bookingId = parseInt(req.params.id);
+    
+    if (isNaN(bookingId)) {
+      return res.status(400).json({ message: "Invalid booking ID" });
+    }
+    
+    try {
+      // 予約情報の取得
+      const booking = await storage.getBookingById(bookingId);
+      
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
+      // 予約が現在のユーザーのものか確認
+      if (booking.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to cancel this booking" });
+      }
+      
+      // ユーザー情報の取得
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // 予約の削除
+      await storage.deleteBooking(bookingId);
+      
+      // チケットの返却（1枚）
+      const updatedUser = await storage.updateTicketCount(userId, user.ticketCount + 1);
+      
+      res.json({ 
+        message: "Booking cancelled successfully", 
+        ticketCount: updatedUser.ticketCount 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to cancel booking", error });
+    }
+  });
 
   // Purchase tickets
   app.post("/api/tickets/purchase", async (req, res) => {

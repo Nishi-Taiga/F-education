@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { CalendarView } from "@/components/calendar-view";
 import { BookingCard } from "@/components/booking-card";
+import { BookingCancellationModal } from "@/components/booking-cancellation-modal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Ticket, CalendarCheck, Settings, Plus } from "lucide-react";
@@ -15,6 +16,10 @@ export default function HomePage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  
+  // キャンセル関連の状態
+  const [selectedBooking, setSelectedBooking] = useState<(Booking & { studentName?: string }) | null>(null);
+  const [showCancellationModal, setShowCancellationModal] = useState(false);
 
   const { data: bookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
@@ -79,6 +84,43 @@ export default function HomePage() {
   // 開発用：チケットを10枚追加する
   const handleAddTickets = () => {
     addTicketsMutation.mutate(10);
+  };
+  
+  // 予約キャンセルのミューテーション
+  const cancelBookingMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      const res = await apiRequest("DELETE", `/api/bookings/${bookingId}`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "予約キャンセル",
+        description: "授業の予約をキャンセルしました。チケットが1枚返却されました。",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      setShowCancellationModal(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "キャンセルエラー",
+        description: error instanceof Error ? error.message : "予約のキャンセルに失敗しました",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // 予約キャンセルボタンのハンドラ
+  const handleCancelClick = (booking: Booking & { studentName?: string }) => {
+    setSelectedBooking(booking);
+    setShowCancellationModal(true);
+  };
+
+  // キャンセルの確認
+  const confirmCancellation = () => {
+    if (selectedBooking) {
+      cancelBookingMutation.mutate(selectedBooking.id);
+    }
   };
   
   // 生徒の名前を取得する関数
