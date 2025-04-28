@@ -638,6 +638,7 @@ export default function SettingsPage() {
                       if (formData.firstName) updateData.firstName = formData.firstName;
                       if (formData.lastNameFurigana) updateData.lastNameFurigana = formData.lastNameFurigana;
                       if (formData.firstNameFurigana) updateData.firstNameFurigana = formData.firstNameFurigana;
+                      if (formData.gender) updateData.gender = formData.gender;
                       if (formData.school) updateData.school = formData.school;
                       if (formData.grade) updateData.grade = formData.grade;
                       if (formData.birthDate) updateData.birthDate = formData.birthDate;
@@ -705,6 +706,27 @@ export default function SettingsPage() {
                         )}
                       />
                     </div>
+
+                    <FormField
+                      control={studentForm.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>性別</FormLabel>
+                          <FormControl>
+                            <select 
+                              className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              {...field}
+                            >
+                              <option value="">現在: {editingStudent?.gender || "選択してください"}</option>
+                              <option value="男性">男性</option>
+                              <option value="女性">女性</option>
+                            </select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
@@ -785,6 +807,7 @@ export default function SettingsPage() {
                         firstName: "",
                         lastNameFurigana: "",
                         firstNameFurigana: "",
+                        gender: "",
                         school: "",
                         grade: "",
                         birthDate: "",
@@ -813,166 +836,238 @@ export default function SettingsPage() {
               </DialogContent>
             </Dialog>
 
-            {/* 生徒情報の新規登録フォーム - 下部に配置 */}
-            <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-6">
-                生徒情報の新規登録
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                新しい生徒情報を追加して、兄弟・姉妹の家庭教師予約も可能になります。
-              </p>
-              
-              <Form {...studentForm}>
-                <form 
-                  onSubmit={studentForm.handleSubmit((data) => {
-                    // 新規追加処理
-                    addStudentMutation.mutate(data);
-                  })} 
-                  className="space-y-6"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={studentForm.control}
-                      name="lastName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>姓</FormLabel>
-                          <FormControl>
-                            <Input placeholder="山田" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+            {/* 生徒を追加ボタン - 下部に配置 */}
+            <div className="flex justify-center mt-6 mb-8">
+              <Button 
+                onClick={() => {
+                  // フォームをリセット
+                  studentForm.reset({
+                    lastName: "",
+                    firstName: "",
+                    lastNameFurigana: "",
+                    firstNameFurigana: "",
+                    gender: "",
+                    school: "",
+                    grade: "",
+                    birthDate: "",
+                  });
+                  // 新規追加ダイアログを開く
+                  setAddDialogOpen(true);
+                }}
+                className="flex items-center"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                生徒を追加
+              </Button>
+            </div>
+            
+            {/* 生徒追加ダイアログ */}
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>生徒情報の新規登録</DialogTitle>
+                  <DialogDescription>
+                    新しい生徒情報を追加して、兄弟・姉妹の家庭教師予約も可能になります。
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <Form {...studentForm}>
+                  <form 
+                    id="add-student-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = studentForm.getValues();
+                      // userId を追加
+                      const data = {
+                        ...formData,
+                        userId: user?.id as number,
+                      };
+                      // 新規追加処理
+                      addStudentMutation.mutate(data as any);
+                      setAddDialogOpen(false);
+                    }}
+                    className="space-y-6"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={studentForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>姓</FormLabel>
+                            <FormControl>
+                              <Input placeholder="山田" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={studentForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>名</FormLabel>
+                            <FormControl>
+                              <Input placeholder="太郎" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={studentForm.control}
+                        name="lastNameFurigana"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>姓（ふりがな）</FormLabel>
+                            <FormControl>
+                              <Input placeholder="やまだ" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={studentForm.control}
+                        name="firstNameFurigana"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>名（ふりがな）</FormLabel>
+                            <FormControl>
+                              <Input placeholder="たろう" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
                     <FormField
                       control={studentForm.control}
-                      name="firstName"
+                      name="gender"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>名</FormLabel>
-                          <FormControl>
-                            <Input placeholder="太郎" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={studentForm.control}
-                      name="lastNameFurigana"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>姓（ふりがな）</FormLabel>
-                          <FormControl>
-                            <Input placeholder="やまだ" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={studentForm.control}
-                      name="firstNameFurigana"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>名（ふりがな）</FormLabel>
-                          <FormControl>
-                            <Input placeholder="たろう" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={studentForm.control}
-                      name="school"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>学校</FormLabel>
-                          <FormControl>
-                            <Input placeholder="〇〇小学校" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={studentForm.control}
-                      name="grade"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>学年</FormLabel>
+                          <FormLabel>性別</FormLabel>
                           <FormControl>
                             <select 
                               className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                               {...field}
                             >
                               <option value="">選択してください</option>
-                              <option value="小学1年生">小学1年生</option>
-                              <option value="小学2年生">小学2年生</option>
-                              <option value="小学3年生">小学3年生</option>
-                              <option value="小学4年生">小学4年生</option>
-                              <option value="小学5年生">小学5年生</option>
-                              <option value="小学6年生">小学6年生</option>
-                              <option value="中学1年生">中学1年生</option>
-                              <option value="中学2年生">中学2年生</option>
-                              <option value="中学3年生">中学3年生</option>
-                              <option value="高校1年生">高校1年生</option>
-                              <option value="高校2年生">高校2年生</option>
-                              <option value="高校3年生">高校3年生</option>
+                              <option value="男性">男性</option>
+                              <option value="女性">女性</option>
                             </select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
 
-                  <FormField
-                    control={studentForm.control}
-                    name="birthDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>生年月日</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={studentForm.control}
+                        name="school"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>学校</FormLabel>
+                            <FormControl>
+                              <Input placeholder="〇〇小学校" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={studentForm.control}
+                        name="grade"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>学年</FormLabel>
+                            <FormControl>
+                              <select 
+                                className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                {...field}
+                              >
+                                <option value="">選択してください</option>
+                                <option value="小学1年生">小学1年生</option>
+                                <option value="小学2年生">小学2年生</option>
+                                <option value="小学3年生">小学3年生</option>
+                                <option value="小学4年生">小学4年生</option>
+                                <option value="小学5年生">小学5年生</option>
+                                <option value="小学6年生">小学6年生</option>
+                                <option value="中学1年生">中学1年生</option>
+                                <option value="中学2年生">中学2年生</option>
+                                <option value="中学3年生">中学3年生</option>
+                                <option value="高校1年生">高校1年生</option>
+                                <option value="高校2年生">高校2年生</option>
+                                <option value="高校3年生">高校3年生</option>
+                              </select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
-                  <div className="flex justify-end">
-                    <Button 
-                      type="submit" 
-                      disabled={addStudentMutation.isPending}
-                      className="flex items-center"
-                    >
-                      {addStudentMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          保存中...
-                        </>
-                      ) : (
-                        <>
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          生徒を追加
-                        </>
+                    <FormField
+                      control={studentForm.control}
+                      name="birthDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>生年月日</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </div>
+                    />
+                  </form>
+                </Form>
+                
+                <DialogFooter>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      // ダイアログを閉じる
+                      setAddDialogOpen(false);
+                      // フォームをリセット
+                      studentForm.reset({
+                        lastName: "",
+                        firstName: "",
+                        lastNameFurigana: "",
+                        firstNameFurigana: "",
+                        gender: "",
+                        school: "",
+                        grade: "",
+                        birthDate: "",
+                      });
+                    }}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button 
+                    type="submit"
+                    form="add-student-form"
+                    disabled={addStudentMutation.isPending}
+                  >
+                    {addStudentMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        登録中...
+                      </>
+                    ) : (
+                      "登録する"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* パスワード変更タブ */}
