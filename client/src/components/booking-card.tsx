@@ -46,12 +46,13 @@ export function BookingCard({ booking, onCancelClick }: BookingCardProps) {
       {onCancelClick && !isInPast && (
         <Button 
           variant="ghost" 
-          size="icon" 
-          className="text-gray-400 hover:text-red-500 h-8 w-8 shrink-0" 
+          size="sm"
+          className="text-gray-500 hover:text-red-500 hover:bg-red-50 h-8 shrink-0 flex items-center gap-1" 
           onClick={() => onCancelClick(booking)}
           title="この予約をキャンセル"
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" />
+          <span className="text-xs">キャンセル</span>
         </Button>
       )}
     </div>
