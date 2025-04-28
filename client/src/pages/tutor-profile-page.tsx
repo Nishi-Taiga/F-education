@@ -67,40 +67,64 @@ export default function TutorProfilePage() {
     enabled: !!user && user.role === "tutor"
   });
   
-  // 講師プロフィールの保存用ミューテーション
-  const saveProfileMutation = useMutation({
-    mutationFn: async (data: any) => {
+  // リダイレクト状態管理
+  const [redirectPending, setRedirectPending] = useState(false);
+  
+  // リダイレクト処理用のエフェクト
+  useEffect(() => {
+    if (redirectPending) {
+      const timer = setTimeout(() => {
+        console.log('リダイレクト実行中...');
+        window.location.href = '/'; // 直接locationを使用
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [redirectPending]);
+  
+  // プロフィール保存中の状態
+  const [isSaving, setIsSaving] = useState(false);
+
+  // 講師プロフィールの保存用ミューテーション（シンプルな実装）
+  const saveProfile = async (data: any) => {
+    try {
+      setIsSaving(true);
       console.log("保存リクエスト開始:", data);
       const res = await apiRequest("POST", "/api/tutor/profile", data);
       const result = await res.json();
       console.log("保存レスポンス:", result);
-      return result;
-    },
-    onSuccess: () => {
-      console.log("保存成功 - リダイレクト前");
+      
+      // キャッシュを更新
       queryClient.invalidateQueries({ queryKey: ["/api/tutor/profile"] });
+      
+      // 成功メッセージ
       toast({
         title: "プロフィールを保存しました",
         description: "講師プロフィールが正常に更新されました。",
       });
-
-      // すぐにリダイレクトしない - 少し遅延してリダイレクト
-      setTimeout(() => {
-        console.log("リダイレクト実行");
-        navigate("/");
-      }, 1000);
-    },
-    onError: (error: Error) => {
+      
+      // リダイレクトフラグを設定
+      console.log("リダイレクトフラグをONに設定");
+      setRedirectPending(true);
+      
+      return result;
+    } catch (error) {
       console.error("保存エラー:", error);
-      toast({
-        title: "エラーが発生しました",
-        description: error.message,
-        variant: "destructive",
-      });
+      
       // エラー時に編集モードを維持
       setIsEditing(true);
+      
+      // エラーメッセージを表示
+      toast({
+        title: "エラーが発生しました",
+        description: error instanceof Error ? error.message : "不明なエラーが発生しました",
+        variant: "destructive",
+      });
+      
+      throw error;
+    } finally {
+      setIsSaving(false);
     }
-  });
+  };
   
   // フォームの初期化
   const form = useForm<FormValues>({
@@ -150,6 +174,9 @@ export default function TutorProfilePage() {
   
   // フォーム送信時の処理
   const onSubmit = async (data: FormValues) => {
+    // 保存中なら何もしない
+    if (isSaving) return;
+    
     console.log("フォーム送信イベント発生");
     
     // バリデーションエラーの確認
@@ -176,23 +203,13 @@ export default function TutorProfilePage() {
       // 編集モードを終了
       setIsEditing(false);
       
-      console.log("mutateAsync呼び出し前");
-      // 講師プロフィールを保存
-      await saveProfileMutation.mutateAsync(tutorData);
-      console.log("保存完了 - onSubmit内");
-      
-      // リダイレクトはonSuccess内で処理するため、ここでは何もしない
+      // 新しい保存関数を使用
+      console.log("保存関数呼び出し");
+      await saveProfile(tutorData);
+      console.log("保存完了 - リダイレクト待機中");
     } catch (error) {
       console.error("プロフィール保存エラー:", error);
-      // エラーがあった場合は編集モードを維持
-      setIsEditing(true);
-      
-      // エラーメッセージを表示
-      toast({
-        title: "保存に失敗しました",
-        description: error instanceof Error ? error.message : "不明なエラーが発生しました",
-        variant: "destructive"
-      });
+      // エラー時の処理はsaveProfile内で行われるので、ここでは何もしない
     }
   };
   
@@ -514,16 +531,16 @@ export default function TutorProfilePage() {
                           });
                         }
                       }}
-                      disabled={saveProfileMutation.isPending}
+                      disabled={isSaving}
                     >
                       キャンセル
                     </Button>
                     <Button 
                       type="submit" 
                       className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white"
-                      disabled={saveProfileMutation.isPending}
+                      disabled={isSaving}
                     >
-                      {saveProfileMutation.isPending ? (
+                      {isSaving ? (
                         <span className="flex items-center gap-1">
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-opacity-50 border-t-white"></span>
                           保存中...
