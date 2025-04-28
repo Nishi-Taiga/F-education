@@ -9,6 +9,7 @@ import { ArrowLeft, Ticket, Calendar, Loader2 } from "lucide-react";
 import { CalendarView } from "@/components/calendar-view";
 import { BookingConfirmationModal } from "@/components/booking-confirmation-modal";
 import { format, parse } from "date-fns";
+import { ja } from "date-fns/locale";
 import { timeSlots, type Booking } from "@shared/schema";
 
 type BookingSelection = {
@@ -53,7 +54,7 @@ export default function BookingPage() {
     
     if (selectedDate) {
       const dateObj = parse(selectedDate, "yyyy-MM-dd", new Date());
-      const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: require('date-fns/locale/ja') });
+      const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
       
       // Check if already selected
       const isDuplicate = selectedBookings.some(
@@ -170,7 +171,7 @@ export default function BookingPage() {
                     {format(
                       parse(selectedDate, "yyyy-MM-dd", new Date()),
                       "yyyy年M月d日 (E)",
-                      { locale: require('date-fns/locale/ja') }
+                      { locale: ja }
                     )}
                   </div>
                   
