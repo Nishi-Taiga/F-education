@@ -77,14 +77,18 @@ export default function TutorProfilePage() {
       return result;
     },
     onSuccess: () => {
-      console.log("保存成功");
+      console.log("保存成功 - リダイレクト前");
       queryClient.invalidateQueries({ queryKey: ["/api/tutor/profile"] });
       toast({
         title: "プロフィールを保存しました",
         description: "講師プロフィールが正常に更新されました。",
       });
-      // ホームページにリダイレクト
-      navigate("/");
+
+      // すぐにリダイレクトしない - 少し遅延してリダイレクト
+      setTimeout(() => {
+        console.log("リダイレクト実行");
+        navigate("/");
+      }, 1000);
     },
     onError: (error: Error) => {
       console.error("保存エラー:", error);
@@ -174,12 +178,10 @@ export default function TutorProfilePage() {
       
       console.log("mutateAsync呼び出し前");
       // 講師プロフィールを保存
-      const result = await saveProfileMutation.mutateAsync(tutorData);
-      console.log("保存成功:", result);
+      await saveProfileMutation.mutateAsync(tutorData);
+      console.log("保存完了 - onSubmit内");
       
-      // 成功したらホームページに移動
-      console.log("ホームページへリダイレクト");
-      navigate("/");
+      // リダイレクトはonSuccess内で処理するため、ここでは何もしない
     } catch (error) {
       console.error("プロフィール保存エラー:", error);
       // エラーがあった場合は編集モードを維持
@@ -512,14 +514,21 @@ export default function TutorProfilePage() {
                           });
                         }
                       }}
+                      disabled={saveProfileMutation.isPending}
                     >
                       キャンセル
                     </Button>
                     <Button 
                       type="submit" 
                       className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white"
+                      disabled={saveProfileMutation.isPending}
                     >
-                      {saveProfileMutation.isPending ? "保存中..." : "プロフィールを保存"}
+                      {saveProfileMutation.isPending ? (
+                        <span className="flex items-center gap-1">
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-opacity-50 border-t-white"></span>
+                          保存中...
+                        </span>
+                      ) : "プロフィールを保存"}
                     </Button>
                   </>
                 ) : (
