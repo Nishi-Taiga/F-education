@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { addMonths, subMonths, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isBefore, parse } from "date-fns";
+import { addMonths, subMonths, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isBefore, parse, getDay } from "date-fns";
 import { type Booking } from "@shared/schema";
 
 // 予約情報に生徒名を追加するための拡張型
@@ -64,14 +64,14 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
       </div>
 
       {/* Day labels */}
-      <div className="grid grid-cols-7 gap-1 text-center text-sm font-medium text-gray-500 mb-2">
-        <div>日</div>
-        <div>月</div>
-        <div>火</div>
-        <div>水</div>
-        <div>木</div>
-        <div>金</div>
-        <div>土</div>
+      <div className="grid grid-cols-7 gap-1 text-center text-sm font-medium mb-2">
+        <div className="text-red-600">日</div>
+        <div className="text-gray-500">月</div>
+        <div className="text-gray-500">火</div>
+        <div className="text-gray-500">水</div>
+        <div className="text-gray-500">木</div>
+        <div className="text-gray-500">金</div>
+        <div className="text-blue-600">土</div>
       </div>
       
       {/* Calendar grid */}
@@ -93,6 +93,15 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
           const isPast = isBefore(day, new Date()) && !isToday(day);
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isSelectable = interactive && !isPast;
+          const dayOfWeek = getDay(day);
+          
+          // 曜日に基づく色分け
+          let textColorClass = "text-gray-900";
+          if (dayOfWeek === 0) { // 日曜日
+            textColorClass = "text-red-600";
+          } else if (dayOfWeek === 6) { // 土曜日
+            textColorClass = "text-blue-600";
+          }
           
           return (
             <div key={day.toString()} className="aspect-square p-1">
@@ -103,7 +112,7 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
                 <div className="p-1 text-center">
                   <span className={`
                     ${isToday(day) ? 'bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center mx-auto' : ''}
-                    ${!isCurrentMonth ? 'text-gray-400' : 'text-gray-900'}
+                    ${!isCurrentMonth ? 'text-gray-400' : textColorClass}
                   `}>
                     {day.getDate()}
                   </span>

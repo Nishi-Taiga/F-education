@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, addDays, startOfWeek, subDays, addWeeks, subWeeks, isEqual, parseISO } from "date-fns";
+import { format, addDays, startOfWeek, subDays, addWeeks, subWeeks, isEqual, parseISO, getDay } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { timeSlots } from "@shared/schema";
-import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, Home, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +43,11 @@ export default function TutorSchedulePage() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const [pendingShifts, setPendingShifts] = useState<Array<{
+    date: string;
+    timeSlot: string;
+    isAvailable: boolean;
+  }>>([]);
   
   // 現在の週の開始日（日曜日）
   const [weekStart, setWeekStart] = useState(() => {
@@ -158,12 +163,63 @@ export default function TutorSchedulePage() {
     setWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }));
   };
   
-  // シフトの変更を処理
+  // シフトの変更を処理（保留中の変更として保存）
   const handleShiftToggle = (date: string, timeSlot: string, currentValue: boolean) => {
-    updateShiftMutation.mutate({
-      date,
-      timeSlot,
-      isAvailable: !currentValue
+    // 既存のシフト情報を確認
+    const existingIndex = pendingShifts.findIndex(
+      shift => shift.date === date && shift.timeSlot === timeSlot
+    );
+    
+    // 新しい値
+    const newIsAvailable = !currentValue;
+    
+    if (existingIndex >= 0) {
+      // 既に変更が予定されている場合は更新
+      const updatedShifts = [...pendingShifts];
+      updatedShifts[existingIndex] = {
+        ...updatedShifts[existingIndex],
+        isAvailable: newIsAvailable
+      };
+      setPendingShifts(updatedShifts);
+    } else {
+      // 新しい変更を追加
+      setPendingShifts([
+        ...pendingShifts,
+        {
+          date,
+          timeSlot,
+          isAvailable: newIsAvailable
+        }
+      ]);
+    }
+  };
+  
+  // すべての保留中のシフト変更を保存
+  const saveAllPendingShifts = async () => {
+    if (pendingShifts.length === 0) {
+      toast({
+        title: "変更はありません",
+        description: "保存する変更がありません。",
+      });
+      return;
+    }
+    
+    // シフト変更を一括保存
+    for (const shift of pendingShifts) {
+      try {
+        await updateShiftMutation.mutateAsync(shift);
+      } catch (error) {
+        // エラーが発生してもすべてのシフトを保存するために続行
+        console.error("シフト保存エラー:", error);
+      }
+    }
+    
+    // 保存完了後に保留中のシフトをクリア
+    setPendingShifts([]);
+    
+    toast({
+      title: "シフトの変更を保存しました",
+      description: `${pendingShifts.length}件のシフト変更が保存されました。`,
     });
   };
   
@@ -208,7 +264,28 @@ export default function TutorSchedulePage() {
   
   return (
     <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-6">シフト管理</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">シフト管理</h1>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2"
+          >
+            <Home className="h-4 w-4" />
+            ホームに戻る
+          </Button>
+          <Button
+            variant="default"
+            onClick={saveAllPendingShifts}
+            disabled={pendingShifts.length === 0 || updateShiftMutation.isPending}
+            className="flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            変更を保存 {pendingShifts.length > 0 && `(${pendingShifts.length}件)`}
+          </Button>
+        </div>
+      </div>
       
       <Card>
         <CardHeader>
@@ -216,6 +293,7 @@ export default function TutorSchedulePage() {
           <CardDescription>
             各時間帯ごとに授業可能なシフトを設定してください。
             スイッチがONの場合は授業可能、OFFの場合は授業不可を意味します。
+            変更後は「変更を保存」ボタンをクリックして確定してください。
           </CardDescription>
         </CardHeader>
         
@@ -261,17 +339,30 @@ export default function TutorSchedulePage() {
               <thead>
                 <tr>
                   <th className="p-2 text-left font-medium"></th>
-                  {weekShifts.map((day) => (
-                    <th 
-                      key={day.date} 
-                      className={`p-2 text-center font-medium ${
-                        day.date === formattedToday ? "bg-primary/10" : ""
-                      }`}
-                    >
-                      <div>{day.formattedDate}</div>
-                      <div className="text-sm">({day.dayOfWeek})</div>
-                    </th>
-                  ))}
+                  {weekShifts.map((day) => {
+                    const date = parseISO(day.date);
+                    const dayNum = getDay(date);
+                    let textColorClass = "";
+                    
+                    // 土曜日は青、日曜日は赤
+                    if (dayNum === 6) { // 土曜日
+                      textColorClass = "text-blue-600";
+                    } else if (dayNum === 0) { // 日曜日
+                      textColorClass = "text-red-600";
+                    }
+                    
+                    return (
+                      <th 
+                        key={day.date} 
+                        className={`p-2 text-center font-medium ${textColorClass} ${
+                          day.date === formattedToday ? "bg-primary/10" : ""
+                        }`}
+                      >
+                        <div>{day.formattedDate}</div>
+                        <div className="text-sm">({day.dayOfWeek})</div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -279,31 +370,65 @@ export default function TutorSchedulePage() {
                   <tr key={timeSlot} className="border-t">
                     <td className="p-2 font-medium">{timeSlot}</td>
                     {weekShifts.map((day) => {
+                      const date = parseISO(day.date);
+                      const dayNum = getDay(date);
+                      let textColorClass = "";
+                      
+                      // 土曜日は青、日曜日は赤
+                      if (dayNum === 6) { // 土曜日
+                        textColorClass = "text-blue-600";
+                      } else if (dayNum === 0) { // 日曜日
+                        textColorClass = "text-red-600";
+                      }
+                      
                       const shiftInfo = day.shifts[timeSlot];
                       const isPast = parseISO(day.date) < subDays(new Date(), 1);
+                      
+                      // シフトが変更待ちかどうかを確認
+                      const isPending = pendingShifts.some(
+                        shift => shift.date === day.date && shift.timeSlot === timeSlot
+                      );
                       
                       return (
                         <td 
                           key={`${day.date}-${timeSlot}`} 
-                          className={`p-2 text-center ${
+                          className={`p-2 text-center ${textColorClass} ${
                             day.date === formattedToday ? "bg-primary/10" : ""
+                          } ${
+                            isPending ? "bg-yellow-50" : ""
                           }`}
                         >
                           <div className="flex justify-center">
                             <Switch
-                              checked={shiftInfo?.isAvailable ?? true}
+                              checked={
+                                // 保留中の変更があればそれを表示
+                                pendingShifts.find(
+                                  shift => shift.date === day.date && shift.timeSlot === timeSlot
+                                )?.isAvailable ?? 
+                                // なければ既存の設定を表示
+                                (shiftInfo?.isAvailable ?? true)
+                              }
                               onCheckedChange={() => 
                                 handleShiftToggle(
                                   day.date, 
                                   timeSlot, 
-                                  shiftInfo?.isAvailable ?? true
+                                  // 保留中の変更があればそれを基準に切り替え
+                                  pendingShifts.find(
+                                    shift => shift.date === day.date && shift.timeSlot === timeSlot
+                                  )?.isAvailable ?? 
+                                  // なければ既存の設定を基準に切り替え
+                                  (shiftInfo?.isAvailable ?? true)
                                 )
                               }
                               disabled={isPast || updateShiftMutation.isPending}
                             />
                           </div>
-                          <div className="text-xs mt-1 text-muted-foreground">
-                            {shiftInfo?.isAvailable ? "可能" : "不可"}
+                          <div className={`text-xs mt-1 ${isPending ? "font-medium text-yellow-600" : "text-muted-foreground"}`}>
+                            {pendingShifts.find(
+                              shift => shift.date === day.date && shift.timeSlot === timeSlot
+                            )?.isAvailable ?? 
+                            (shiftInfo?.isAvailable ?? true) ? "可能" : "不可"}
+                            {isPending && " (未保存)"}
                           </div>
                         </td>
                       );
@@ -314,11 +439,24 @@ export default function TutorSchedulePage() {
             </table>
           </div>
           
+          <div className="mt-6 flex justify-end">
+            <Button
+              variant="default"
+              onClick={saveAllPendingShifts}
+              disabled={pendingShifts.length === 0 || updateShiftMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              変更を保存 {pendingShifts.length > 0 && `(${pendingShifts.length}件)`}
+            </Button>
+          </div>
+          
           <div className="mt-6">
             <Separator className="my-4" />
             <div className="text-sm text-muted-foreground">
               <p>※ 過去の日付のシフトは変更できません</p>
-              <p>※ シフトの変更は即時に反映されます</p>
+              <p>※ 変更は「変更を保存」ボタンを押すまで反映されません</p>
+              <p>※ 黄色でハイライトされている項目は未保存の変更です</p>
               <p>※ 既に予約が入っている時間帯は、予約をキャンセルしない限りシフトを変更できません</p>
             </div>
           </div>
