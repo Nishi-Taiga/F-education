@@ -1,21 +1,51 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { CalendarView } from "@/components/calendar-view";
 import { BookingCard } from "@/components/booking-card";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Ticket, CalendarCheck, Settings } from "lucide-react";
+import { Loader2, Ticket, CalendarCheck, Settings, Plus } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Booking } from "@shared/schema";
 
 export default function HomePage() {
+  const { toast } = useToast();
   const { user } = useAuth();
   const [, navigate] = useLocation();
 
   const { data: bookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
+  
+  // 開発用：チケットを追加するミューテーション
+  const addTicketsMutation = useMutation({
+    mutationFn: async (quantity: number) => {
+      const res = await apiRequest("POST", "/api/tickets/add", { quantity });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "チケット追加",
+        description: `${data.message}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "エラー",
+        description: `チケットの追加に失敗しました: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // 開発用：チケットを10枚追加する
+  const handleAddTickets = () => {
+    addTicketsMutation.mutate(10);
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -52,7 +82,23 @@ export default function HomePage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">チケット残数</p>
-                <p className="text-2xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
+                <div className="flex items-center">
+                  <p className="text-2xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
+                  <Button 
+                    variant="outline"
+                    size="icon"
+                    className="ml-2 h-7 w-7 rounded-full border-dashed"
+                    onClick={handleAddTickets}
+                    disabled={addTicketsMutation.isPending}
+                  >
+                    {addTicketsMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Plus className="h-3 w-3" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">※開発用：テスト用にチケットを追加できます</p>
               </div>
             </div>
           </div>

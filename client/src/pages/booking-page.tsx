@@ -276,20 +276,30 @@ export default function BookingPage() {
                 )}
               </div>
               
-              <Button 
-                className="w-full" 
-                disabled={selectedBookings.length === 0 || bookingMutation.isPending}
-                onClick={confirmBooking}
-              >
-                {bookingMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    処理中...
-                  </>
-                ) : (
-                  "予約を確認する"
-                )}
-              </Button>
+              {user && user.ticketCount < selectedBookings.length ? (
+                <Button 
+                  className="w-full" 
+                  variant="destructive"
+                  disabled={true}
+                >
+                  チケットが不足しています（{selectedBookings.length}枚必要）
+                </Button>
+              ) : (
+                <Button 
+                  className="w-full" 
+                  disabled={selectedBookings.length === 0 || bookingMutation.isPending}
+                  onClick={confirmBooking}
+                >
+                  {bookingMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      処理中...
+                    </>
+                  ) : (
+                    "予約を確認する"
+                  )}
+                </Button>
+              )}
             </Card>
           </div>
         </div>

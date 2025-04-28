@@ -89,6 +89,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       message: "Tickets purchased successfully" 
     });
   });
+  
+  // Add tickets directly to a user (for testing purposes)
+  app.post("/api/tickets/add", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const { quantity } = req.body;
+    
+    if (!quantity || typeof quantity !== 'number') {
+      return res.status(400).json({ message: "Invalid ticket quantity" });
+    }
+    
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    const newTicketCount = user.ticketCount + quantity;
+    await storage.updateTicketCount(userId, newTicketCount);
+    
+    res.json({ 
+      ticketCount: newTicketCount,
+      message: `${quantity} tickets added successfully`
+    });
+  });
 
   // Update user settings
   app.patch("/api/user/settings", async (req, res) => {
