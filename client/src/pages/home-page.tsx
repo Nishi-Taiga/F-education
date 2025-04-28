@@ -170,13 +170,19 @@ export default function HomePage() {
           <div className="mt-4">
             <div className="text-sm text-gray-600 mb-2">授業予定</div>
             <div className="space-y-2">
-              {isLoadingBookings ? (
+              {isLoadingBookings || isLoadingStudents ? (
                 <div className="flex justify-center items-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
                 </div>
               ) : bookings && bookings.length > 0 ? (
                 bookings.map((booking) => (
-                  <BookingCard key={booking.id} booking={booking} />
+                  <BookingCard 
+                    key={booking.id} 
+                    booking={{
+                      ...booking,
+                      studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+                    }} 
+                  />
                 ))
               ) : (
                 <div className="text-center py-4 text-gray-500">

@@ -230,7 +230,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lastName, 
       firstName, 
       lastNameFurigana, 
-      firstNameFurigana, 
+      firstNameFurigana,
+      gender,
       school, 
       grade, 
       birthDate 
@@ -238,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // バリデーション
-      if (!lastName || !firstName || !lastNameFurigana || !firstNameFurigana || !school || !grade || !birthDate) {
+      if (!lastName || !firstName || !lastNameFurigana || !firstNameFurigana || !gender || !school || !grade || !birthDate) {
         return res.status(400).json({ message: "All student fields are required" });
       }
       
@@ -248,6 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName,
         lastNameFurigana,
         firstNameFurigana,
+        gender,
         school,
         grade,
         birthDate

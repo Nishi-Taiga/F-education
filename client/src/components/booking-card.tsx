@@ -4,7 +4,9 @@ import { ja } from "date-fns/locale";
 import { BookOpen, User } from "lucide-react";
 
 interface BookingCardProps {
-  booking: Booking;
+  booking: Booking & {
+    studentName?: string;
+  };
 }
 
 export function BookingCard({ booking }: BookingCardProps) {
@@ -22,6 +24,14 @@ export function BookingCard({ booking }: BookingCardProps) {
       <div className="flex-grow">
         <div className="text-sm font-medium">{formattedDate}</div>
         <div className="text-xs text-gray-600">{booking.timeSlot}</div>
+        {booking.studentId && (
+          <div className="flex items-center mt-1">
+            <User className="h-3 w-3 text-primary mr-1" />
+            <span className="text-xs text-primary">
+              {booking.studentName || `生徒ID: ${booking.studentId}`}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

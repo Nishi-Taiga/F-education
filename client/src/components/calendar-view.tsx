@@ -4,8 +4,13 @@ import { Button } from "@/components/ui/button";
 import { addMonths, subMonths, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isBefore, parse } from "date-fns";
 import { type Booking } from "@shared/schema";
 
+// 予約情報に生徒名を追加するための拡張型
+type ExtendedBooking = Booking & {
+  studentName?: string;
+};
+
 interface CalendarViewProps {
-  bookings: Booking[];
+  bookings: ExtendedBooking[];
   onSelectDate?: (date: string) => void;
   interactive?: boolean;
 }
@@ -107,14 +112,18 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
                   <div key={index} className="mt-auto mb-1 mx-1">
                     <div 
                       className="px-1 py-0.5 text-xs rounded bg-primary text-white text-center relative group"
-                      title={booking.studentId ? `予約済み` : '予約済み'}
+                      title={booking.studentName ? `${booking.studentName}` : '予約済み'}
                     >
                       <span className="block truncate">{booking.timeSlot.split('-')[0]}</span>
                       {/* 学生情報のツールチップ */}
                       {booking.studentId && (
                         <div className="absolute left-0 bottom-full mb-1 w-max z-10 hidden group-hover:block">
                           <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 shadow-lg">
-                            <span>ID: {booking.studentId}</span>
+                            {booking.studentName ? (
+                              <span>{booking.studentName}</span>
+                            ) : (
+                              <span>生徒ID: {booking.studentId}</span>
+                            )}
                           </div>
                         </div>
                       )}
