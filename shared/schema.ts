@@ -18,6 +18,7 @@ export const users = pgTable("users", {
   smsNotifications: boolean("sms_notifications").default(false),
   ticketCount: integer("ticket_count").default(0).notNull(),
   role: text("role").default("user"), // "user" or "tutor"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const students = pgTable("students", {

@@ -227,8 +227,9 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
     const user: User = { 
-      ...insertUser, 
       id, 
+      username: insertUser.username,
+      password: insertUser.password,
       ticketCount: 0, 
       displayName: insertUser.displayName || null,
       email: insertUser.email || null,
@@ -239,7 +240,9 @@ export class MemStorage implements IStorage {
       address: null,
       profileCompleted: false,
       emailNotifications: true, 
-      smsNotifications: false
+      smsNotifications: false,
+      role: insertUser.role || "user", // "user" または "tutor"
+      createdAt: new Date()
     };
     this.users.set(id, user);
     return user;
@@ -288,7 +291,9 @@ export class MemStorage implements IStorage {
       ...insertBooking,
       id,
       studentId: insertBooking.studentId || null,
+      tutorId: insertBooking.tutorId || null,
       subject: insertBooking.subject || null,
+      status: insertBooking.status || "confirmed",
       createdAt: now
     };
     this.bookings.set(id, booking);
@@ -377,6 +382,97 @@ export class MemStorage implements IStorage {
     // 物理削除ではなく、isActiveフラグをfalseに設定する（論理削除）
     const updatedStudent = { ...student, isActive: false };
     this.students.set(id, updatedStudent);
+  }
+
+  // 講師関連のメソッド
+  async getTutorByUserId(userId: number): Promise<Tutor | undefined> {
+    return Array.from(this.tutors.values()).find(
+      (tutor) => tutor.userId === userId && tutor.isActive
+    );
+  }
+
+  async getTutor(id: number): Promise<Tutor | undefined> {
+    return this.tutors.get(id);
+  }
+
+  async createTutor(insertTutor: InsertTutor): Promise<Tutor> {
+    const id = this.currentTutorId++;
+    const now = new Date();
+    const tutor: Tutor = {
+      ...insertTutor,
+      id,
+      isActive: true,
+      profileCompleted: true,
+      bio: insertTutor.bio || null,
+      createdAt: now
+    };
+    this.tutors.set(id, tutor);
+
+    // ユーザーのプロフィール完了状態を更新
+    const user = await this.getUser(insertTutor.userId);
+    if (user) {
+      await this.updateUserSettings(user.id, { profileCompleted: true });
+    }
+
+    return tutor;
+  }
+
+  async updateTutor(id: number, tutorUpdate: Partial<Tutor>): Promise<Tutor> {
+    const tutor = await this.getTutor(id);
+    if (!tutor) {
+      throw new Error("Tutor not found");
+    }
+    
+    const updatedTutor = { ...tutor, ...tutorUpdate };
+    this.tutors.set(id, updatedTutor);
+    return updatedTutor;
+  }
+
+  // 講師シフト関連のメソッド
+  async getTutorShiftsByTutorId(tutorId: number): Promise<TutorShift[]> {
+    return Array.from(this.tutorShifts.values()).filter(
+      (shift) => shift.tutorId === tutorId
+    );
+  }
+
+  async getTutorShiftsByDate(tutorId: number, date: string): Promise<TutorShift[]> {
+    return Array.from(this.tutorShifts.values()).filter(
+      (shift) => shift.tutorId === tutorId && shift.date === date
+    );
+  }
+
+  async createTutorShift(insertShift: InsertTutorShift): Promise<TutorShift> {
+    const id = this.currentTutorShiftId++;
+    const now = new Date();
+    const shift: TutorShift = {
+      ...insertShift,
+      id,
+      isAvailable: insertShift.isAvailable !== undefined ? insertShift.isAvailable : true,
+      createdAt: now
+    };
+    this.tutorShifts.set(id, shift);
+    return shift;
+  }
+
+  async updateTutorShift(id: number, shiftUpdate: Partial<TutorShift>): Promise<TutorShift> {
+    const shift = this.tutorShifts.get(id);
+    if (!shift) {
+      throw new Error("Tutor shift not found");
+    }
+    
+    const updatedShift = { ...shift, ...shiftUpdate };
+    this.tutorShifts.set(id, updatedShift);
+    return updatedShift;
+  }
+
+  async deleteTutorShift(id: number): Promise<void> {
+    this.tutorShifts.delete(id);
+  }
+
+  async getBookingsByTutorId(tutorId: number): Promise<Booking[]> {
+    return Array.from(this.bookings.values()).filter(
+      (booking) => booking.tutorId === tutorId
+    );
   }
 }
 
