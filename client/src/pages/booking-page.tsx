@@ -1,17 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Ticket, Calendar, Loader2 } from "lucide-react";
+import { ArrowLeft, Ticket, Calendar, Loader2, User } from "lucide-react";
 import { CalendarView } from "@/components/calendar-view";
 import { BookingConfirmationModal } from "@/components/booking-confirmation-modal";
 import { format, parse } from "date-fns";
 import { ja } from "date-fns/locale";
-import { timeSlots, type Booking } from "@shared/schema";
+import { timeSlots, type Booking, type Student } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from "@/components/ui/select";
 
 type BookingSelection = {
   date: string;

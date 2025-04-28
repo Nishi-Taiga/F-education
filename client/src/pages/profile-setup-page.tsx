@@ -32,6 +32,7 @@ const studentSchema = z.object({
   firstName: z.string().min(1, { message: "名を入力してください" }),
   lastNameFurigana: z.string().min(1, { message: "姓のふりがなを入力してください" }),
   firstNameFurigana: z.string().min(1, { message: "名のふりがなを入力してください" }),
+  gender: z.string().min(1, { message: "性別を選択してください" }),
   school: z.string().min(2, { message: "学校名は2文字以上で入力してください" }),
   grade: z.string().min(1, { message: "学年を選択してください" }),
   birthDate: z.string().min(1, { message: "生年月日を入力してください" }),
@@ -185,6 +186,7 @@ export default function ProfileSetupPage() {
       firstName: "",
       lastNameFurigana: "",
       firstNameFurigana: "",
+      gender: "",
       school: "",
       grade: "",
       birthDate: "",
@@ -468,6 +470,27 @@ export default function ProfileSetupPage() {
                       )}
                     />
                   </div>
+
+                  <FormField
+                    control={studentForm.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>性別</FormLabel>
+                        <FormControl>
+                          <select 
+                            className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            {...field}
+                          >
+                            <option value="">選択してください</option>
+                            <option value="男性">男性</option>
+                            <option value="女性">女性</option>
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
