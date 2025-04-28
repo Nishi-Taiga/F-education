@@ -23,20 +23,50 @@ export default function HomePage() {
   // 開発用：チケットを追加するミューテーション
   const addTicketsMutation = useMutation({
     mutationFn: async (quantity: number) => {
-      const res = await apiRequest("POST", "/api/tickets/add", { quantity });
-      return res.json();
+      try {
+        console.log("チケット追加リクエスト開始:", { quantity });
+        
+        // apiRequestではなく、直接fetchを使用する（apiRequestはレスポンスを消費してしまう）
+        const res = await fetch("/api/tickets/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ quantity }),
+          credentials: "include",
+        });
+        
+        console.log("レスポンス受信:", res.status);
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("APIエラー:", errorText);
+          throw new Error(errorText || "APIリクエストが失敗しました");
+        }
+        
+        const data = await res.json();
+        console.log("APIレスポンス:", data);
+        return data;
+      } catch (err) {
+        console.error("チケット追加エラー:", err);
+        throw err;
+      }
     },
     onSuccess: (data) => {
+      console.log("onSuccess呼び出し:", data);
       toast({
         title: "チケット追加",
-        description: `${data.message}`,
+        description: `${data.message || "10枚のチケットが追加されました"}`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error) => {
+      console.error("onErrorが呼び出されました:", error);
+      let errorMessage = "チケットの追加に失敗しました";
+      if (error instanceof Error) {
+        errorMessage += `: ${error.message}`;
+      }
       toast({
         title: "エラー",
-        description: `チケットの追加に失敗しました: ${error}`,
+        description: errorMessage,
         variant: "destructive",
       });
     },

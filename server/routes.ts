@@ -92,27 +92,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Add tickets directly to a user (for testing purposes)
   app.post("/api/tickets/add", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    const userId = req.user!.id;
-    const { quantity } = req.body;
-    
-    if (!quantity || typeof quantity !== 'number') {
-      return res.status(400).json({ message: "Invalid ticket quantity" });
+    try {
+      console.log("[API] /api/tickets/add リクエスト受信:", req.body);
+      
+      if (!req.isAuthenticated()) {
+        console.log("[API] 認証エラー: 未ログイン");
+        return res.status(401).json({ message: "認証が必要です" });
+      }
+      
+      const userId = req.user!.id;
+      console.log("[API] ユーザーID:", userId);
+      
+      const { quantity } = req.body;
+      console.log("[API] リクエスト内容:", { quantity, type: typeof quantity });
+      
+      if (!quantity || typeof quantity !== 'number') {
+        console.log("[API] バリデーションエラー: 不正なチケット数");
+        return res.status(400).json({ message: "Invalid ticket quantity" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        console.log("[API] ユーザーが見つかりません:", userId);
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      console.log("[API] 現在のチケット数:", user.ticketCount);
+      const newTicketCount = user.ticketCount + quantity;
+      console.log("[API] 新しいチケット数:", newTicketCount);
+      
+      await storage.updateTicketCount(userId, newTicketCount);
+      
+      const response = { 
+        ticketCount: newTicketCount,
+        message: `${quantity} tickets added successfully`
+      };
+      console.log("[API] レスポンス:", response);
+      
+      res.json(response);
+    } catch (error) {
+      console.error("[API] チケット追加エラー:", error);
+      res.status(500).json({ message: "Internal server error", error: String(error) });
     }
-    
-    const user = await storage.getUser(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    
-    const newTicketCount = user.ticketCount + quantity;
-    await storage.updateTicketCount(userId, newTicketCount);
-    
-    res.json({ 
-      ticketCount: newTicketCount,
-      message: `${quantity} tickets added successfully`
-    });
   });
 
   // Update user settings
