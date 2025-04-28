@@ -10,6 +10,7 @@ interface BookingConfirmationModalProps {
     timeSlot: string;
     studentId?: number;
     studentName?: string;
+    subject?: string;
   }>;
   onCancel: () => void;
   onConfirm: () => void;
@@ -38,6 +39,16 @@ export function BookingConfirmationModal({
             <div key={index} className="p-3 bg-gray-50 rounded-md">
               <div className="font-medium">{booking.formattedDate}</div>
               <div className="text-sm text-gray-600">{booking.timeSlot}</div>
+              {booking.subject && (
+                <div className="text-sm text-gray-600 mt-1">
+                  科目: <span className="font-medium">{booking.subject}</span>
+                </div>
+              )}
+              {!booking.subject && (
+                <div className="mt-1 text-xs text-amber-600">
+                  科目が選択されていません
+                </div>
+              )}
               {booking.studentName && (
                 <div className="flex items-center mt-2 text-sm text-primary">
                   <User className="h-3.5 w-3.5 mr-1.5" />

@@ -5,12 +5,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Ticket, Calendar, Loader2, User } from "lucide-react";
+import { ArrowLeft, Ticket, Calendar, Loader2, User, BookOpen } from "lucide-react";
 import { CalendarView } from "@/components/calendar-view";
 import { BookingConfirmationModal } from "@/components/booking-confirmation-modal";
 import { format, parse } from "date-fns";
 import { ja } from "date-fns/locale";
-import { timeSlots, type Booking, type Student } from "@shared/schema";
+import { timeSlots, type Booking, type Student, subjectsBySchoolLevel, type SchoolLevel, getSchoolLevelFromGrade } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { 
@@ -27,6 +27,7 @@ type BookingSelection = {
   timeSlot: string;
   studentId?: number;
   studentName?: string;
+  subject?: string;
 };
 
 export default function BookingPage() {
@@ -38,6 +39,8 @@ export default function BookingPage() {
   const [selectedBookings, setSelectedBookings] = useState<BookingSelection[]>([]);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [studentSchoolLevel, setStudentSchoolLevel] = useState<SchoolLevel | null>(null);
 
   // 登録済みの生徒一覧を取得
   const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
@@ -52,6 +55,7 @@ export default function BookingPage() {
     date: string;
     timeSlot: string;
     studentId?: number;
+    subject?: string;
   };
   
   const bookingMutation = useMutation({
@@ -162,7 +166,8 @@ export default function BookingPage() {
       const bookingsData = selectedBookings.map(booking => ({
         date: booking.date,
         timeSlot: booking.timeSlot,
-        studentId: booking.studentId
+        studentId: booking.studentId,
+        subject: booking.subject
       }));
       
       // Process all bookings
@@ -261,7 +266,20 @@ export default function BookingPage() {
                 ) : students && students.length > 0 ? (
                   <Select 
                     value={selectedStudentId?.toString() || ""} 
-                    onValueChange={(value) => setSelectedStudentId(parseInt(value))}
+                    onValueChange={(value) => {
+                      const studentId = parseInt(value);
+                      setSelectedStudentId(studentId);
+                      setSelectedSubject(null);
+                      
+                      // 生徒の学年から学校レベルを取得
+                      const selectedStudent = students.find(student => student.id === studentId);
+                      if (selectedStudent) {
+                        const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
+                        setStudentSchoolLevel(schoolLevel);
+                      } else {
+                        setStudentSchoolLevel(null);
+                      }
+                    }}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="生徒を選択してください" />
