@@ -11,6 +11,7 @@ import { BookingConfirmationModal } from "@/components/booking-confirmation-moda
 import { format, parse } from "date-fns";
 import { ja } from "date-fns/locale";
 import { timeSlots, type Booking } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 type BookingSelection = {
   date: string;
@@ -19,6 +20,7 @@ type BookingSelection = {
 };
 
 export default function BookingPage() {
+  const { toast } = useToast();
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -34,21 +36,52 @@ export default function BookingPage() {
   
   const bookingMutation = useMutation({
     mutationFn: async (bookingsData: BookingData[]) => {
-      // Process each booking sequentially
-      const results = [];
-      for (const bookingData of bookingsData) {
-        const res = await apiRequest("POST", "/api/bookings", bookingData);
-        const data = await res.json();
-        results.push(data);
+      try {
+        // Process each booking sequentially
+        const results = [];
+        for (const bookingData of bookingsData) {
+          const res = await apiRequest("POST", "/api/bookings", bookingData);
+          
+          // Check for error status
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || "予約に失敗しました");
+          }
+          
+          // Clone response because once json() is called, we can't call it again
+          const clonedRes = res.clone();
+          const data = await clonedRes.json();
+          results.push(data);
+        }
+        return results;
+      } catch (error) {
+        // Handle errors and still navigate back
+        const errorMessage = error instanceof Error ? error.message : "予約に失敗しました";
+        toast({
+          title: "予約エラー",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        
+        // Close the modal and navigate back even on error
+        setShowConfirmationModal(false);
+        navigate("/");
+        throw error; // Re-throw to trigger onError
       }
-      return results;
     },
     onSuccess: () => {
+      toast({
+        title: "予約完了",
+        description: "授業の予約が完了しました",
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       setSelectedBookings([]);
       setShowConfirmationModal(false);
       navigate("/");
+    },
+    onError: () => {
+      // Error already handled in mutationFn
     },
   });
 
