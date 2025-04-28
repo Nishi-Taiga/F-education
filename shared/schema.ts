@@ -121,14 +121,27 @@ export const subjectsBySchoolLevel: Record<SchoolLevel, string[]> = {
 
 // 学年から学校レベルを推測する関数
 export function getSchoolLevelFromGrade(grade: string): SchoolLevel {
+  // 「高校」という文字が含まれていれば高校生
+  if (grade.includes("高校") || grade.includes("高等")) {
+    return "high_school";
+  }
+  
+  // 「中学」という文字が含まれていれば中学生
+  if (grade.includes("中学")) {
+    return "junior_high";
+  }
+  
   // 学年文字列から数字部分を抽出
   const gradeNum = parseInt(grade.replace(/[^0-9]/g, ""));
   
   if (gradeNum >= 1 && gradeNum <= 6) {
     return "elementary"; // 小学生（1〜6年生）
-  } else if (gradeNum >= 7 && gradeNum <= 9 || grade.includes("中学")) {
-    return "junior_high"; // 中学生（7〜9年生または「中学」を含む）
+  } else if (gradeNum >= 7 && gradeNum <= 9) {
+    return "junior_high"; // 中学生（7〜9年生）
+  } else if (gradeNum >= 10 && gradeNum <= 12) {
+    return "high_school"; // 高校生（10〜12年生に相当）
   } else {
-    return "high_school"; // 上記以外は高校生と判断
+    // 数字が判断できない場合やその他の場合は、小学生をデフォルトとする
+    return "elementary";
   }
 }

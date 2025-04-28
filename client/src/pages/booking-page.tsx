@@ -293,6 +293,7 @@ export default function BookingPage() {
                       const selectedStudent = students.find(student => student.id === studentId);
                       if (selectedStudent) {
                         const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
+                        console.log(`生徒: ${selectedStudent.firstName}, 学年: ${selectedStudent.grade}, 学校レベル: ${schoolLevel}`);
                         setStudentSchoolLevel(schoolLevel);
                       } else {
                         setStudentSchoolLevel(null);
