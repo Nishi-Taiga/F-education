@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, User } from "lucide-react";
 
 interface BookingConfirmationModalProps {
   isOpen: boolean;
@@ -8,6 +8,8 @@ interface BookingConfirmationModalProps {
     date: string;
     formattedDate: string;
     timeSlot: string;
+    studentId?: number;
+    studentName?: string;
   }>;
   onCancel: () => void;
   onConfirm: () => void;
@@ -36,6 +38,17 @@ export function BookingConfirmationModal({
             <div key={index} className="p-3 bg-gray-50 rounded-md">
               <div className="font-medium">{booking.formattedDate}</div>
               <div className="text-sm text-gray-600">{booking.timeSlot}</div>
+              {booking.studentName && (
+                <div className="flex items-center mt-2 text-sm text-primary">
+                  <User className="h-3.5 w-3.5 mr-1.5" />
+                  <span>{booking.studentName}</span>
+                </div>
+              )}
+              {!booking.studentName && (
+                <div className="mt-2 text-xs text-amber-600">
+                  生徒が選択されていません
+                </div>
+              )}
             </div>
           ))}
         </div>
