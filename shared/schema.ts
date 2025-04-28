@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   city: text("city"),
   address: text("address"),
   profileCompleted: boolean("profile_completed").default(false),
+  tutorProfileCompleted: boolean("tutor_profile_completed").default(false),
   emailNotifications: boolean("email_notifications").default(true),
   smsNotifications: boolean("sms_notifications").default(false),
   ticketCount: integer("ticket_count").default(0).notNull(),
@@ -86,6 +87,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   city: true,
   address: true,
   profileCompleted: true,
+  tutorProfileCompleted: true,
   role: true,
 });
 
@@ -111,6 +113,7 @@ export const insertTutorSchema = createInsertSchema(tutors).pick({
   birthDate: true,
   subjects: true,
   bio: true,
+  profileCompleted: true,
 });
 
 export const insertTutorShiftSchema = createInsertSchema(tutorShifts).pick({

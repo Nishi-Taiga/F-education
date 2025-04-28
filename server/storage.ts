@@ -411,7 +411,10 @@ export class MemStorage implements IStorage {
     // ユーザーのプロフィール完了状態を更新
     const user = await this.getUser(insertTutor.userId);
     if (user) {
-      await this.updateUserSettings(user.id, { profileCompleted: true });
+      await this.updateUserSettings(user.id, { 
+        profileCompleted: true,
+        tutorProfileCompleted: true 
+      });
     }
 
     return tutor;

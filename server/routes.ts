@@ -472,7 +472,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           university,
           birthDate,
           subjects,
-          bio: bio || tutor.bio
+          bio: bio || tutor.bio,
+          profileCompleted: true
         });
       } else {
         // 新規作成
@@ -488,6 +489,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bio: bio || null
         });
       }
+      
+      // ユーザーのtutorProfileCompletedフラグを更新
+      await storage.updateUserSettings(userId, { tutorProfileCompleted: true });
       
       res.json(tutor);
     } catch (error) {
