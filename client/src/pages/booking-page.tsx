@@ -30,10 +30,18 @@ export default function BookingPage() {
     queryKey: ["/api/bookings"],
   });
 
+  type BookingData = { date: string, timeSlot: string };
+  
   const bookingMutation = useMutation({
-    mutationFn: async (bookingData: { date: string, timeSlot: string }) => {
-      const res = await apiRequest("POST", "/api/bookings", bookingData);
-      return res.json();
+    mutationFn: async (bookingsData: BookingData[]) => {
+      // Process each booking sequentially
+      const results = [];
+      for (const bookingData of bookingsData) {
+        const res = await apiRequest("POST", "/api/bookings", bookingData);
+        const data = await res.json();
+        results.push(data);
+      }
+      return results;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
@@ -83,12 +91,14 @@ export default function BookingPage() {
 
   const completeBooking = () => {
     if (selectedBookings.length > 0) {
-      // For simplicity, we'll just book the first selection
-      const booking = selectedBookings[0];
-      bookingMutation.mutate({
+      // Create an array of booking data to send to the mutation
+      const bookingsData = selectedBookings.map(booking => ({
         date: booking.date,
         timeSlot: booking.timeSlot
-      });
+      }));
+      
+      // Process all bookings
+      bookingMutation.mutate(bookingsData);
     }
   };
 

@@ -28,6 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "User not found" });
     }
     
+    // Make sure user has enough tickets (at least 1)
     if (user.ticketCount <= 0) {
       return res.status(400).json({ message: "Insufficient tickets" });
     }
@@ -54,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Booking already exists for this date and time" });
       }
       
-      // Create booking and deduct ticket
+      // Create booking and deduct one ticket
       const booking = await storage.createBooking(bookingData);
       await storage.updateTicketCount(userId, user.ticketCount - 1);
       
