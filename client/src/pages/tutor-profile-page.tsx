@@ -40,6 +40,7 @@ export default function TutorProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
+  const [isEditing, setIsEditing] = useState(false);
   
   // 既存の講師プロフィール情報を取得
   const { data: tutorProfile, isLoading } = useQuery({
@@ -118,6 +119,12 @@ export default function TutorProfilePage() {
         selectedSubjects: subjects,
         bio: tutorProfile.bio || ""
       });
+      
+      // 新規プロフィール作成時は編集モードにする
+      setIsEditing(!tutorProfile.profileCompleted);
+    } else {
+      // プロフィールがない場合は編集モードにする
+      setIsEditing(true);
     }
   }, [tutorProfile, form]);
   
@@ -161,7 +168,12 @@ export default function TutorProfilePage() {
   
   return (
     <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-6">講師プロフィール設定</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">講師プロフィール設定</h1>
+        <Button variant="outline" onClick={() => navigate("/")}>
+          マイページに戻る
+        </Button>
+      </div>
       
       <Card>
         <CardHeader>
@@ -175,6 +187,18 @@ export default function TutorProfilePage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* 編集ボタン（プロフィールがあり、編集モードでない場合のみ表示） */}
+              {tutorProfile && !isEditing && (
+                <div className="flex justify-end">
+                  <Button 
+                    type="button" 
+                    onClick={() => setIsEditing(true)}
+                    variant="outline"
+                  >
+                    編集する
+                  </Button>
+                </div>
+              )}
               {/* 基本情報 */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">基本情報</h3>
