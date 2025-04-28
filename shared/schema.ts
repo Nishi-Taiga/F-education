@@ -40,6 +40,7 @@ export const bookings = pgTable("bookings", {
   studentId: integer("student_id").references(() => students.id),
   date: text("date").notNull(), // in YYYY-MM-DD format
   timeSlot: text("time_slot").notNull(), // format: "HH:MM-HH:MM"
+  subject: text("subject"), // 科目（数学、英語など）
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -73,6 +74,7 @@ export const insertBookingSchema = createInsertSchema(bookings).pick({
   studentId: true,
   date: true,
   timeSlot: true,
+  subject: true,
 });
 
 export const updateUserProfileSchema = z.object({
@@ -102,3 +104,31 @@ export type TicketPurchase = {
 };
 
 export const timeSlots = ["16:00-17:30", "18:00-19:30", "20:00-21:30"];
+
+// 学校レベルの定義
+export type SchoolLevel = "elementary" | "junior_high" | "high_school";
+
+// 各学校レベルに対応する科目マップ
+export const subjectsBySchoolLevel: Record<SchoolLevel, string[]> = {
+  elementary: ["国語", "算数", "理科", "社会", "英語"],
+  junior_high: ["国語", "数学", "理科", "社会", "英語"],
+  high_school: [
+    "現代文", "古典", "数学", "物理", "化学", "生物", "地学", 
+    "地理", "日本史（歴史総合を含む）", "世界史（歴史総合を含む）", 
+    "公共", "英語", "情報"
+  ]
+};
+
+// 学年から学校レベルを推測する関数
+export function getSchoolLevelFromGrade(grade: string): SchoolLevel {
+  // 学年文字列から数字部分を抽出
+  const gradeNum = parseInt(grade.replace(/[^0-9]/g, ""));
+  
+  if (gradeNum >= 1 && gradeNum <= 6) {
+    return "elementary"; // 小学生（1〜6年生）
+  } else if (gradeNum >= 7 && gradeNum <= 9 || grade.includes("中学")) {
+    return "junior_high"; // 中学生（7〜9年生または「中学」を含む）
+  } else {
+    return "high_school"; // 上記以外は高校生と判断
+  }
+}

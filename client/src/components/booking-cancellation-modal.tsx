@@ -48,6 +48,12 @@ export function BookingCancellationModal({
             <div className="text-sm text-gray-500">時間</div>
             <div className="font-medium">{booking?.timeSlot}</div>
           </div>
+          {booking?.subject && (
+            <div className="mb-2">
+              <div className="text-sm text-gray-500">科目</div>
+              <div className="font-medium">{booking.subject}</div>
+            </div>
+          )}
           {booking?.studentName && (
             <div>
               <div className="text-sm text-gray-500">生徒</div>

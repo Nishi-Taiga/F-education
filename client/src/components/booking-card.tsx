@@ -33,6 +33,11 @@ export function BookingCard({ booking, onCancelClick }: BookingCardProps) {
       <div className="flex-grow">
         <div className="text-sm font-medium">{formattedDate}</div>
         <div className="text-xs text-gray-600">{booking.timeSlot}</div>
+        {booking.subject && (
+          <div className="text-xs text-gray-600 mt-0.5">
+            科目: <span className="font-medium">{booking.subject}</span>
+          </div>
+        )}
         {booking.studentId && (
           <div className="flex items-center mt-1">
             <User className="h-3 w-3 text-primary mr-1" />
