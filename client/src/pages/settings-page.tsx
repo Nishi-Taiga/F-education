@@ -628,6 +628,7 @@ export default function SettingsPage() {
               <Form {...studentForm}>
                 <form 
                   onSubmit={studentForm.handleSubmit((data) => {
+                    console.log("フォーム送信:", { editingStudentId, data });
                     if (editingStudentId) {
                       // 編集モードの場合は更新処理
                       updateStudentMutation.mutate({ id: editingStudentId, ...data });
@@ -838,8 +839,26 @@ export default function SettingsPage() {
                         <FormItem>
                           <FormLabel>新しいパスワード</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <Input 
+                              type="password" 
+                              placeholder="••••••••" 
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                // 新しいパスワードが変更されたとき、確認欄も検証する
+                                const confirmPassword = passwordForm.getValues("confirmPassword");
+                                if (confirmPassword && e.target.value && confirmPassword !== e.target.value) {
+                                  passwordForm.setError("confirmPassword", {
+                                    type: "manual",
+                                    message: "パスワードが一致しません"
+                                  });
+                                } else if (confirmPassword) {
+                                  passwordForm.clearErrors("confirmPassword");
+                                }
+                              }}
+                            />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -851,8 +870,26 @@ export default function SettingsPage() {
                         <FormItem>
                           <FormLabel>パスワード確認</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <Input 
+                              type="password" 
+                              placeholder="••••••••" 
+                              {...field} 
+                              onChange={(e) => {
+                                field.onChange(e);
+                                // 入力時に新しいパスワードと一致するか確認し、FormMessageを表示する
+                                const newPassword = passwordForm.getValues("newPassword");
+                                if (newPassword && e.target.value && newPassword !== e.target.value) {
+                                  passwordForm.setError("confirmPassword", {
+                                    type: "manual",
+                                    message: "パスワードが一致しません"
+                                  });
+                                } else {
+                                  passwordForm.clearErrors("confirmPassword");
+                                }
+                              }}
+                            />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
