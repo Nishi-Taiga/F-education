@@ -47,7 +47,7 @@ export function BookingConfirmationModal({
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                予約の確定後はチケット1枚を消費します。
+                予約の確定後はチケット{bookings.length}枚を消費します。
               </p>
             </div>
           </div>
