@@ -43,7 +43,7 @@ export function ProtectedRoute({
   
   // 講師ユーザーで、講師プロフィールページ以外にアクセスしようとした場合で、
   // 講師プロフィールを未入力の場合は、講師プロフィール設定ページにリダイレクト
-  if (user.role === "tutor" && !user.tutorProfileCompleted && path !== "/tutor/profile") {
+  if (user.role === "tutor" && !(user as any).tutorProfileCompleted && path !== "/tutor/profile") {
     return (
       <Route path={path}>
         <Redirect to="/tutor/profile" />

@@ -239,6 +239,7 @@ export class MemStorage implements IStorage {
       city: null,
       address: null,
       profileCompleted: false,
+      tutorProfileCompleted: false,
       emailNotifications: true, 
       smsNotifications: false,
       role: insertUser.role || "user", // "user" または "tutor"
