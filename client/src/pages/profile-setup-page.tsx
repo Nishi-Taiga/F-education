@@ -105,18 +105,10 @@ export default function ProfileSetupPage() {
         description: "生徒情報の登録が完了しました",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
-      // 新しい生徒を追加
+      // 生徒登録が完了したらマイページへ進む
       setStudents([...students, data]);
-      // フォームをリセット
-      studentForm.reset({
-        lastName: "",
-        firstName: "",
-        lastNameFurigana: "",
-        firstNameFurigana: "",
-        school: "",
-        grade: "",
-        birthDate: "",
-      });
+      // 登録完了後、マイページに移動
+      navigate("/");
     },
     onError: (error) => {
       toast({
@@ -407,8 +399,9 @@ export default function ProfileSetupPage() {
 
           {/* 生徒情報フォーム */}
           <TabsContent value="student" className="mt-4">
-            <Card className="p-6 mb-6">
+            <Card className="p-6">
               <h3 className="text-lg font-medium mb-4">生徒情報を入力</h3>
+              <p className="text-sm text-gray-500 mb-4">ここでは、基本的な生徒情報を1名分入力してください。兄弟姉妹の登録は後から設定画面で行えます。</p>
 
               <Form {...studentForm}>
                 <form onSubmit={studentForm.handleSubmit(onStudentSubmit)} className="space-y-6">
@@ -545,60 +538,18 @@ export default function ProfileSetupPage() {
                       {addStudentMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          保存中...
+                          登録中...
                         </>
                       ) : (
                         <>
-                          <Plus className="mr-2 h-4 w-4" />
-                          生徒を追加
+                          登録して完了
+                          <ArrowRight className="ml-2 h-4 w-4" />
                         </>
                       )}
                     </Button>
                   </div>
                 </form>
               </Form>
-            </Card>
-
-            {/* 登録済み生徒一覧 */}
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">登録済み生徒</h3>
-              </div>
-
-              {isLoadingStudents ? (
-                <div className="flex justify-center items-center p-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : students && students.length > 0 ? (
-                <ScrollArea className="h-[200px]">
-                  <div className="space-y-4">
-                    {students.map((student) => (
-                      <div key={student.id} className="p-4 border rounded-md bg-gray-50">
-                        <div className="font-medium">{getFullName(student)}</div>
-                        <div className="text-sm text-gray-500">{getFullNameFurigana(student)}</div>
-                        <div className="mt-1 text-sm">
-                          {student.school} | {student.grade}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <div className="text-center p-4 text-gray-500">
-                  生徒が登録されていません
-                </div>
-              )}
-
-              <div className="flex justify-end mt-6">
-                <Button
-                  onClick={goToHomePage}
-                  disabled={students.length === 0}
-                  className="flex items-center"
-                >
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                  完了
-                </Button>
-              </div>
             </Card>
           </TabsContent>
         </Tabs>
