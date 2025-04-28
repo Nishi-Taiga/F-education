@@ -8,12 +8,13 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Loader2, PlusCircle, Search, User, GraduationCap, UsersRound } from "lucide-react";
+import { ArrowLeft, Loader2, PlusCircle, Search, User, GraduationCap, UsersRound, XCircle } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Student, insertStudentSchema, updateUserProfileSchema } from "@shared/schema";
 import { useState } from "react";
 import axios from "axios";
@@ -61,6 +62,8 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [currentTab, setCurrentTab] = useState("profile");
   const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   // 生徒情報のクエリ
   const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
@@ -584,20 +587,11 @@ export default function SettingsPage() {
                           variant="outline" 
                           size="sm"
                           onClick={() => {
-                            // 生徒情報をフォームにセット
-                            studentForm.reset({
-                              lastName: student.lastName,
-                              firstName: student.firstName,
-                              lastNameFurigana: student.lastNameFurigana,
-                              firstNameFurigana: student.firstNameFurigana,
-                              school: student.school,
-                              grade: student.grade,
-                              birthDate: student.birthDate,
-                            });
-                            // 編集モードを設定
+                            // 編集する生徒情報をセット
+                            setEditingStudent(student);
                             setEditingStudentId(student.id);
-                            // 編集フォームまでスクロール
-                            document.getElementById('student-form')?.scrollIntoView({ behavior: 'smooth' });
+                            // ダイアログを開く
+                            setEditDialogOpen(true);
                           }}
                           className="flex items-center"
                         >
@@ -613,29 +607,223 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+            
+            {/* 生徒編集ダイアログ */}
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>生徒情報の編集</DialogTitle>
+                  <DialogDescription>
+                    変更したい項目のみ入力してください。入力がない項目は更新されません。
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <Form {...studentForm}>
+                  <form 
+                    id="edit-student-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = studentForm.getValues();
+                      
+                      // 未入力フィールドを除外した更新データを作成
+                      const updateData: Partial<StudentForm> & { id: number } = {
+                        id: editingStudentId as number,
+                      };
+                      
+                      // 入力されているフィールドのみ更新データに追加
+                      if (formData.lastName) updateData.lastName = formData.lastName;
+                      if (formData.firstName) updateData.firstName = formData.firstName;
+                      if (formData.lastNameFurigana) updateData.lastNameFurigana = formData.lastNameFurigana;
+                      if (formData.firstNameFurigana) updateData.firstNameFurigana = formData.firstNameFurigana;
+                      if (formData.school) updateData.school = formData.school;
+                      if (formData.grade) updateData.grade = formData.grade;
+                      if (formData.birthDate) updateData.birthDate = formData.birthDate;
+                      
+                      // 更新処理を実行
+                      updateStudentMutation.mutate(updateData as any);
+                      setEditDialogOpen(false);
+                    }}
+                    className="space-y-6"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={studentForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>姓</FormLabel>
+                            <FormControl>
+                              <Input placeholder={editingStudent?.lastName} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={studentForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>名</FormLabel>
+                            <FormControl>
+                              <Input placeholder={editingStudent?.firstName} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
-            {/* 生徒情報登録/編集フォーム - 下部に配置 */}
-            <div id="student-form" className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={studentForm.control}
+                        name="lastNameFurigana"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>姓（ふりがな）</FormLabel>
+                            <FormControl>
+                              <Input placeholder={editingStudent?.lastNameFurigana} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={studentForm.control}
+                        name="firstNameFurigana"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>名（ふりがな）</FormLabel>
+                            <FormControl>
+                              <Input placeholder={editingStudent?.firstNameFurigana} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={studentForm.control}
+                        name="school"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>学校</FormLabel>
+                            <FormControl>
+                              <Input placeholder={editingStudent?.school} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={studentForm.control}
+                        name="grade"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>学年</FormLabel>
+                            <FormControl>
+                              <select 
+                                className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                {...field}
+                              >
+                                <option value="">現在: {editingStudent?.grade || "選択してください"}</option>
+                                <option value="小学1年生">小学1年生</option>
+                                <option value="小学2年生">小学2年生</option>
+                                <option value="小学3年生">小学3年生</option>
+                                <option value="小学4年生">小学4年生</option>
+                                <option value="小学5年生">小学5年生</option>
+                                <option value="小学6年生">小学6年生</option>
+                                <option value="中学1年生">中学1年生</option>
+                                <option value="中学2年生">中学2年生</option>
+                                <option value="中学3年生">中学3年生</option>
+                                <option value="高校1年生">高校1年生</option>
+                                <option value="高校2年生">高校2年生</option>
+                                <option value="高校3年生">高校3年生</option>
+                              </select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={studentForm.control}
+                      name="birthDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>生年月日</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="date" 
+                              placeholder={editingStudent?.birthDate} 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </form>
+                </Form>
+                
+                <DialogFooter>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      // ダイアログを閉じる
+                      setEditDialogOpen(false);
+                      // フォームをリセット
+                      studentForm.reset({
+                        lastName: "",
+                        firstName: "",
+                        lastNameFurigana: "",
+                        firstNameFurigana: "",
+                        school: "",
+                        grade: "",
+                        birthDate: "",
+                      });
+                      setEditingStudentId(null);
+                      setEditingStudent(null);
+                    }}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button 
+                    type="submit"
+                    form="edit-student-form"
+                    disabled={updateStudentMutation.isPending}
+                  >
+                    {updateStudentMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        更新中...
+                      </>
+                    ) : (
+                      "更新する"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* 生徒情報の新規登録フォーム - 下部に配置 */}
+            <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-8">
               <h3 className="text-lg font-medium text-gray-900 mb-6">
-                {editingStudentId ? "生徒情報編集" : "生徒情報登録"}
+                生徒情報の新規登録
               </h3>
               <p className="text-sm text-gray-500 mb-4">
-                {editingStudentId 
-                  ? "生徒情報を更新します。" 
-                  : "新しい生徒情報を追加して、兄弟・姉妹の家庭教師予約も可能になります。"}
+                新しい生徒情報を追加して、兄弟・姉妹の家庭教師予約も可能になります。
               </p>
               
               <Form {...studentForm}>
                 <form 
                   onSubmit={studentForm.handleSubmit((data) => {
-                    console.log("フォーム送信:", { editingStudentId, data });
-                    if (editingStudentId) {
-                      // 編集モードの場合は更新処理
-                      updateStudentMutation.mutate({ id: editingStudentId, ...data });
-                    } else {
-                      // 新規追加モードの場合は追加処理
-                      addStudentMutation.mutate(data);
-                    }
+                    // 新規追加処理
+                    addStudentMutation.mutate(data);
                   })} 
                   className="space-y-6"
                 >
@@ -760,42 +948,17 @@ export default function SettingsPage() {
                     )}
                   />
 
-                  <div className="flex justify-end space-x-3">
-                    {editingStudentId && (
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={() => {
-                          // 編集モードをキャンセル
-                          setEditingStudentId(null);
-                          // フォームをリセット
-                          studentForm.reset({
-                            lastName: "",
-                            firstName: "",
-                            lastNameFurigana: "",
-                            firstNameFurigana: "",
-                            school: "",
-                            grade: "",
-                            birthDate: "",
-                          });
-                        }}
-                      >
-                        キャンセル
-                      </Button>
-                    )}
-                    
+                  <div className="flex justify-end">
                     <Button 
                       type="submit" 
-                      disabled={addStudentMutation.isPending || updateStudentMutation.isPending}
+                      disabled={addStudentMutation.isPending}
                       className="flex items-center"
                     >
-                      {addStudentMutation.isPending || updateStudentMutation.isPending ? (
+                      {addStudentMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           保存中...
                         </>
-                      ) : editingStudentId ? (
-                        "更新する"
                       ) : (
                         <>
                           <PlusCircle className="mr-2 h-4 w-4" />
