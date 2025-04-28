@@ -11,7 +11,14 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateTicketCount(userId: number, ticketCount: number): Promise<User>;
   updateUserSettings(userId: number, settings: Partial<User>): Promise<User>;
-  updateUserProfile(userId: number, phone: string, address: string): Promise<User>;
+  updateUserProfile(
+    userId: number, 
+    phone: string, 
+    postalCode: string,
+    prefecture: string,
+    city: string,
+    address: string
+  ): Promise<User>;
   
   // 生徒関連
   getStudentsByUserId(userId: number): Promise<Student[]>;
@@ -67,6 +74,9 @@ export class MemStorage implements IStorage {
       displayName: insertUser.displayName || null,
       email: insertUser.email || null,
       phone: null,
+      postalCode: null,
+      prefecture: null,
+      city: null,
       address: null,
       profileCompleted: false,
       emailNotifications: true, 
@@ -123,7 +133,14 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
-  async updateUserProfile(userId: number, phone: string, address: string): Promise<User> {
+  async updateUserProfile(
+    userId: number, 
+    phone: string, 
+    postalCode: string,
+    prefecture: string,
+    city: string,
+    address: string
+  ): Promise<User> {
     const user = await this.getUser(userId);
     if (!user) {
       throw new Error("User not found");
@@ -132,6 +149,9 @@ export class MemStorage implements IStorage {
     const updatedUser = { 
       ...user, 
       phone, 
+      postalCode,
+      prefecture,
+      city,
       address, 
       profileCompleted: true 
     };

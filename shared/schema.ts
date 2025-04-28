@@ -75,7 +75,10 @@ export const insertBookingSchema = createInsertSchema(bookings).pick({
 
 export const updateUserProfileSchema = z.object({
   phone: z.string().min(10).max(15),
-  address: z.string().min(5),
+  postalCode: z.string().min(7).max(8),
+  prefecture: z.string().min(2),
+  city: z.string().min(2),
+  address: z.string().min(2),
   profileCompleted: z.boolean().optional(),
 });
 

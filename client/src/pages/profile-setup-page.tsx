@@ -14,18 +14,24 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, ArrowRight, Plus, User, GraduationCap, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, User, GraduationCap, Loader2, Search } from "lucide-react";
+import axios from "axios";
 
 // 保護者情報のためのスキーマ
 const parentProfileSchema = z.object({
   phone: z.string().min(10, { message: "電話番号は10桁以上で入力してください" }).max(15),
-  address: z.string().min(5, { message: "ご住所は5文字以上で入力してください" }),
+  postalCode: z.string().min(7, { message: "郵便番号は7桁で入力してください" }).max(8),
+  prefecture: z.string().min(2, { message: "都道府県を入力してください" }),
+  city: z.string().min(2, { message: "市区町村を入力してください" }),
+  address: z.string().min(2, { message: "番地以降の住所を入力してください" }),
 });
 
 // 生徒情報のためのスキーマ
 const studentSchema = z.object({
-  fullName: z.string().min(2, { message: "氏名は2文字以上で入力してください" }),
-  furigana: z.string().min(2, { message: "ふりがなは2文字以上で入力してください" }),
+  lastName: z.string().min(1, { message: "姓を入力してください" }),
+  firstName: z.string().min(1, { message: "名を入力してください" }),
+  lastNameFurigana: z.string().min(1, { message: "姓のふりがなを入力してください" }),
+  firstNameFurigana: z.string().min(1, { message: "名のふりがなを入力してください" }),
   school: z.string().min(2, { message: "学校名は2文字以上で入力してください" }),
   grade: z.string().min(1, { message: "学年を選択してください" }),
   birthDate: z.string().min(1, { message: "生年月日を入力してください" }),

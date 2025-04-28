@@ -169,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     const userId = req.user!.id;
-    const { phone, address } = req.body;
+    const { phone, postalCode, prefecture, city, address } = req.body;
     
     try {
       // バリデーション
@@ -177,11 +177,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid phone number is required" });
       }
       
-      if (!address || address.length < 5) {
+      if (!postalCode || postalCode.length < 7) {
+        return res.status(400).json({ message: "Valid postal code is required" });
+      }
+      
+      if (!prefecture || prefecture.length < 2) {
+        return res.status(400).json({ message: "Valid prefecture is required" });
+      }
+      
+      if (!city || city.length < 2) {
+        return res.status(400).json({ message: "Valid city is required" });
+      }
+      
+      if (!address || address.length < 2) {
         return res.status(400).json({ message: "Valid address is required" });
       }
       
-      const updatedUser = await storage.updateUserProfile(userId, phone, address);
+      const updatedUser = await storage.updateUserProfile(
+        userId, 
+        phone, 
+        postalCode, 
+        prefecture, 
+        city, 
+        address
+      );
       res.json(updatedUser);
     } catch (error) {
       res.status(400).json({ message: "Failed to update profile", error });
@@ -207,18 +226,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     const userId = req.user!.id;
-    const { fullName, furigana, school, grade, birthDate } = req.body;
+    const { 
+      lastName, 
+      firstName, 
+      lastNameFurigana, 
+      firstNameFurigana, 
+      school, 
+      grade, 
+      birthDate 
+    } = req.body;
     
     try {
       // バリデーション
-      if (!fullName || !furigana || !school || !grade || !birthDate) {
+      if (!lastName || !firstName || !lastNameFurigana || !firstNameFurigana || !school || !grade || !birthDate) {
         return res.status(400).json({ message: "All student fields are required" });
       }
       
       const student = await storage.createStudent({
         userId,
-        fullName,
-        furigana,
+        lastName,
+        firstName,
+        lastNameFurigana,
+        firstNameFurigana,
         school,
         grade,
         birthDate
