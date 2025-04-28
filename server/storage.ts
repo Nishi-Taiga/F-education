@@ -69,6 +69,68 @@ export class MemStorage implements IStorage {
     this.currentUserId = 1;
     this.currentBookingId = 1;
     this.currentStudentId = 1;
+    
+    // テストユーザーを自動作成
+    this.createInitialTestData();
+  }
+  
+  // テストデータを作成
+  private async createInitialTestData() {
+    try {
+      // テストユーザーを作成
+      const testUser = await this.createUser({
+        username: "testuser",
+        password: "password123",
+        displayName: "テストユーザー",
+        email: "test@example.com",
+        phone: "090-1234-5678",
+        postalCode: "100-0001",
+        prefecture: "東京都",
+        city: "千代田区",
+        address: "千代田1-1-1",
+        ticketCount: 10,
+        emailNotifications: true,
+        smsNotifications: false
+      });
+      
+      // チケットを追加
+      await this.updateTicketCount(testUser.id, 10);
+      
+      // テスト用の生徒を作成
+      const student1 = await this.createStudent({
+        userId: testUser.id,
+        lastName: "テスト",
+        firstName: "太郎",
+        lastNameFurigana: "てすと",
+        firstNameFurigana: "たろう",
+        gender: "male",
+        school: "テスト小学校",
+        grade: "5年生",
+        birthDate: "2013-05-15"
+      });
+      
+      const student2 = await this.createStudent({
+        userId: testUser.id,
+        lastName: "テスト",
+        firstName: "花子",
+        lastNameFurigana: "てすと",
+        firstNameFurigana: "はなこ",
+        gender: "female",
+        school: "テスト小学校",
+        grade: "3年生",
+        birthDate: "2015-08-23"
+      });
+      
+      console.log("テストユーザーとテストデータを作成しました:", {
+        user: testUser.username,
+        students: [
+          `${student1.lastName} ${student1.firstName}`,
+          `${student2.lastName} ${student2.firstName}`
+        ]
+      });
+    } catch (error) {
+      console.error("テストデータの作成に失敗しました:", error);
+    }
   }
 
   async getUser(id: number): Promise<User | undefined> {
