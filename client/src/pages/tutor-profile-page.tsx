@@ -5,9 +5,10 @@ import { z } from "zod";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tutorProfileSchema, allSubjects } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +40,7 @@ export default function TutorProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [, navigate] = useLocation();
+  const [, setLocation] = useLocation();
   const [isEditing, setIsEditing] = useState(false);
   
   // 既存の講師プロフィール情報を取得
@@ -224,9 +225,15 @@ export default function TutorProfilePage() {
   
   return (
     <div className="container py-8">
+      <Toaster />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">講師プロフィール設定</h1>
         <div className="flex gap-2">
+          {!isEditing && (
+            <Button variant="outline" onClick={() => setIsEditing(true)}>
+              編集する
+            </Button>
+          )}
           <Button variant="outline" onClick={() => navigate("/")}>
             ホームに戻る
           </Button>
@@ -548,15 +555,7 @@ export default function TutorProfilePage() {
                       ) : "プロフィールを保存"}
                     </Button>
                   </>
-                ) : (
-                  <Button 
-                    type="button" 
-                    variant="outline"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    編集する
-                  </Button>
-                )}
+                ) : null}
               </CardFooter>
             </form>
           </Form>
