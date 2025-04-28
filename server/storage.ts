@@ -6,9 +6,13 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
 import { hashPassword } from "./auth";
+import { db, pool } from "./db";
+import { eq, and, sql, isNull, inArray } from "drizzle-orm";
 
 const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // ユーザー関連
@@ -192,10 +196,15 @@ export class MemStorage implements IStorage {
         const dateStr = date.toISOString().split('T')[0];
         
         for (const timeSlot of ["16:00-17:30", "18:00-19:30", "20:00-21:30"]) {
+          // 講師の担当科目からランダムに1つ選択
+          const subjectList = tutor.subjects.split(',');
+          const randomSubject = subjectList[Math.floor(Math.random() * subjectList.length)];
+          
           await this.createTutorShift({
             tutorId: tutor.id,
             date: dateStr,
             timeSlot: timeSlot,
+            subject: randomSubject, // 科目を設定
             isAvailable: Math.random() > 0.3 // ランダムに空き状況を設定
           });
         }
@@ -286,19 +295,42 @@ export class MemStorage implements IStorage {
   }
 
   async createBooking(insertBooking: InsertBooking): Promise<Booking> {
+    // tutorIdとtutorShiftIdが必須なので、未指定の場合はエラー
+    if (!insertBooking.tutorId) {
+      throw new Error("tutorId is required");
+    }
+    if (!insertBooking.tutorShiftId) {
+      throw new Error("tutorShiftId is required");
+    }
+    
     const id = this.currentBookingId++;
     const now = new Date();
+    
+    // 対応するシフトを取得
+    const shift = await this.getTutorShift(insertBooking.tutorShiftId);
+    if (!shift) {
+      throw new Error("Tutor shift not found");
+    }
+    
     const booking: Booking = {
       ...insertBooking,
       id,
+      // studentIdはnullable
       studentId: insertBooking.studentId || null,
-      tutorId: insertBooking.tutorId || null,
-      subject: insertBooking.subject || null,
+      // tutorIdとsubjectはrequired
+      tutorId: insertBooking.tutorId,
+      tutorShiftId: insertBooking.tutorShiftId,
+      subject: insertBooking.subject || shift.subject, // シフトの科目をデフォルトで使用
       status: insertBooking.status || "confirmed",
       createdAt: now
     };
     this.bookings.set(id, booking);
     return booking;
+  }
+  
+  // 追加: シフトIDによるシフト情報取得
+  async getTutorShift(id: number): Promise<TutorShift | undefined> {
+    return this.tutorShifts.get(id);
   }
 
   async updateUserSettings(userId: number, settings: Partial<User>): Promise<User> {
@@ -480,4 +512,310 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  sessionStore: any;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
+  }
+
+  // ユーザー関連
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateTicketCount(userId: number, ticketCount: number): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ ticketCount })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
+  }
+
+  async updateUserSettings(userId: number, settings: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(settings)
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
+  }
+
+  async updateUserProfile(
+    userId: number, 
+    phone: string, 
+    postalCode: string,
+    prefecture: string,
+    city: string,
+    address: string
+  ): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ 
+        phone, 
+        postalCode, 
+        prefecture, 
+        city, 
+        address, 
+        profileCompleted: true 
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
+  }
+
+  // 生徒関連
+  async getStudentsByUserId(userId: number): Promise<Student[]> {
+    return await db
+      .select()
+      .from(students)
+      .where(and(eq(students.userId, userId), eq(students.isActive, true)));
+  }
+
+  async getStudent(id: number): Promise<Student | undefined> {
+    const [student] = await db
+      .select()
+      .from(students)
+      .where(eq(students.id, id));
+    return student;
+  }
+
+  async createStudent(student: InsertStudent): Promise<Student> {
+    const [newStudent] = await db
+      .insert(students)
+      .values(student)
+      .returning();
+    return newStudent;
+  }
+
+  async updateStudent(id: number, studentUpdate: Partial<Student>): Promise<Student> {
+    const [student] = await db
+      .update(students)
+      .set(studentUpdate)
+      .where(eq(students.id, id))
+      .returning();
+    
+    if (!student) {
+      throw new Error("Student not found");
+    }
+    return student;
+  }
+
+  async deleteStudent(id: number): Promise<void> {
+    // 論理削除: isActiveをfalseに設定
+    await db
+      .update(students)
+      .set({ isActive: false })
+      .where(eq(students.id, id));
+  }
+
+  // 講師関連
+  async getTutorByUserId(userId: number): Promise<Tutor | undefined> {
+    const [tutor] = await db
+      .select()
+      .from(tutors)
+      .where(eq(tutors.userId, userId));
+    return tutor;
+  }
+
+  async getTutor(id: number): Promise<Tutor | undefined> {
+    const [tutor] = await db
+      .select()
+      .from(tutors)
+      .where(eq(tutors.id, id));
+    return tutor;
+  }
+
+  async createTutor(tutor: InsertTutor): Promise<Tutor> {
+    const [newTutor] = await db
+      .insert(tutors)
+      .values(tutor)
+      .returning();
+    return newTutor;
+  }
+
+  async updateTutor(id: number, tutorUpdate: Partial<Tutor>): Promise<Tutor> {
+    const [tutor] = await db
+      .update(tutors)
+      .set(tutorUpdate)
+      .where(eq(tutors.id, id))
+      .returning();
+    
+    if (!tutor) {
+      throw new Error("Tutor not found");
+    }
+    return tutor;
+  }
+
+  // 講師シフト関連
+  async getTutorShiftsByTutorId(tutorId: number): Promise<TutorShift[]> {
+    return await db
+      .select()
+      .from(tutorShifts)
+      .where(eq(tutorShifts.tutorId, tutorId));
+  }
+
+  async getTutorShiftsByDate(tutorId: number, date: string): Promise<TutorShift[]> {
+    return await db
+      .select()
+      .from(tutorShifts)
+      .where(and(
+        eq(tutorShifts.tutorId, tutorId),
+        eq(tutorShifts.date, date)
+      ));
+  }
+
+  async createTutorShift(shift: InsertTutorShift): Promise<TutorShift> {
+    const [newShift] = await db
+      .insert(tutorShifts)
+      .values(shift)
+      .returning();
+    return newShift;
+  }
+
+  async updateTutorShift(id: number, shiftUpdate: Partial<TutorShift>): Promise<TutorShift> {
+    const [shift] = await db
+      .update(tutorShifts)
+      .set(shiftUpdate)
+      .where(eq(tutorShifts.id, id))
+      .returning();
+    
+    if (!shift) {
+      throw new Error("Tutor shift not found");
+    }
+    return shift;
+  }
+
+  async deleteTutorShift(id: number): Promise<void> {
+    await db
+      .delete(tutorShifts)
+      .where(eq(tutorShifts.id, id));
+  }
+
+  // 予約関連
+  async getBookingsByUserId(userId: number): Promise<Booking[]> {
+    return await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.userId, userId));
+  }
+
+  async getBookingsByTutorId(tutorId: number): Promise<Booking[]> {
+    return await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.tutorId, tutorId));
+  }
+
+  async getBookingByDateAndTimeSlot(userId: number, date: string, timeSlot: string, studentId?: number): Promise<Booking | undefined> {
+    const query = studentId
+      ? and(
+          eq(bookings.userId, userId),
+          eq(bookings.date, date),
+          eq(bookings.timeSlot, timeSlot),
+          eq(bookings.studentId, studentId)
+        )
+      : and(
+          eq(bookings.userId, userId),
+          eq(bookings.date, date),
+          eq(bookings.timeSlot, timeSlot)
+        );
+
+    const [booking] = await db
+      .select()
+      .from(bookings)
+      .where(query);
+    
+    return booking;
+  }
+
+  async getBookingByDateAndTimeSlotOnly(date: string, timeSlot: string): Promise<Booking[]> {
+    return await db
+      .select()
+      .from(bookings)
+      .where(and(
+        eq(bookings.date, date),
+        eq(bookings.timeSlot, timeSlot)
+      ));
+  }
+
+  async getTutorShift(id: number): Promise<TutorShift | undefined> {
+    const [shift] = await db
+      .select()
+      .from(tutorShifts)
+      .where(eq(tutorShifts.id, id));
+    return shift;
+  }
+  
+  async createBooking(booking: InsertBooking): Promise<Booking> {
+    // tutorIdとtutorShiftIdが必須なので、未指定の場合はエラー
+    if (!booking.tutorId) {
+      throw new Error("tutorId is required");
+    }
+    if (!booking.tutorShiftId) {
+      throw new Error("tutorShiftId is required");
+    }
+    
+    // 対応するシフトを取得
+    const shift = await this.getTutorShift(booking.tutorShiftId);
+    if (!shift) {
+      throw new Error("Tutor shift not found");
+    }
+    
+    // シフトの科目をデフォルトで使用
+    const bookingData = {
+      ...booking,
+      subject: booking.subject || shift.subject
+    };
+    
+    const [newBooking] = await db
+      .insert(bookings)
+      .values(bookingData)
+      .returning();
+    return newBooking;
+  }
+
+  async getBookingById(id: number): Promise<Booking | undefined> {
+    const [booking] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, id));
+    return booking;
+  }
+
+  async deleteBooking(id: number): Promise<void> {
+    await db
+      .delete(bookings)
+      .where(eq(bookings.id, id));
+  }
+}
+
+// MemStorageからDatabaseStorageに変更
+export const storage = new DatabaseStorage();

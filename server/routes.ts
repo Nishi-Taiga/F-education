@@ -598,11 +598,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAvailable: isAvailable !== undefined ? isAvailable : existingShift.isAvailable 
         });
       } else {
+        // 講師情報から担当科目を取得
+        const tutorProfile = await storage.getTutor(tutor.id);
+        if (!tutorProfile || !tutorProfile.subjects) {
+          return res.status(400).json({ error: "講師の担当科目が設定されていません" });
+        }
+        
+        // デフォルトでは最初の科目を設定
+        const subjectList = tutorProfile.subjects.split(',');
+        const defaultSubject = subjectList[0];
+        
         // 新規作成
         shift = await storage.createTutorShift({
           tutorId: tutor.id,
           date,
           timeSlot,
+          subject: defaultSubject, // 追加: シフトの科目を設定
           isAvailable: isAvailable !== undefined ? isAvailable : true
         });
       }
