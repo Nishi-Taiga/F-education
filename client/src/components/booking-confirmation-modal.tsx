@@ -63,6 +63,12 @@ export function BookingConfirmationModal({
                   生徒が選択されていません
                 </div>
               )}
+              {booking.tutorName && (
+                <div className="flex items-center mt-2 text-sm text-blue-600">
+                  <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
+                  <span>{booking.tutorName}</span>
+                </div>
+              )}
             </div>
           ))}
         </div>

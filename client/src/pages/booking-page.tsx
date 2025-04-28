@@ -168,7 +168,7 @@ export default function BookingPage() {
     }
     
     // 選択済みの講師情報を取得
-    const tutor = availableTutors.find(t => t.tutorId === selectedTutorId && t.shiftId === selectedShiftId);
+    const tutor = availableTutors?.find((t: any) => t.tutorId === selectedTutorId && t.shiftId === selectedShiftId);
     if (!tutor) {
       toast({
         title: "講師情報が見つかりません",
@@ -482,7 +482,7 @@ export default function BookingPage() {
                         </div>
                       ) : availableTutors && availableTutors.length > 0 ? (
                         <div className="space-y-3">
-                          {availableTutors.map((tutor) => (
+                          {availableTutors.map((tutor: any) => (
                             <div 
                               key={`${tutor.tutorId}-${tutor.shiftId}`}
                               className={`p-3 border rounded-md cursor-pointer transition-colors 
