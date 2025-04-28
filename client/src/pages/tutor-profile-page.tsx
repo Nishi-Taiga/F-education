@@ -98,12 +98,14 @@ export default function TutorProfilePage() {
       
       // 成功メッセージ
       toast({
-        title: "プロフィールを保存しました",
+        title: "保存しました",
         description: "講師プロフィールが正常に更新されました。",
+        variant: "default",
+        duration: 3000,
       });
       
       // リダイレクトフラグを設定
-      console.log("リダイレクトフラグをONに設定");
+      console.log("保存完了状態に設定");
       setRedirectPending(true);
       
       return result;
@@ -118,11 +120,14 @@ export default function TutorProfilePage() {
         title: "エラーが発生しました",
         description: error instanceof Error ? error.message : "不明なエラーが発生しました",
         variant: "destructive",
+        duration: 5000,
       });
       
       throw error;
     } finally {
-      setIsSaving(false);
+      setTimeout(() => {
+        setIsSaving(false);
+      }, 500); // 少し遅延させてボタンの状態変化を見えるようにする
     }
   };
   
@@ -222,11 +227,6 @@ export default function TutorProfilePage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">講師プロフィール設定</h1>
         <div className="flex gap-2">
-          {tutorProfile && !isEditing && (
-            <Button variant="outline" onClick={() => setIsEditing(true)}>
-              編集する
-            </Button>
-          )}
           <Button variant="outline" onClick={() => navigate("/")}>
             ホームに戻る
           </Button>
