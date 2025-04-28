@@ -372,16 +372,24 @@ export default function BookingPage() {
                     )}
                   </div>
                   
-                  <div className="text-sm text-gray-600 mb-2">時間帯を選択</div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm text-gray-600">時間帯を選択</div>
+                    {studentSchoolLevel && !selectedSubject && (
+                      <div className="text-xs text-amber-600 font-medium">
+                        ※先に科目を選択してください
+                      </div>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     {timeSlots.map((timeSlot) => {
                       const isBooked = isTimeSlotBooked(selectedDate, timeSlot);
+                      const needsSubjectSelection = studentSchoolLevel !== null && !selectedSubject;
                       return (
                         <Button
                           key={timeSlot}
                           variant="outline"
                           className="w-full justify-start h-auto py-3"
-                          disabled={isBooked}
+                          disabled={isBooked || needsSubjectSelection}
                           onClick={() => handleTimeSlotSelection(timeSlot)}
                         >
                           <span className="font-medium">{timeSlot}</span>

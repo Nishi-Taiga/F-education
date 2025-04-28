@@ -108,7 +108,7 @@ export class MemStorage implements IStorage {
       // チケットを追加
       await this.updateTicketCount(testUser.id, 10);
       
-      // テスト用の生徒を作成
+      // テスト用の生徒を作成（高校生と小学生）
       const student1 = await this.createStudent({
         userId: testUser.id,
         lastName: "テスト",
@@ -116,9 +116,9 @@ export class MemStorage implements IStorage {
         lastNameFurigana: "てすと",
         firstNameFurigana: "たろう",
         gender: "male",
-        school: "テスト小学校",
-        grade: "5年生",
-        birthDate: "2013-05-15"
+        school: "テスト高等学校",
+        grade: "高校2年生",
+        birthDate: "2008-05-15"
       });
       
       const student2 = await this.createStudent({
