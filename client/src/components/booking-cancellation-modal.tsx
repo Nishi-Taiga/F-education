@@ -1,1 +1,85 @@
-null
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Loader2, AlertCircle } from "lucide-react";
+import { format, parse } from "date-fns";
+import { ja } from "date-fns/locale";
+import { type Booking } from "@shared/schema";
+
+interface BookingCancellationModalProps {
+  isOpen: boolean;
+  booking: Booking & { studentName?: string };
+  onCancel: () => void;
+  onConfirm: () => void;
+  isProcessing: boolean;
+}
+
+export function BookingCancellationModal({
+  isOpen,
+  booking,
+  onCancel,
+  onConfirm,
+  isProcessing
+}: BookingCancellationModalProps) {
+  // 日付をフォーマット
+  const formattedDate = booking?.date 
+    ? format(parse(booking.date, "yyyy-MM-dd", new Date()), "yyyy年M月d日 (E)", { locale: ja })
+    : "";
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isProcessing && onCancel()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+            予約をキャンセルしますか？
+          </DialogTitle>
+          <DialogDescription className="text-gray-600 mt-2">
+            以下の授業予約をキャンセルします。キャンセルすると、チケットが1枚返却されます。
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="border rounded-lg p-4 my-4 bg-gray-50">
+          <div className="mb-2">
+            <div className="text-sm text-gray-500">日付</div>
+            <div className="font-medium">{formattedDate}</div>
+          </div>
+          <div className="mb-2">
+            <div className="text-sm text-gray-500">時間</div>
+            <div className="font-medium">{booking?.timeSlot}</div>
+          </div>
+          {booking?.studentName && (
+            <div>
+              <div className="text-sm text-gray-500">生徒</div>
+              <div className="font-medium">{booking.studentName}</div>
+            </div>
+          )}
+        </div>
+        
+        <DialogFooter className="sm:justify-between">
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={isProcessing}
+          >
+            キャンセルしない
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                処理中...
+              </>
+            ) : (
+              "予約をキャンセルする"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

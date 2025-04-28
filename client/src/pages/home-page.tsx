@@ -223,7 +223,8 @@ export default function HomePage() {
                     booking={{
                       ...booking,
                       studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-                    }} 
+                    }}
+                    onCancelClick={handleCancelClick}
                   />
                 ))
               ) : (
@@ -277,6 +278,17 @@ export default function HomePage() {
           </Button>
         </div>
       </main>
+      
+      {/* キャンセル確認モーダル */}
+      {selectedBooking && (
+        <BookingCancellationModal 
+          isOpen={showCancellationModal}
+          booking={selectedBooking}
+          onCancel={() => setShowCancellationModal(false)}
+          onConfirm={confirmCancellation}
+          isProcessing={cancelBookingMutation.isPending}
+        />
+      )}
     </div>
   );
 }
