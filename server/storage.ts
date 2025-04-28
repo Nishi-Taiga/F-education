@@ -1,6 +1,7 @@
 import { users, bookings, students, type User, type InsertUser, type Booking, type InsertBooking, type Student, type InsertStudent } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import { hashPassword } from "./auth";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -77,18 +78,29 @@ export class MemStorage implements IStorage {
   // テストデータを作成
   private async createInitialTestData() {
     try {
+      // パスワードをハッシュ化
+      const hashedPassword = await hashPassword("password123");
+      
       // テストユーザーを作成
       const testUser = await this.createUser({
         username: "testuser",
-        password: "password123",
+        password: hashedPassword,
         displayName: "テストユーザー",
-        email: "test@example.com",
-        phone: "090-1234-5678",
-        postalCode: "100-0001",
-        prefecture: "東京都",
-        city: "千代田区",
-        address: "千代田1-1-1",
-        ticketCount: 10,
+        email: "test@example.com"
+      });
+      
+      // プロフィール情報を更新
+      await this.updateUserProfile(
+        testUser.id,
+        "090-1234-5678",
+        "100-0001",
+        "東京都",
+        "千代田区",
+        "千代田1-1-1"
+      );
+      
+      // 通知設定を更新
+      await this.updateUserSettings(testUser.id, {
         emailNotifications: true,
         smsNotifications: false
       });
