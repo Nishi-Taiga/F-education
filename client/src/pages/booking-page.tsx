@@ -170,10 +170,23 @@ export default function BookingPage() {
     }
   };
 
-  // Check if a date has any already-booked time slots
+  // Check if a date has any already-booked time slots for the selected student
   const getDateAvailability = (date: string): {hasAvailable: boolean, isFullyBooked: boolean} => {
     if (!existingBookings) return {hasAvailable: true, isFullyBooked: false};
     
+    // 生徒が選択されている場合、その生徒の予約のみをチェック
+    if (selectedStudentId) {
+      const bookedSlotsForStudentAndDate = existingBookings.filter(
+        b => b.date === date && b.studentId === selectedStudentId
+      );
+      
+      return {
+        hasAvailable: bookedSlotsForStudentAndDate.length < timeSlots.length,
+        isFullyBooked: bookedSlotsForStudentAndDate.length === timeSlots.length
+      };
+    }
+    
+    // 生徒が選択されていない場合は、すべての予約をチェック（古い動作と互換性を保つ）
     const bookedSlotsForDate = existingBookings.filter(b => b.date === date);
     return {
       hasAvailable: bookedSlotsForDate.length < timeSlots.length,
@@ -181,9 +194,20 @@ export default function BookingPage() {
     };
   };
 
-  // Check if a specific time slot on a date is already booked
+  // Check if a specific time slot on a date is already booked for the selected student
   const isTimeSlotBooked = (date: string, timeSlot: string): boolean => {
     if (!existingBookings) return false;
+    
+    // 生徒が選択されている場合は、その生徒の予約のみをチェック
+    if (selectedStudentId) {
+      return existingBookings.some(
+        b => b.date === date && 
+          b.timeSlot === timeSlot && 
+          b.studentId === selectedStudentId
+      );
+    }
+    
+    // 生徒が選択されていない場合は、すべての予約をチェック（古い動作と互換性を保つ）
     return existingBookings.some(b => b.date === date && b.timeSlot === timeSlot);
   };
 
