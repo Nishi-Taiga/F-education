@@ -26,6 +26,7 @@ export interface IStorage {
   getStudent(id: number): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
   updateStudent(id: number, student: Partial<Student>): Promise<Student>;
+  deleteStudent(id: number): Promise<void>;
   
   // 予約関連
   getBookingsByUserId(userId: number): Promise<Booking[]>;
@@ -296,6 +297,18 @@ export class MemStorage implements IStorage {
     const updatedStudent = { ...student, ...studentUpdate };
     this.students.set(id, updatedStudent);
     return updatedStudent;
+  }
+  
+  async deleteStudent(id: number): Promise<void> {
+    // 生徒情報を取得
+    const student = await this.getStudent(id);
+    if (!student) {
+      throw new Error("Student not found");
+    }
+    
+    // 物理削除ではなく、isActiveフラグをfalseに設定する（論理削除）
+    const updatedStudent = { ...student, isActive: false };
+    this.students.set(id, updatedStudent);
   }
 }
 

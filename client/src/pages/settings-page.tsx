@@ -64,6 +64,7 @@ export default function SettingsPage() {
   const [currentTab, setCurrentTab] = useState("profile");
   const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -274,6 +275,32 @@ export default function SettingsPage() {
       toast({
         title: "エラー",
         description: `生徒情報の更新に失敗しました: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // 生徒の削除
+  const deleteStudentMutation = useMutation({
+    mutationFn: async (studentId: number) => {
+      const res = await apiRequest("DELETE", `/api/students/${studentId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      toast({
+        title: "生徒情報が削除されました",
+        description: "生徒情報の削除が完了しました",
+      });
+      // 編集モードを解除
+      setEditingStudentId(null);
+      // 削除ダイアログを閉じる
+      setDeleteDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "エラー",
+        description: `生徒情報の削除に失敗しました: ${error}`,
         variant: "destructive",
       });
     },
@@ -586,20 +613,33 @@ export default function SettingsPage() {
                             {student.school} | {student.grade}
                           </div>
                         </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            // 編集する生徒情報をセット
-                            setEditingStudent(student);
-                            setEditingStudentId(student.id);
-                            // ダイアログを開く
-                            setEditDialogOpen(true);
-                          }}
-                          className="flex items-center"
-                        >
-                          編集
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              // 編集する生徒情報をセット
+                              setEditingStudent(student);
+                              setEditingStudentId(student.id);
+                              // ダイアログを開く
+                              setEditDialogOpen(true);
+                            }}
+                          >
+                            編集
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => {
+                              // 削除確認ダイアログ表示の前に生徒情報をセット
+                              setEditingStudent(student);
+                              setEditingStudentId(student.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            削除
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -610,6 +650,54 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+            
+            {/* 生徒削除確認ダイアログ */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>生徒情報の削除</DialogTitle>
+                  <DialogDescription>
+                    {editingStudent && (
+                      <>
+                        <span className="font-medium">{getFullName(editingStudent)}</span>
+                        さんの情報を削除します。この操作は元に戻せません。
+                      </>
+                    )}
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="py-4">
+                  <p className="text-sm text-gray-700">
+                    削除した生徒のデータは復元できません。また、この生徒に関連する予約情報はすべて無効になります。
+                  </p>
+                </div>
+                
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                    キャンセル
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="destructive"
+                    onClick={() => {
+                      if (editingStudentId) {
+                        deleteStudentMutation.mutate(editingStudentId);
+                      }
+                    }}
+                    disabled={deleteStudentMutation.isPending}
+                  >
+                    {deleteStudentMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        削除中...
+                      </>
+                    ) : (
+                      "削除する"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             
             {/* 生徒編集ダイアログ */}
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

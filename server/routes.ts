@@ -346,6 +346,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Failed to update student", error });
     }
   });
+  
+  // 生徒情報の削除（論理削除）
+  app.delete("/api/students/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const studentId = parseInt(req.params.id);
+    
+    try {
+      // 生徒の存在チェック
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      
+      // 権限チェック
+      if (student.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to delete this student" });
+      }
+      
+      // 生徒を削除（論理削除）
+      await storage.deleteStudent(studentId);
+      
+      res.json({ message: "Student deleted successfully" });
+    } catch (error) {
+      res.status(400).json({ message: "Failed to delete student", error });
+    }
+  });
 
   const httpServer = createServer(app);
 
