@@ -190,93 +190,187 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Calendar */}
-        <Card className="p-4 mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">予約済み授業</h3>
-          </div>
-          
-          {isLoadingBookings || isLoadingStudents ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        {/* Calendar - 生徒のみに表示 */}
+        {user?.role !== 'tutor' && (
+          <Card className="p-4 mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">予約済み授業</h3>
             </div>
-          ) : (
-            <CalendarView 
-              bookings={bookings?.map(booking => ({
-                ...booking,
-                studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-              })) || []} 
-            />
-          )}
-          
-          <div className="mt-4">
-            <div className="text-sm text-gray-600 mb-2">授業予定</div>
-            <div className="space-y-2">
-              {isLoadingBookings || isLoadingStudents ? (
-                <div className="flex justify-center items-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                </div>
-              ) : bookings && bookings.length > 0 ? (
-                bookings.map((booking) => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={{
-                      ...booking,
-                      studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-                    }}
-                    onCancelClick={handleCancelClick}
-                  />
-                ))
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  予約済みの授業はありません
-                </div>
-              )}
+            
+            {isLoadingBookings || isLoadingStudents ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <CalendarView 
+                bookings={bookings?.map(booking => ({
+                  ...booking,
+                  studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+                })) || []} 
+              />
+            )}
+            
+            <div className="mt-4">
+              <div className="text-sm text-gray-600 mb-2">授業予定</div>
+              <div className="space-y-2">
+                {isLoadingBookings || isLoadingStudents ? (
+                  <div className="flex justify-center items-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                ) : bookings && bookings.length > 0 ? (
+                  bookings.map((booking) => (
+                    <BookingCard 
+                      key={booking.id} 
+                      booking={{
+                        ...booking,
+                        studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+                      }}
+                      onCancelClick={handleCancelClick}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    予約済みの授業はありません
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        )}
+        
+        {/* 講師向けダッシュボード要約 */}
+        {user?.role === 'tutor' && (
+          <Card className="p-4 mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">講師ダッシュボード</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-500 mb-1">今日の授業</h4>
+                <p className="text-2xl font-bold">0</p>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-500 mb-1">今週の授業</h4>
+                <p className="text-2xl font-bold">0</p>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-500 mb-1">合計シフト</h4>
+                <p className="text-2xl font-bold">0</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-center py-6 bg-gray-50 rounded-lg">
+              <div className="text-center">
+                <p className="text-gray-600 mb-2">講師機能を使用するには、各ページでデータを設定してください</p>
+                <div className="flex space-x-4 mt-2">
+                  <Button variant="outline" size="sm" onClick={() => navigate("/tutor/profile")}>
+                    プロフィール設定
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => navigate("/tutor/schedule")}>
+                    シフト登録
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button
-            variant="outline"
-            className="h-auto py-6 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-            onClick={() => navigate("/tickets")}
-          >
-            <div className="flex flex-col items-center justify-center">
-              <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-3">
-                <Ticket className="h-6 w-6 text-primary" />
-              </div>
-              <span className="text-gray-900 font-medium">チケット購入</span>
+        {user?.role === 'tutor' ? (
+          // 講師用メニュー
+          <div>
+            <h3 className="text-xl font-semibold mb-4">講師メニュー</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Button
+                variant="outline"
+                className="h-auto py-6 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                onClick={() => navigate("/tutor/profile")}
+              >
+                <div className="flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-3">
+                    <svg className="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <span className="text-gray-900 font-medium">プロフィール設定</span>
+                </div>
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="h-auto py-6 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                onClick={() => navigate("/tutor/schedule")}
+              >
+                <div className="flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-3">
+                    <CalendarCheck className="h-6 w-6 text-primary" />
+                  </div>
+                  <span className="text-gray-900 font-medium">シフト管理</span>
+                </div>
+              </Button>
+              
+              <Button
+                variant="outline"
+                className="h-auto py-6 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                onClick={() => navigate("/tutor/bookings")}
+              >
+                <div className="flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-3">
+                    <svg className="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    </svg>
+                  </div>
+                  <span className="text-gray-900 font-medium">予約確認</span>
+                </div>
+              </Button>
             </div>
-          </Button>
-          
-          <Button
-            variant="outline"
-            className="h-auto py-6 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-            onClick={() => navigate("/booking")}
-          >
-            <div className="flex flex-col items-center justify-center">
-              <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-3">
-                <CalendarCheck className="h-6 w-6 text-primary" />
+          </div>
+        ) : (
+          // 生徒用メニュー
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button
+              variant="outline"
+              className="h-auto py-6 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+              onClick={() => navigate("/tickets")}
+            >
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-3">
+                  <Ticket className="h-6 w-6 text-primary" />
+                </div>
+                <span className="text-gray-900 font-medium">チケット購入</span>
               </div>
-              <span className="text-gray-900 font-medium">授業予約</span>
-            </div>
-          </Button>
-          
-          <Button
-            variant="outline"
-            className="h-auto py-6 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-            onClick={() => navigate("/settings")}
-          >
-            <div className="flex flex-col items-center justify-center">
-              <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-3">
-                <Settings className="h-6 w-6 text-primary" />
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="h-auto py-6 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+              onClick={() => navigate("/booking")}
+            >
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-3">
+                  <CalendarCheck className="h-6 w-6 text-primary" />
+                </div>
+                <span className="text-gray-900 font-medium">授業予約</span>
               </div>
-              <span className="text-gray-900 font-medium">設定</span>
-            </div>
-          </Button>
-        </div>
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="h-auto py-6 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+              onClick={() => navigate("/settings")}
+            >
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-3">
+                  <Settings className="h-6 w-6 text-primary" />
+                </div>
+                <span className="text-gray-900 font-medium">設定</span>
+              </div>
+            </Button>
+          </div>
+        )}
       </main>
       
       {/* キャンセル確認モーダル */}
