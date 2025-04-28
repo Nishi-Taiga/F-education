@@ -7,6 +7,45 @@ import { insertBookingSchema, timeSlots } from "@shared/schema";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
+  
+  // 科目、日付、時間帯に基づいて利用可能な講師を取得するAPIエンドポイント
+  app.get("/api/tutors/available", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const { subject, date, timeSlot } = req.query;
+    
+    if (!subject || !date || !timeSlot) {
+      return res.status(400).json({ 
+        error: "Missing required query parameters: subject, date, and timeSlot are required" 
+      });
+    }
+    
+    if (!timeSlots.includes(timeSlot as string)) {
+      return res.status(400).json({ error: "Invalid time slot" });
+    }
+    
+    try {
+      const tutors = await storage.getAvailableTutorsBySubject(
+        subject as string, 
+        date as string, 
+        timeSlot as string
+      );
+      
+      // レスポンスを整形
+      const formattedTutors = tutors.map(tutor => ({
+        tutorId: tutor.tutor_id,
+        name: `${tutor.last_name} ${tutor.first_name}`,
+        university: tutor.university,
+        shiftId: tutor.shift_id,
+        subject: tutor.shift_subject
+      }));
+      
+      res.json(formattedTutors);
+    } catch (error) {
+      console.error("Error fetching available tutors:", error);
+      res.status(500).json({ error: "Failed to fetch available tutors" });
+    }
+  });
 
   // Get bookings for a user
   app.get("/api/bookings", async (req, res) => {
@@ -68,6 +107,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existingBooking) {
           return res.status(400).json({ message: "この日時には既に予約があります" });
         }
+      }
+      
+      // 講師のシフトをチェック
+      if (!bookingData.tutorShiftId) {
+        return res.status(400).json({ message: "講師シフトIDが必要です" });
+      }
+      
+      // シフト情報を取得
+      const shift = await storage.getTutorShift(bookingData.tutorShiftId);
+      if (!shift) {
+        return res.status(400).json({ message: "指定されたシフトが見つかりません" });
+      }
+      
+      // シフトが利用可能かチェック
+      if (!shift.isAvailable) {
+        return res.status(400).json({ message: "選択したシフトは利用できません" });
+      }
+      
+      // 指定された講師が本当にそのシフトを持っているかチェック
+      if (shift.tutorId !== bookingData.tutorId) {
+        return res.status(400).json({ message: "選択したシフトとチューターが一致しません" });
+      }
+      
+      // 科目が指定されていない場合はシフトの科目を使用
+      if (!bookingData.subject) {
+        bookingData.subject = shift.subject;
+      } else if (bookingData.subject !== shift.subject) {
+        return res.status(400).json({ 
+          message: "選択した科目がシフトの科目と一致しません。選択した科目: " + 
+                  bookingData.subject + ", シフトの科目: " + shift.subject 
+        });
       }
       
       // Create booking and deduct one ticket

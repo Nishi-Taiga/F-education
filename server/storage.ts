@@ -75,6 +75,48 @@ export class MemStorage implements IStorage {
   currentTutorId: number;
   currentTutorShiftId: number;
   
+  // 科目、日付、時間帯に基づいて利用可能な講師を取得
+  async getAvailableTutorsBySubject(subject: string, date: string, timeSlot: string): Promise<any[]> {
+    const results = [];
+    
+    for (const tutor of this.tutors.values()) {
+      // 講師の担当科目に指定された科目が含まれているか確認
+      if (tutor.subjects.includes(subject) && tutor.isActive) {
+        // 講師のシフトを確認
+        const shifts = Array.from(this.tutorShifts.values()).filter(
+          shift => 
+            shift.tutorId === tutor.id && 
+            shift.date === date && 
+            shift.timeSlot === timeSlot && 
+            shift.isAvailable === true &&
+            shift.subject === subject
+        );
+        
+        // 利用可能なシフトがある場合は結果に追加
+        for (const shift of shifts) {
+          const user = this.users.get(tutor.userId);
+          if (user) {
+            results.push({
+              tutor_id: tutor.id,
+              last_name: tutor.lastName,
+              first_name: tutor.firstName,
+              university: tutor.university,
+              subjects: tutor.subjects,
+              user_id: user.id,
+              shift_id: shift.id,
+              date: shift.date,
+              time_slot: shift.timeSlot,
+              shift_subject: shift.subject,
+              is_available: shift.isAvailable
+            });
+          }
+        }
+      }
+    }
+    
+    return results;
+  }
+  
   // 予約IDで予約を取得
   async getBookingById(id: number): Promise<Booking | undefined> {
     return this.bookings.get(id);
@@ -520,6 +562,45 @@ export class DatabaseStorage implements IStorage {
       pool, 
       createTableIfMissing: true 
     });
+  }
+  
+  // 科目、日付、時間帯に基づいて利用可能な講師を取得
+  async getAvailableTutorsBySubject(subject: string, date: string, timeSlot: string): Promise<any[]> {
+    // 1. 指定した科目を教えられる講師を探す
+    // 2. その講師の中から、指定した日時に利用可能なシフトを持つ講師を探す
+    
+    try {
+      // SQL文で直接結合クエリを実行
+      const result = await db.execute(sql`
+        SELECT 
+          t.id AS tutor_id, 
+          t.last_name, 
+          t.first_name, 
+          t.university, 
+          t.subjects,
+          u.id AS user_id,
+          ts.id AS shift_id,
+          ts.date,
+          ts.time_slot,
+          ts.subject AS shift_subject,
+          ts.is_available
+        FROM tutors t
+        JOIN users u ON t.user_id = u.id
+        JOIN tutor_shifts ts ON t.id = ts.tutor_id
+        WHERE 
+          t.subjects LIKE ${`%${subject}%`} AND
+          ts.date = ${date} AND
+          ts.time_slot = ${timeSlot} AND
+          ts.is_available = true AND
+          ts.subject = ${subject} AND
+          t.is_active = true
+      `);
+      
+      return result.rows;
+    } catch (error) {
+      console.error("講師検索エラー:", error);
+      return [];
+    }
   }
 
   // ユーザー関連
