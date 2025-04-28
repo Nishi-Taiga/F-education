@@ -321,8 +321,6 @@ export default function HomePage() {
                   <span className="text-gray-900 font-medium">シフト管理</span>
                 </div>
               </Button>
-              
-
             </div>
           </div>
         ) : (

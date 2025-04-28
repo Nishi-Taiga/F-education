@@ -70,22 +70,31 @@ export default function TutorProfilePage() {
   // 講師プロフィールの保存用ミューテーション
   const saveProfileMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("保存リクエスト開始:", data);
       const res = await apiRequest("POST", "/api/tutor/profile", data);
-      return await res.json();
+      const result = await res.json();
+      console.log("保存レスポンス:", result);
+      return result;
     },
     onSuccess: () => {
+      console.log("保存成功");
       queryClient.invalidateQueries({ queryKey: ["/api/tutor/profile"] });
       toast({
         title: "プロフィールを保存しました",
         description: "講師プロフィールが正常に更新されました。",
       });
+      // ホームページにリダイレクト
+      navigate("/");
     },
     onError: (error: Error) => {
+      console.error("保存エラー:", error);
       toast({
         title: "エラーが発生しました",
         description: error.message,
         variant: "destructive",
       });
+      // エラー時に編集モードを維持
+      setIsEditing(true);
     }
   });
   
@@ -157,10 +166,10 @@ export default function TutorProfilePage() {
     try {
       // 編集モードを終了
       setIsEditing(false);
-      // 講師プロフィールを保存
+      // 講師プロフィールを保存（リダイレクトはonSuccessで行う）
       await saveProfileMutation.mutateAsync(tutorData);
-      // 保存完了後にホームページに遷移
-      navigate("/");
+      // 注：ここでのnavigate("/")は冗長なので削除
+      // リダイレクトはonSuccess内で処理
     } catch (error) {
       console.error("プロフィール保存エラー:", error);
       // エラーがあった場合は編集モードを維持
