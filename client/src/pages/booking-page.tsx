@@ -25,6 +25,8 @@ type BookingSelection = {
   date: string;
   formattedDate: string;
   timeSlot: string;
+  studentId?: number;
+  studentName?: string;
 };
 
 export default function BookingPage() {
@@ -35,12 +37,22 @@ export default function BookingPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [selectedBookings, setSelectedBookings] = useState<BookingSelection[]>([]);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+
+  // 登録済みの生徒一覧を取得
+  const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
+    queryKey: ["/api/students"],
+  });
 
   const { data: existingBookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
 
-  type BookingData = { date: string, timeSlot: string };
+  type BookingData = { 
+    date: string;
+    timeSlot: string;
+    studentId?: number;
+  };
   
   const bookingMutation = useMutation({
     mutationFn: async (bookingsData: BookingData[]) => {
@@ -111,10 +123,24 @@ export default function BookingPage() {
       );
       
       if (!isDuplicate) {
+        // 生徒情報を取得
+        let studentId: number | undefined = undefined;
+        let studentName: string | undefined = undefined;
+        
+        if (selectedStudentId && students) {
+          const selectedStudent = students.find(student => student.id === selectedStudentId);
+          if (selectedStudent) {
+            studentId = selectedStudent.id;
+            studentName = `${selectedStudent.lastName} ${selectedStudent.firstName}`;
+          }
+        }
+        
         setSelectedBookings([...selectedBookings, {
           date: selectedDate,
           formattedDate,
-          timeSlot
+          timeSlot,
+          studentId,
+          studentName
         }]);
       }
     }
@@ -135,7 +161,8 @@ export default function BookingPage() {
       // Create an array of booking data to send to the mutation
       const bookingsData = selectedBookings.map(booking => ({
         date: booking.date,
-        timeSlot: booking.timeSlot
+        timeSlot: booking.timeSlot,
+        studentId: booking.studentId
       }));
       
       // Process all bookings
@@ -194,6 +221,40 @@ export default function BookingPage() {
             <Card className="p-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium text-gray-900">カレンダー</h3>
+              </div>
+              
+              {/* 生徒選択 */}
+              <div className="mb-6">
+                <div className="flex items-center space-x-2 mb-2">
+                  <User className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-medium">受講する生徒を選択</Label>
+                </div>
+                {isLoadingStudents ? (
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm text-gray-500">生徒情報を読み込み中...</span>
+                  </div>
+                ) : students && students.length > 0 ? (
+                  <Select 
+                    value={selectedStudentId?.toString() || ""} 
+                    onValueChange={(value) => setSelectedStudentId(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="生徒を選択してください" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {students.map((student) => (
+                        <SelectItem key={student.id} value={student.id.toString()}>
+                          {student.lastName} {student.firstName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700">
+                    生徒情報が登録されていません。設定ページから生徒情報を登録してください。
+                  </div>
+                )}
               </div>
               
               {isLoadingBookings ? (
@@ -267,6 +328,12 @@ export default function BookingPage() {
                       <div>
                         <div className="font-medium">{booking.formattedDate}</div>
                         <div className="text-sm text-gray-600">{booking.timeSlot}</div>
+                        {booking.studentName && (
+                          <div className="flex items-center mt-1">
+                            <User className="h-3 w-3 text-primary mr-1" />
+                            <span className="text-xs text-primary">{booking.studentName}</span>
+                          </div>
+                        )}
                       </div>
                       <Button 
                         variant="ghost" 
