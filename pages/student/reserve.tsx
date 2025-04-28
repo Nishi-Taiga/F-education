@@ -34,7 +34,7 @@ export default function ReservePage() {
       return;
     }
 
-    // Supabase に予約を保存
+    // Supabase に予約を保
     const { error } = await supabase
       .from('reservations')
       .insert([
