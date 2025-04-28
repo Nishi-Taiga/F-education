@@ -211,7 +211,7 @@ export default function TutorProfilePage() {
                       <FormItem>
                         <FormLabel>姓</FormLabel>
                         <FormControl>
-                          <Input placeholder="例：山田" {...field} />
+                          <Input placeholder="例：山田" {...field} disabled={!isEditing} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -225,7 +225,7 @@ export default function TutorProfilePage() {
                       <FormItem>
                         <FormLabel>名</FormLabel>
                         <FormControl>
-                          <Input placeholder="例：太郎" {...field} />
+                          <Input placeholder="例：太郎" {...field} disabled={!isEditing} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -241,7 +241,7 @@ export default function TutorProfilePage() {
                       <FormItem>
                         <FormLabel>姓（ふりがな）</FormLabel>
                         <FormControl>
-                          <Input placeholder="例：やまだ" {...field} />
+                          <Input placeholder="例：やまだ" {...field} disabled={!isEditing} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -255,7 +255,7 @@ export default function TutorProfilePage() {
                       <FormItem>
                         <FormLabel>名（ふりがな）</FormLabel>
                         <FormControl>
-                          <Input placeholder="例：たろう" {...field} />
+                          <Input placeholder="例：たろう" {...field} disabled={!isEditing} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -270,7 +270,7 @@ export default function TutorProfilePage() {
                     <FormItem>
                       <FormLabel>大学名</FormLabel>
                       <FormControl>
-                        <Input placeholder="例：東京大学" {...field} />
+                        <Input placeholder="例：東京大学" {...field} disabled={!isEditing} />
                       </FormControl>
                       <FormDescription>
                         現在通っている、または卒業した大学名を入力してください。
@@ -293,6 +293,7 @@ export default function TutorProfilePage() {
                           // 18歳以上の方のみ登録可能に制限
                           max={new Date(new Date().setFullYear(new Date().getFullYear() - 18))
                             .toISOString().split('T')[0]} 
+                          disabled={!isEditing}
                         />
                       </FormControl>
                       <FormDescription>
@@ -457,14 +458,41 @@ export default function TutorProfilePage() {
                 />
               </div>
               
-              <CardFooter className="flex justify-end px-0">
-                <Button 
-                  type="submit" 
-                  disabled={isLoading || saveProfileMutation.isPending}
-                  className="w-full md:w-auto"
-                >
-                  {saveProfileMutation.isPending ? "保存中..." : "プロフィールを保存"}
-                </Button>
+              <CardFooter className="flex justify-end gap-2 px-0">
+                {isEditing ? (
+                  <>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={() => {
+                        if (tutorProfile) {
+                          setIsEditing(false);
+                          // フォームを元の値に戻す
+                          const subjects = tutorProfile.subjects ? tutorProfile.subjects.split(",") : [];
+                          form.reset({
+                            lastName: tutorProfile.lastName || "",
+                            firstName: tutorProfile.firstName || "",
+                            lastNameFurigana: tutorProfile.lastNameFurigana || "",
+                            firstNameFurigana: tutorProfile.firstNameFurigana || "",
+                            university: tutorProfile.university || "",
+                            birthDate: tutorProfile.birthDate || "",
+                            selectedSubjects: subjects,
+                            bio: tutorProfile.bio || ""
+                          });
+                        }
+                      }}
+                    >
+                      キャンセル
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={isLoading || saveProfileMutation.isPending}
+                      className="w-full md:w-auto"
+                    >
+                      {saveProfileMutation.isPending ? "保存中..." : "プロフィールを保存"}
+                    </Button>
+                  </>
+                ) : null}
               </CardFooter>
             </form>
           </Form>
