@@ -1,0 +1,453 @@
+import { useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { useLocation } from "wouter";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { tutorProfileSchema, allSubjects } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+
+// 講師プロフィールのフォーム用スキーマ
+const tutorFormSchema = tutorProfileSchema.extend({
+  selectedSubjects: z.array(z.string()).min(1, "少なくとも1つの科目を選択してください")
+});
+
+type FormValues = z.infer<typeof tutorFormSchema>;
+
+export default function TutorProfilePage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+  
+  // 既存の講師プロフィール情報を取得
+  const { data: tutorProfile, isLoading } = useQuery({
+    queryKey: ["/api/tutor/profile"],
+    queryFn: async () => {
+      try {
+        const response = await fetch("/api/tutor/profile");
+        if (response.status === 404) {
+          return null; // 新規登録の場合
+        }
+        if (!response.ok) {
+          throw new Error("Failed to fetch tutor profile");
+        }
+        return await response.json();
+      } catch (error) {
+        // 404の場合は新規登録画面として表示するため、エラーにしない
+        if (error instanceof Error && error.message.includes("404")) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    retry: false,
+    enabled: !!user && user.role === "tutor"
+  });
+  
+  // 講師プロフィールの保存用ミューテーション
+  const saveProfileMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/tutor/profile", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tutor/profile"] });
+      toast({
+        title: "プロフィールを保存しました",
+        description: "講師プロフィールが正常に更新されました。",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "エラーが発生しました",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // フォームの初期化
+  const form = useForm<FormValues>({
+    resolver: zodResolver(tutorFormSchema),
+    defaultValues: {
+      lastName: "",
+      firstName: "",
+      lastNameFurigana: "",
+      firstNameFurigana: "",
+      university: "",
+      birthDate: "",
+      selectedSubjects: [],
+      bio: ""
+    }
+  });
+  
+  // プロフィールデータの取得後にフォームの値を設定
+  useEffect(() => {
+    if (tutorProfile) {
+      const subjects = tutorProfile.subjects ? tutorProfile.subjects.split(",") : [];
+      
+      form.reset({
+        lastName: tutorProfile.lastName || "",
+        firstName: tutorProfile.firstName || "",
+        lastNameFurigana: tutorProfile.lastNameFurigana || "",
+        firstNameFurigana: tutorProfile.firstNameFurigana || "",
+        university: tutorProfile.university || "",
+        birthDate: tutorProfile.birthDate || "",
+        selectedSubjects: subjects,
+        bio: tutorProfile.bio || ""
+      });
+    }
+  }, [tutorProfile, form]);
+  
+  // 講師でない場合はリダイレクト
+  useEffect(() => {
+    if (user && user.role !== "tutor") {
+      navigate("/");
+    }
+  }, [user, navigate]);
+  
+  // フォーム送信時の処理
+  const onSubmit = async (data: FormValues) => {
+    // 科目の配列をカンマ区切りの文字列に変換
+    const subjects = data.selectedSubjects.join(",");
+    
+    // APIに送信するデータを構築
+    const tutorData = {
+      lastName: data.lastName,
+      firstName: data.firstName,
+      lastNameFurigana: data.lastNameFurigana,
+      firstNameFurigana: data.firstNameFurigana,
+      university: data.university,
+      birthDate: data.birthDate,
+      subjects,
+      bio: data.bio
+    };
+    
+    // 講師プロフィールを保存
+    saveProfileMutation.mutate(tutorData);
+  };
+  
+  if (!user) {
+    return null; // ユーザー情報がない場合は何も表示しない
+  }
+  
+  return (
+    <div className="container py-8">
+      <h1 className="text-2xl font-bold mb-6">講師プロフィール設定</h1>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>講師情報の登録</CardTitle>
+          <CardDescription>
+            講師として活動するために必要な情報を入力してください。
+            この情報は生徒とその保護者に公開されます。
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* 基本情報 */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">基本情報</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>姓</FormLabel>
+                        <FormControl>
+                          <Input placeholder="例：山田" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>名</FormLabel>
+                        <FormControl>
+                          <Input placeholder="例：太郎" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="lastNameFurigana"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>姓（ふりがな）</FormLabel>
+                        <FormControl>
+                          <Input placeholder="例：やまだ" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="firstNameFurigana"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>名（ふりがな）</FormLabel>
+                        <FormControl>
+                          <Input placeholder="例：たろう" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="university"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>大学名</FormLabel>
+                      <FormControl>
+                        <Input placeholder="例：東京大学" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        現在通っている、または卒業した大学名を入力してください。
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="birthDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>生年月日</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          // 20歳以上の方のみ登録可能に制限
+                          max={new Date(new Date().setFullYear(new Date().getFullYear() - 20))
+                            .toISOString().split('T')[0]} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        講師は20歳以上の方のみ登録可能です。
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <Separator />
+              
+              {/* 指導科目 */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">指導可能な科目</h3>
+                <FormField
+                  control={form.control}
+                  name="selectedSubjects"
+                  render={() => (
+                    <FormItem>
+                      <div className="mb-4">
+                        <FormLabel className="text-base">担当科目</FormLabel>
+                        <FormDescription>
+                          指導可能な科目を選択してください。複数選択できます。
+                        </FormDescription>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {/* 小学生の科目 */}
+                        <div className="space-y-2">
+                          <Label className="font-medium">小学生</Label>
+                          {allSubjects
+                            .filter(subject => subject.startsWith("小学"))
+                            .map(subject => (
+                              <FormField
+                                key={subject}
+                                control={form.control}
+                                name="selectedSubjects"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem
+                                      key={subject}
+                                      className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(subject)}
+                                          onCheckedChange={(checked) => {
+                                            return checked
+                                              ? field.onChange([...field.value, subject])
+                                              : field.onChange(
+                                                  field.value?.filter(
+                                                    (value) => value !== subject
+                                                  )
+                                                )
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal">
+                                        {subject.replace("小学", "")}
+                                      </FormLabel>
+                                    </FormItem>
+                                  )
+                                }}
+                              />
+                            ))}
+                        </div>
+                        
+                        {/* 中学生の科目 */}
+                        <div className="space-y-2">
+                          <Label className="font-medium">中学生</Label>
+                          {allSubjects
+                            .filter(subject => subject.startsWith("中学"))
+                            .map(subject => (
+                              <FormField
+                                key={subject}
+                                control={form.control}
+                                name="selectedSubjects"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem
+                                      key={subject}
+                                      className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(subject)}
+                                          onCheckedChange={(checked) => {
+                                            return checked
+                                              ? field.onChange([...field.value, subject])
+                                              : field.onChange(
+                                                  field.value?.filter(
+                                                    (value) => value !== subject
+                                                  )
+                                                )
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal">
+                                        {subject.replace("中学", "")}
+                                      </FormLabel>
+                                    </FormItem>
+                                  )
+                                }}
+                              />
+                            ))}
+                        </div>
+                        
+                        {/* 高校生の科目 */}
+                        <div className="space-y-2">
+                          <Label className="font-medium">高校生</Label>
+                          {allSubjects
+                            .filter(subject => subject.startsWith("高校"))
+                            .map(subject => (
+                              <FormField
+                                key={subject}
+                                control={form.control}
+                                name="selectedSubjects"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem
+                                      key={subject}
+                                      className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(subject)}
+                                          onCheckedChange={(checked) => {
+                                            return checked
+                                              ? field.onChange([...field.value, subject])
+                                              : field.onChange(
+                                                  field.value?.filter(
+                                                    (value) => value !== subject
+                                                  )
+                                                )
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal">
+                                        {subject.replace("高校", "")}
+                                      </FormLabel>
+                                    </FormItem>
+                                  )
+                                }}
+                              />
+                            ))}
+                        </div>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <Separator />
+              
+              {/* 自己紹介 */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">自己紹介</h3>
+                <FormField
+                  control={form.control}
+                  name="bio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>自己紹介文</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="経歴や指導方針、得意分野などを入力してください"
+                          className="resize-none h-40"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        生徒や保護者に向けた自己紹介を記入してください。
+                        特に得意な科目や指導方法などのアピールポイントを含めると良いでしょう。
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <CardFooter className="flex justify-end px-0">
+                <Button 
+                  type="submit" 
+                  disabled={isLoading || saveProfileMutation.isPending}
+                  className="w-full md:w-auto"
+                >
+                  {saveProfileMutation.isPending ? "保存中..." : "プロフィールを保存"}
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

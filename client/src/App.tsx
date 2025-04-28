@@ -10,6 +10,9 @@ import TicketPurchasePage from "@/pages/ticket-purchase-page";
 import BookingPage from "@/pages/booking-page";
 import SettingsPage from "@/pages/settings-page";
 import ProfileSetupPage from "@/pages/profile-setup-page";
+import TutorProfilePage from "@/pages/tutor-profile-page";
+import TutorSchedulePage from "@/pages/tutor-schedule-page";
+import TutorBookingsPage from "@/pages/tutor-bookings-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 
@@ -21,6 +24,10 @@ function Router() {
       <ProtectedRoute path="/booking" component={BookingPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/profile-setup" component={ProfileSetupPage} skipProfileCheck={true} />
+      {/* 講師関連のルート */}
+      <ProtectedRoute path="/tutor/profile" component={TutorProfilePage} />
+      <ProtectedRoute path="/tutor/schedule" component={TutorSchedulePage} />
+      <ProtectedRoute path="/tutor/bookings" component={TutorBookingsPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

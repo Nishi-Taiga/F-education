@@ -406,6 +406,233 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 講師関連のAPI
+  
+  // 講師プロフィール情報の取得
+  app.get("/api/tutor/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    
+    // ユーザーが講師かどうかチェック
+    if (req.user!.role !== "tutor") {
+      return res.status(403).json({ message: "Access denied. User is not a tutor" });
+    }
+    
+    try {
+      const tutor = await storage.getTutorByUserId(userId);
+      if (!tutor) {
+        return res.status(404).json({ message: "Tutor profile not found" });
+      }
+      
+      res.json(tutor);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to fetch tutor profile", error });
+    }
+  });
+  
+  // 講師プロフィールの作成・更新
+  app.post("/api/tutor/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    
+    // ユーザーが講師かどうかチェック
+    if (req.user!.role !== "tutor") {
+      return res.status(403).json({ message: "Access denied. User is not a tutor" });
+    }
+    
+    try {
+      // 必須フィールドの確認
+      const { 
+        lastName, 
+        firstName, 
+        lastNameFurigana, 
+        firstNameFurigana, 
+        university, 
+        birthDate,
+        subjects,
+        bio 
+      } = req.body;
+      
+      if (!lastName || !firstName || !lastNameFurigana || !firstNameFurigana || !university || !birthDate || !subjects) {
+        return res.status(400).json({ message: "All required fields must be provided" });
+      }
+      
+      // 既存の講師プロフィールを確認
+      let tutor = await storage.getTutorByUserId(userId);
+      
+      if (tutor) {
+        // 更新
+        tutor = await storage.updateTutor(tutor.id, {
+          lastName,
+          firstName,
+          lastNameFurigana,
+          firstNameFurigana,
+          university,
+          birthDate,
+          subjects,
+          bio: bio || tutor.bio
+        });
+      } else {
+        // 新規作成
+        tutor = await storage.createTutor({
+          userId,
+          lastName,
+          firstName,
+          lastNameFurigana,
+          firstNameFurigana,
+          university,
+          birthDate,
+          subjects,
+          bio: bio || null
+        });
+      }
+      
+      res.json(tutor);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to save tutor profile", error });
+    }
+  });
+  
+  // 講師のシフト一覧取得
+  app.get("/api/tutor/shifts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    
+    // ユーザーが講師かどうかチェック
+    if (req.user!.role !== "tutor") {
+      return res.status(403).json({ message: "Access denied. User is not a tutor" });
+    }
+    
+    try {
+      const tutor = await storage.getTutorByUserId(userId);
+      if (!tutor) {
+        return res.status(404).json({ message: "Tutor profile not found" });
+      }
+      
+      const shifts = await storage.getTutorShiftsByTutorId(tutor.id);
+      res.json(shifts);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to fetch tutor shifts", error });
+    }
+  });
+  
+  // 特定日の講師シフト取得
+  app.get("/api/tutor/shifts/:date", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    
+    // ユーザーが講師かどうかチェック
+    if (req.user!.role !== "tutor") {
+      return res.status(403).json({ message: "Access denied. User is not a tutor" });
+    }
+    
+    try {
+      const tutor = await storage.getTutorByUserId(userId);
+      if (!tutor) {
+        return res.status(404).json({ message: "Tutor profile not found" });
+      }
+      
+      const date = req.params.date;
+      // 日付形式のバリデーション (YYYY-MM-DD)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD" });
+      }
+      
+      const shifts = await storage.getTutorShiftsByDate(tutor.id, date);
+      res.json(shifts);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to fetch tutor shifts for date", error });
+    }
+  });
+  
+  // 講師シフトの設定
+  app.post("/api/tutor/shifts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    
+    // ユーザーが講師かどうかチェック
+    if (req.user!.role !== "tutor") {
+      return res.status(403).json({ message: "Access denied. User is not a tutor" });
+    }
+    
+    try {
+      const tutor = await storage.getTutorByUserId(userId);
+      if (!tutor) {
+        return res.status(404).json({ message: "Tutor profile not found" });
+      }
+      
+      const { date, timeSlot, isAvailable } = req.body;
+      
+      // バリデーション
+      if (!date || !timeSlot) {
+        return res.status(400).json({ message: "Date and timeSlot are required" });
+      }
+      
+      // 日付形式のバリデーション (YYYY-MM-DD)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD" });
+      }
+      
+      // 時間枠の検証
+      if (!timeSlots.includes(timeSlot)) {
+        return res.status(400).json({ message: "Invalid time slot" });
+      }
+      
+      // 既存のシフトをチェック
+      const existingShifts = await storage.getTutorShiftsByDate(tutor.id, date);
+      const existingShift = existingShifts.find(shift => shift.timeSlot === timeSlot);
+      
+      let shift;
+      if (existingShift) {
+        // 更新
+        shift = await storage.updateTutorShift(existingShift.id, { 
+          isAvailable: isAvailable !== undefined ? isAvailable : existingShift.isAvailable 
+        });
+      } else {
+        // 新規作成
+        shift = await storage.createTutorShift({
+          tutorId: tutor.id,
+          date,
+          timeSlot,
+          isAvailable: isAvailable !== undefined ? isAvailable : true
+        });
+      }
+      
+      res.json(shift);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update tutor shift", error });
+    }
+  });
+  
+  // 講師の予約一覧取得
+  app.get("/api/tutor/bookings", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    
+    // ユーザーが講師かどうかチェック
+    if (req.user!.role !== "tutor") {
+      return res.status(403).json({ message: "Access denied. User is not a tutor" });
+    }
+    
+    try {
+      const tutor = await storage.getTutorByUserId(userId);
+      if (!tutor) {
+        return res.status(404).json({ message: "Tutor profile not found" });
+      }
+      
+      const bookings = await storage.getBookingsByTutorId(tutor.id);
+      res.json(bookings);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to fetch tutor bookings", error });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

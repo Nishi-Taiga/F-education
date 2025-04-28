@@ -8,9 +8,9 @@ export function ProtectedRoute({
   skipProfileCheck,
 }: {
   path: string;
-  component: () => React.JSX.Element;
+  component: () => React.JSX.Element | null;
   skipProfileCheck?: boolean;
-}) {
+}): React.JSX.Element {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
