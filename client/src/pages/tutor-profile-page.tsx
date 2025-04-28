@@ -70,13 +70,13 @@ export default function TutorProfilePage() {
   // リダイレクト状態管理
   const [redirectPending, setRedirectPending] = useState(false);
   
-  // リダイレクト処理用のエフェクト
+  // 保存完了時の効果音処理（リダイレクトは削除）
   useEffect(() => {
     if (redirectPending) {
+      // リダイレクトではなく、単に保存完了をマーク
       const timer = setTimeout(() => {
-        console.log('リダイレクト実行中...');
-        window.location.href = '/'; // 直接locationを使用
-      }, 1500);
+        setRedirectPending(false);
+      }, 3000); // 3秒後にフラグをリセット
       return () => clearTimeout(timer);
     }
   }, [redirectPending]);
@@ -228,7 +228,7 @@ export default function TutorProfilePage() {
             </Button>
           )}
           <Button variant="outline" onClick={() => navigate("/")}>
-            マイページに戻る
+            ホームに戻る
           </Button>
         </div>
       </div>
