@@ -49,6 +49,8 @@ export interface IStorage {
   createTutorShift(shift: InsertTutorShift): Promise<TutorShift>;
   updateTutorShift(id: number, shift: Partial<TutorShift>): Promise<TutorShift>;
   deleteTutorShift(id: number): Promise<void>;
+  getTutorShift(id: number): Promise<TutorShift | undefined>;
+  getAvailableTutorsBySubject(subject: string, date: string, timeSlot: string): Promise<any[]>;
   
   // 予約関連
   getBookingsByUserId(userId: number): Promise<Booking[]>;
@@ -570,33 +572,35 @@ export class DatabaseStorage implements IStorage {
     // 2. その講師の中から、指定した日時に利用可能なシフトを持つ講師を探す
     
     try {
-      // SQL文で直接結合クエリを実行
-      const result = await db.execute(sql`
+      // SQLクエリを実行
+      const query = sql`
         SELECT 
-          t.id AS tutor_id, 
-          t.last_name, 
-          t.first_name, 
-          t.university, 
+          t.id AS tutor_id,
+          t.last_name,
+          t.first_name,
+          t.university,
           t.subjects,
           u.id AS user_id,
+          u.display_name,
           ts.id AS shift_id,
           ts.date,
           ts.time_slot,
           ts.subject AS shift_subject,
           ts.is_available
-        FROM tutors t
+        FROM tutor_shifts ts
+        JOIN tutors t ON ts.tutor_id = t.id
         JOIN users u ON t.user_id = u.id
-        JOIN tutor_shifts ts ON t.id = ts.tutor_id
         WHERE 
-          t.subjects LIKE ${`%${subject}%`} AND
           ts.date = ${date} AND
           ts.time_slot = ${timeSlot} AND
           ts.is_available = true AND
           ts.subject = ${subject} AND
-          t.is_active = true
-      `);
+          t.is_active = true AND
+          t.subjects LIKE ${`%${subject}%`}
+      `;
       
-      return result.rows;
+      const result = await db.execute(query);
+      return result.rows || [];
     } catch (error) {
       console.error("講師検索エラー:", error);
       return [];
@@ -799,6 +803,14 @@ export class DatabaseStorage implements IStorage {
       .delete(tutorShifts)
       .where(eq(tutorShifts.id, id));
   }
+  
+  async getTutorShift(id: number): Promise<TutorShift | undefined> {
+    const [shift] = await db
+      .select()
+      .from(tutorShifts)
+      .where(eq(tutorShifts.id, id));
+    return shift;
+  }
 
   // 予約関連
   async getBookingsByUserId(userId: number): Promise<Booking[]> {
@@ -847,14 +859,6 @@ export class DatabaseStorage implements IStorage {
       ));
   }
 
-  async getTutorShift(id: number): Promise<TutorShift | undefined> {
-    const [shift] = await db
-      .select()
-      .from(tutorShifts)
-      .where(eq(tutorShifts.id, id));
-    return shift;
-  }
-  
   async createBooking(booking: InsertBooking): Promise<Booking> {
     // tutorIdとtutorShiftIdが必須なので、未指定の場合はエラー
     if (!booking.tutorId) {
