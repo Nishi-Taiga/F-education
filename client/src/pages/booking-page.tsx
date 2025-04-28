@@ -318,12 +318,16 @@ export default function BookingPage() {
               </div>
               
               {/* 科目選択 */}
-              {selectedStudentId && studentSchoolLevel && (
-                <div className="mb-6">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                    <Label className="text-sm font-medium">授業科目を選択</Label>
+              <div className="mb-6">
+                <div className="flex items-center space-x-2 mb-2">
+                  <BookOpen className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-medium">授業科目を選択</Label>
+                </div>
+                {!selectedStudentId ? (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
+                    先に生徒を選択してください
                   </div>
+                ) : studentSchoolLevel ? (
                   <Select
                     value={selectedSubject || ""}
                     onValueChange={(value) => setSelectedSubject(value)}
@@ -339,12 +343,31 @@ export default function BookingPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-              )}
+                ) : (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
+                    生徒の学年情報が取得できませんでした
+                  </div>
+                )}
+              </div>
               
               {isLoadingBookings ? (
                 <div className="flex justify-center items-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : !selectedStudentId || !selectedSubject ? (
+                <div className="border rounded-md p-6 text-center bg-gray-50">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">授業の予約には以下の情報が必要です</p>
+                  <ul className="text-sm text-gray-600 mb-4 space-y-1">
+                    <li className="flex items-center justify-center">
+                      <User className="h-3.5 w-3.5 text-primary mr-1.5" />
+                      <span>受講する生徒</span>
+                    </li>
+                    <li className="flex items-center justify-center">
+                      <BookOpen className="h-3.5 w-3.5 text-primary mr-1.5" />
+                      <span>授業科目</span>
+                    </li>
+                  </ul>
                 </div>
               ) : (
                 <CalendarView 
@@ -361,7 +384,25 @@ export default function BookingPage() {
             <Card className="p-4 mb-4">
               <h3 className="text-lg font-medium text-gray-900 mb-4">授業時間を選択</h3>
               
-              {selectedDate ? (
+              {!selectedStudentId || !selectedSubject ? (
+                <div className="p-4 border rounded-md bg-gray-50 text-center">
+                  <p className="text-gray-600 mb-2">授業時間を選択するには</p>
+                  <ul className="text-sm text-gray-600 mb-2 space-y-1">
+                    {!selectedStudentId && (
+                      <li className="flex items-center justify-center">
+                        <User className="h-3.5 w-3.5 text-amber-500 mr-1.5" />
+                        <span className="text-amber-700">生徒を選択してください</span>
+                      </li>
+                    )}
+                    {selectedStudentId && !selectedSubject && (
+                      <li className="flex items-center justify-center">
+                        <BookOpen className="h-3.5 w-3.5 text-amber-500 mr-1.5" />
+                        <span className="text-amber-700">科目を選択してください</span>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              ) : selectedDate ? (
                 <div id="date-selection" className="mb-4">
                   <div className="text-sm text-gray-600 mb-2">選択した日付</div>
                   <div className="font-medium text-gray-900 mb-4">
@@ -374,22 +415,16 @@ export default function BookingPage() {
                   
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-sm text-gray-600">時間帯を選択</div>
-                    {studentSchoolLevel && !selectedSubject && (
-                      <div className="text-xs text-amber-600 font-medium">
-                        ※先に科目を選択してください
-                      </div>
-                    )}
                   </div>
                   <div className="space-y-2">
                     {timeSlots.map((timeSlot) => {
                       const isBooked = isTimeSlotBooked(selectedDate, timeSlot);
-                      const needsSubjectSelection = studentSchoolLevel !== null && !selectedSubject;
                       return (
                         <Button
                           key={timeSlot}
                           variant="outline"
                           className="w-full justify-start h-auto py-3"
-                          disabled={isBooked || needsSubjectSelection}
+                          disabled={isBooked}
                           onClick={() => handleTimeSlotSelection(timeSlot)}
                         >
                           <span className="font-medium">{timeSlot}</span>
