@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   emailNotifications: boolean("email_notifications").default(true),
   smsNotifications: boolean("sms_notifications").default(false),
   ticketCount: integer("ticket_count").default(0).notNull(),
+  role: text("role").default("user"), // "user" or "tutor"
 });
 
 export const students = pgTable("students", {
@@ -34,13 +35,42 @@ export const students = pgTable("students", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// 講師テーブル
+export const tutors = pgTable("tutors", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  lastName: text("last_name").notNull(),
+  firstName: text("first_name").notNull(),
+  lastNameFurigana: text("last_name_furigana").notNull(),
+  firstNameFurigana: text("first_name_furigana").notNull(),
+  university: text("university").notNull(), // 出身または在学中の大学名
+  birthDate: text("birth_date").notNull(), // in YYYY-MM-DD format
+  subjects: text("subjects").notNull(), // カンマ区切りの科目リスト
+  bio: text("bio"), // 自己紹介文
+  isActive: boolean("is_active").default(true),
+  profileCompleted: boolean("profile_completed").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 講師シフトテーブル
+export const tutorShifts = pgTable("tutor_shifts", {
+  id: serial("id").primaryKey(),
+  tutorId: integer("tutor_id").notNull().references(() => tutors.id),
+  date: text("date").notNull(), // in YYYY-MM-DD format
+  timeSlot: text("time_slot").notNull(), // format: "HH:MM-HH:MM"
+  isAvailable: boolean("is_available").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   studentId: integer("student_id").references(() => students.id),
+  tutorId: integer("tutor_id").references(() => tutors.id),
   date: text("date").notNull(), // in YYYY-MM-DD format
   timeSlot: text("time_slot").notNull(), // format: "HH:MM-HH:MM"
   subject: text("subject"), // 科目（数学、英語など）
+  status: text("status").default("confirmed"), // "confirmed", "cancelled"
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -55,6 +85,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   city: true,
   address: true,
   profileCompleted: true,
+  role: true,
 });
 
 export const insertStudentSchema = createInsertSchema(students).pick({
@@ -69,12 +100,33 @@ export const insertStudentSchema = createInsertSchema(students).pick({
   birthDate: true,
 });
 
+export const insertTutorSchema = createInsertSchema(tutors).pick({
+  userId: true,
+  lastName: true,
+  firstName: true,
+  lastNameFurigana: true,
+  firstNameFurigana: true,
+  university: true,
+  birthDate: true,
+  subjects: true,
+  bio: true,
+});
+
+export const insertTutorShiftSchema = createInsertSchema(tutorShifts).pick({
+  tutorId: true,
+  date: true,
+  timeSlot: true,
+  isAvailable: true,
+});
+
 export const insertBookingSchema = createInsertSchema(bookings).pick({
   userId: true,
   studentId: true,
+  tutorId: true,
   date: true,
   timeSlot: true,
   subject: true,
+  status: true,
 });
 
 export const updateUserProfileSchema = z.object({
@@ -86,16 +138,34 @@ export const updateUserProfileSchema = z.object({
   profileCompleted: z.boolean().optional(),
 });
 
+export const tutorProfileSchema = z.object({
+  lastName: z.string().min(1, "姓を入力してください"),
+  firstName: z.string().min(1, "名を入力してください"),
+  lastNameFurigana: z.string().min(1, "姓（ふりがな）を入力してください"),
+  firstNameFurigana: z.string().min(1, "名（ふりがな）を入力してください"),
+  university: z.string().min(1, "大学名を入力してください"),
+  birthDate: z.string().min(1, "生年月日を選択してください"),
+  subjects: z.string().min(1, "担当科目を選択してください"),
+  bio: z.string().optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type Student = typeof students.$inferSelect;
 
+export type InsertTutor = z.infer<typeof insertTutorSchema>;
+export type Tutor = typeof tutors.$inferSelect;
+
+export type InsertTutorShift = z.infer<typeof insertTutorShiftSchema>;
+export type TutorShift = typeof tutorShifts.$inferSelect;
+
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
 
 export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
+export type TutorProfile = z.infer<typeof tutorProfileSchema>;
 
 export type TicketPurchase = {
   userId: number;
@@ -118,6 +188,17 @@ export const subjectsBySchoolLevel: Record<SchoolLevel, string[]> = {
     "公共", "英語", "情報"
   ]
 };
+
+// すべての科目リスト（講師の担当科目選択用）
+export const allSubjects = [
+  // 小学生
+  "小学国語", "小学算数", "小学理科", "小学社会", "小学英語",
+  // 中学生
+  "中学国語", "中学数学", "中学理科", "中学社会", "中学英語",
+  // 高校生
+  "高校現代文", "高校古典", "高校数学", "高校物理", "高校化学", "高校生物", "高校地学", 
+  "高校地理", "高校日本史", "高校世界史", "高校公共", "高校英語", "高校情報"
+];
 
 // 学年から学校レベルを推測する関数
 export function getSchoolLevelFromGrade(grade: string): SchoolLevel {

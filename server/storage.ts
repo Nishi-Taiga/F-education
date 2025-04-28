@@ -1,4 +1,9 @@
-import { users, bookings, students, type User, type InsertUser, type Booking, type InsertBooking, type Student, type InsertStudent } from "@shared/schema";
+import { 
+  users, bookings, students, tutors, tutorShifts,
+  type User, type InsertUser, type Booking, type InsertBooking, 
+  type Student, type InsertStudent, type Tutor, type InsertTutor,
+  type TutorShift, type InsertTutorShift
+} from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { hashPassword } from "./auth";
@@ -28,8 +33,22 @@ export interface IStorage {
   updateStudent(id: number, student: Partial<Student>): Promise<Student>;
   deleteStudent(id: number): Promise<void>;
   
+  // 講師関連
+  getTutorByUserId(userId: number): Promise<Tutor | undefined>;
+  getTutor(id: number): Promise<Tutor | undefined>;
+  createTutor(tutor: InsertTutor): Promise<Tutor>;
+  updateTutor(id: number, tutor: Partial<Tutor>): Promise<Tutor>;
+  
+  // 講師シフト関連
+  getTutorShiftsByTutorId(tutorId: number): Promise<TutorShift[]>;
+  getTutorShiftsByDate(tutorId: number, date: string): Promise<TutorShift[]>;
+  createTutorShift(shift: InsertTutorShift): Promise<TutorShift>;
+  updateTutorShift(id: number, shift: Partial<TutorShift>): Promise<TutorShift>;
+  deleteTutorShift(id: number): Promise<void>;
+  
   // 予約関連
   getBookingsByUserId(userId: number): Promise<Booking[]>;
+  getBookingsByTutorId(tutorId: number): Promise<Booking[]>;
   getBookingByDateAndTimeSlot(userId: number, date: string, timeSlot: string, studentId?: number): Promise<Booking | undefined>;
   getBookingByDateAndTimeSlotOnly(date: string, timeSlot: string): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
@@ -43,10 +62,14 @@ export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private bookings: Map<number, Booking>;
   private students: Map<number, Student>;
+  private tutors: Map<number, Tutor>;
+  private tutorShifts: Map<number, TutorShift>;
   sessionStore: any; // session.SessionStore型を回避するためにany型を使用
   currentUserId: number;
   currentBookingId: number;
   currentStudentId: number;
+  currentTutorId: number;
+  currentTutorShiftId: number;
   
   // 予約IDで予約を取得
   async getBookingById(id: number): Promise<Booking | undefined> {
@@ -65,12 +88,16 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.bookings = new Map();
     this.students = new Map();
+    this.tutors = new Map();
+    this.tutorShifts = new Map();
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
     this.currentUserId = 1;
     this.currentBookingId = 1;
     this.currentStudentId = 1;
+    this.currentTutorId = 1;
+    this.currentTutorShiftId = 1;
     
     // テストユーザーを自動作成
     this.createInitialTestData();
@@ -82,12 +109,13 @@ export class MemStorage implements IStorage {
       // パスワードをハッシュ化
       const hashedPassword = await hashPassword("password123");
       
-      // テストユーザーを作成
+      // テストユーザー（保護者）を作成
       const testUser = await this.createUser({
         username: "testuser",
         password: hashedPassword,
         displayName: "テストユーザー",
-        email: "test@example.com"
+        email: "test@example.com",
+        role: "user"
       });
       
       // プロフィール情報を更新
@@ -134,12 +162,52 @@ export class MemStorage implements IStorage {
         birthDate: "2015-08-23"
       });
       
+      // テスト講師ユーザーを作成
+      const tutorUser = await this.createUser({
+        username: "testutor",
+        password: await hashPassword("tutor123"),
+        displayName: "テスト講師",
+        email: "tutor@example.com",
+        role: "tutor"
+      });
+      
+      // テスト講師プロフィールを作成
+      const tutor = await this.createTutor({
+        userId: tutorUser.id,
+        lastName: "講師",
+        firstName: "太郎",
+        lastNameFurigana: "こうし",
+        firstNameFurigana: "たろう",
+        university: "東京大学",
+        birthDate: "1995-01-15",
+        subjects: "小学国語,小学算数,中学数学,高校数学",
+        bio: "数学が得意な講師です。分かりやすい授業を心がけています。"
+      });
+      
+      // テスト講師のシフトを追加（翌日から1週間分）
+      const today = new Date();
+      for (let i = 1; i <= 7; i++) {
+        const date = new Date();
+        date.setDate(today.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        for (const timeSlot of ["16:00-17:30", "18:00-19:30", "20:00-21:30"]) {
+          await this.createTutorShift({
+            tutorId: tutor.id,
+            date: dateStr,
+            timeSlot: timeSlot,
+            isAvailable: Math.random() > 0.3 // ランダムに空き状況を設定
+          });
+        }
+      }
+      
       console.log("テストユーザーとテストデータを作成しました:", {
         user: testUser.username,
         students: [
           `${student1.lastName} ${student1.firstName}`,
           `${student2.lastName} ${student2.firstName}`
-        ]
+        ],
+        tutor: `${tutor.lastName} ${tutor.firstName}`
       });
     } catch (error) {
       console.error("テストデータの作成に失敗しました:", error);
