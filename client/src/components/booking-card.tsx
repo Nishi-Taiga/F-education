@@ -1,7 +1,7 @@
 import { type Booking } from "@shared/schema";
 import { format, parse } from "date-fns";
 import { ja } from "date-fns/locale";
-import { BookOpen } from "lucide-react";
+import { BookOpen, User } from "lucide-react";
 
 interface BookingCardProps {
   booking: Booking;

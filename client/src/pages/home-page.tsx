@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Ticket, CalendarCheck, Settings, Plus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Booking } from "@shared/schema";
+import type { Booking, Student } from "@shared/schema";
 
 export default function HomePage() {
   const { toast } = useToast();
@@ -18,6 +18,10 @@ export default function HomePage() {
 
   const { data: bookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
+  });
+  
+  const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
+    queryKey: ["/api/students"],
   });
   
   // 開発用：チケットを追加するミューテーション
@@ -75,6 +79,16 @@ export default function HomePage() {
   // 開発用：チケットを10枚追加する
   const handleAddTickets = () => {
     addTicketsMutation.mutate(10);
+  };
+  
+  // 生徒の名前を取得する関数
+  const getStudentName = (studentId: number | null): string | undefined => {
+    if (!studentId || !students) return undefined;
+    const student = students.find(s => s.id === studentId);
+    if (student) {
+      return `${student.lastName} ${student.firstName}`;
+    }
+    return undefined;
   };
 
   return (
@@ -140,12 +154,17 @@ export default function HomePage() {
             <h3 className="text-lg font-medium text-gray-900">予約済み授業</h3>
           </div>
           
-          {isLoadingBookings ? (
+          {isLoadingBookings || isLoadingStudents ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <CalendarView bookings={bookings || []} />
+            <CalendarView 
+              bookings={bookings?.map(booking => ({
+                ...booking,
+                studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+              })) || []} 
+            />
           )}
           
           <div className="mt-4">

@@ -105,8 +105,19 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
                 </div>
                 {dayBookings.map((booking, index) => (
                   <div key={index} className="mt-auto mb-1 mx-1">
-                    <div className="px-1 py-0.5 text-xs rounded bg-primary text-white text-center">
-                      {booking.timeSlot.split('-')[0]}
+                    <div 
+                      className="px-1 py-0.5 text-xs rounded bg-primary text-white text-center relative group"
+                      title={booking.studentId ? `予約済み` : '予約済み'}
+                    >
+                      <span className="block truncate">{booking.timeSlot.split('-')[0]}</span>
+                      {/* 学生情報のツールチップ */}
+                      {booking.studentId && (
+                        <div className="absolute left-0 bottom-full mb-1 w-max z-10 hidden group-hover:block">
+                          <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 shadow-lg">
+                            <span>ID: {booking.studentId}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
