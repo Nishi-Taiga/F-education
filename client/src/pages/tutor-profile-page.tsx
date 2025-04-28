@@ -146,6 +146,11 @@ export default function TutorProfilePage() {
   
   // フォーム送信時の処理
   const onSubmit = async (data: FormValues) => {
+    console.log("フォーム送信イベント発生");
+    
+    // バリデーションエラーの確認
+    console.log("フォームエラー:", form.formState.errors);
+    
     // 科目の配列をカンマ区切りの文字列に変換
     const subjects = data.selectedSubjects.join(",");
     
@@ -166,14 +171,26 @@ export default function TutorProfilePage() {
     try {
       // 編集モードを終了
       setIsEditing(false);
-      // 講師プロフィールを保存（リダイレクトはonSuccessで行う）
-      await saveProfileMutation.mutateAsync(tutorData);
-      // 注：ここでのnavigate("/")は冗長なので削除
-      // リダイレクトはonSuccess内で処理
+      
+      console.log("mutateAsync呼び出し前");
+      // 講師プロフィールを保存
+      const result = await saveProfileMutation.mutateAsync(tutorData);
+      console.log("保存成功:", result);
+      
+      // 成功したらホームページに移動
+      console.log("ホームページへリダイレクト");
+      navigate("/");
     } catch (error) {
       console.error("プロフィール保存エラー:", error);
       // エラーがあった場合は編集モードを維持
       setIsEditing(true);
+      
+      // エラーメッセージを表示
+      toast({
+        title: "保存に失敗しました",
+        description: error instanceof Error ? error.message : "不明なエラーが発生しました",
+        variant: "destructive"
+      });
     }
   };
   
@@ -500,13 +517,20 @@ export default function TutorProfilePage() {
                     </Button>
                     <Button 
                       type="submit" 
-                      disabled={isLoading || saveProfileMutation.isPending}
-                      className="w-full md:w-auto"
+                      className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white"
                     >
                       {saveProfileMutation.isPending ? "保存中..." : "プロフィールを保存"}
                     </Button>
                   </>
-                ) : null}
+                ) : (
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    編集する
+                  </Button>
+                )}
               </CardFooter>
             </form>
           </Form>
