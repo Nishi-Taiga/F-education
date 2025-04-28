@@ -122,7 +122,7 @@ export const subjectsBySchoolLevel: Record<SchoolLevel, string[]> = {
 // 学年から学校レベルを推測する関数
 export function getSchoolLevelFromGrade(grade: string): SchoolLevel {
   // 高校生（高校1年生、高校2年生、高校3年生）
-  if (grade.includes("高校") || grade.includes("高等")) {
+  if (grade.includes("高校")) {
     return "high_school";
   }
   
