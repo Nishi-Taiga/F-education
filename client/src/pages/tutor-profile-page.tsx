@@ -152,13 +152,19 @@ export default function TutorProfilePage() {
       bio: "" // 自己紹介は不要のため空に設定
     };
     
+    console.log("送信データ:", tutorData);
+    
     try {
+      // 編集モードを終了
+      setIsEditing(false);
       // 講師プロフィールを保存
       await saveProfileMutation.mutateAsync(tutorData);
       // 保存完了後にホームページに遷移
       navigate("/");
     } catch (error) {
       console.error("プロフィール保存エラー:", error);
+      // エラーがあった場合は編集モードを維持
+      setIsEditing(true);
     }
   };
   

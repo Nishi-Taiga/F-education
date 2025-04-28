@@ -202,53 +202,51 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Calendar - 生徒のみに表示 */}
-        {user?.role !== 'tutor' && (
-          <Card className="p-4 mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">予約済み授業</h3>
+        {/* Calendar - 共通表示 */}
+        <Card className="p-4 mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-900">予約済み授業</h3>
+          </div>
+          
+          {isLoadingBookings || isLoadingStudents ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-            
-            {isLoadingBookings || isLoadingStudents ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <CalendarView 
-                bookings={bookings?.map(booking => ({
-                  ...booking,
-                  studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-                })) || []} 
-              />
-            )}
-            
-            <div className="mt-4">
-              <div className="text-sm text-gray-600 mb-2">授業予定</div>
-              <div className="space-y-2">
-                {isLoadingBookings || isLoadingStudents ? (
-                  <div className="flex justify-center items-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  </div>
-                ) : bookings && bookings.length > 0 ? (
-                  bookings.map((booking) => (
-                    <BookingCard 
-                      key={booking.id} 
-                      booking={{
-                        ...booking,
-                        studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-                      }}
-                      onCancelClick={handleCancelClick}
-                    />
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-gray-500">
-                    予約済みの授業はありません
-                  </div>
-                )}
-              </div>
+          ) : (
+            <CalendarView 
+              bookings={bookings?.map(booking => ({
+                ...booking,
+                studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+              })) || []} 
+            />
+          )}
+          
+          <div className="mt-4">
+            <div className="text-sm text-gray-600 mb-2">授業予定</div>
+            <div className="space-y-2">
+              {isLoadingBookings || isLoadingStudents ? (
+                <div className="flex justify-center items-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                </div>
+              ) : bookings && bookings.length > 0 ? (
+                bookings.map((booking) => (
+                  <BookingCard 
+                    key={booking.id} 
+                    booking={{
+                      ...booking,
+                      studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+                    }}
+                    onCancelClick={user?.role !== 'tutor' ? handleCancelClick : undefined}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  予約済みの授業はありません
+                </div>
+              )}
             </div>
-          </Card>
-        )}
+          </div>
+        </Card>
         
         {/* 講師向けダッシュボード要約 */}
         {user?.role === 'tutor' && (
@@ -324,20 +322,7 @@ export default function HomePage() {
                 </div>
               </Button>
               
-              <Button
-                variant="outline"
-                className="h-auto py-6 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-                onClick={() => navigate("/tutor/bookings")}
-              >
-                <div className="flex flex-col items-center justify-center">
-                  <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-3">
-                    <svg className="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                    </svg>
-                  </div>
-                  <span className="text-gray-900 font-medium">予約確認</span>
-                </div>
-              </Button>
+
             </div>
           </div>
         ) : (
