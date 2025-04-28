@@ -28,7 +28,8 @@ export interface IStorage {
   
   // 予約関連
   getBookingsByUserId(userId: number): Promise<Booking[]>;
-  getBookingByDateAndTimeSlot(userId: number, date: string, timeSlot: string): Promise<Booking | undefined>;
+  getBookingByDateAndTimeSlot(userId: number, date: string, timeSlot: string, studentId?: number): Promise<Booking | undefined>;
+  getBookingByDateAndTimeSlotOnly(date: string, timeSlot: string): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   
   sessionStore: any; // sessionエラー回避のためany型を使用
@@ -103,9 +104,22 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async getBookingByDateAndTimeSlot(userId: number, date: string, timeSlot: string): Promise<Booking | undefined> {
+  async getBookingByDateAndTimeSlot(userId: number, date: string, timeSlot: string, studentId?: number): Promise<Booking | undefined> {
     return Array.from(this.bookings.values()).find(
-      (booking) => booking.userId === userId && booking.date === date && booking.timeSlot === timeSlot
+      (booking) => {
+        // ユーザーIDと日付、時間が一致し、かつ生徒IDが指定されている場合はその生徒のみをチェック
+        return booking.userId === userId && 
+               booking.date === date && 
+               booking.timeSlot === timeSlot && 
+               (studentId ? booking.studentId === studentId : true);
+      }
+    );
+  }
+  
+  // 日付と時間のみで予約をチェックする（生徒IDは無視）
+  async getBookingByDateAndTimeSlotOnly(date: string, timeSlot: string): Promise<Booking[]> {
+    return Array.from(this.bookings.values()).filter(
+      (booking) => booking.date === date && booking.timeSlot === timeSlot
     );
   }
 

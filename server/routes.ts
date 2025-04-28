@@ -44,15 +44,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid time slot" });
       }
       
-      // Check if booking already exists
-      const existingBooking = await storage.getBookingByDateAndTimeSlot(
-        userId, 
-        bookingData.date, 
-        bookingData.timeSlot
-      );
-      
-      if (existingBooking) {
-        return res.status(400).json({ message: "Booking already exists for this date and time" });
+      // 同じ生徒が同じ日時に予約していないか確認
+      if (bookingData.studentId) {
+        const existingBookingForStudent = await storage.getBookingByDateAndTimeSlot(
+          userId, 
+          bookingData.date, 
+          bookingData.timeSlot,
+          bookingData.studentId
+        );
+        
+        if (existingBookingForStudent) {
+          return res.status(400).json({ message: "この生徒は既にこの日時に予約があります" });
+        }
+      } else {
+        // 生徒が指定されていない場合は以前の動作（ユーザーごとに重複不可）を維持
+        const existingBooking = await storage.getBookingByDateAndTimeSlot(
+          userId, 
+          bookingData.date, 
+          bookingData.timeSlot
+        );
+        
+        if (existingBooking) {
+          return res.status(400).json({ message: "この日時には既に予約があります" });
+        }
       }
       
       // Create booking and deduct one ticket
