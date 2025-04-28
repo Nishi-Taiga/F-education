@@ -130,6 +130,7 @@ export default function BookingPage() {
         // 生徒情報を取得
         let studentId: number | undefined = undefined;
         let studentName: string | undefined = undefined;
+        let subject: string | undefined = selectedSubject || undefined;
         
         if (selectedStudentId && students) {
           const selectedStudent = students.find(student => student.id === selectedStudentId);
@@ -139,12 +140,23 @@ export default function BookingPage() {
           }
         }
         
+        // 科目が選択されていない場合は警告を表示
+        if (!subject && studentSchoolLevel) {
+          toast({
+            title: "科目が選択されていません",
+            description: "授業科目を選択してください",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         setSelectedBookings([...selectedBookings, {
           date: selectedDate,
           formattedDate,
           timeSlot,
           studentId,
-          studentName
+          studentName,
+          subject
         }]);
       }
     }
@@ -253,7 +265,7 @@ export default function BookingPage() {
               </div>
               
               {/* 生徒選択 */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <User className="h-4 w-4 text-primary" />
                   <Label className="text-sm font-medium">受講する生徒を選択</Label>
@@ -298,6 +310,31 @@ export default function BookingPage() {
                   </div>
                 )}
               </div>
+              
+              {/* 科目選択 */}
+              {selectedStudentId && studentSchoolLevel && (
+                <div className="mb-6">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    <Label className="text-sm font-medium">授業科目を選択</Label>
+                  </div>
+                  <Select
+                    value={selectedSubject || ""}
+                    onValueChange={(value) => setSelectedSubject(value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="科目を選択してください" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjectsBySchoolLevel[studentSchoolLevel].map((subject) => (
+                        <SelectItem key={subject} value={subject}>
+                          {subject}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               
               {isLoadingBookings ? (
                 <div className="flex justify-center items-center py-12">
@@ -370,6 +407,12 @@ export default function BookingPage() {
                       <div>
                         <div className="font-medium">{booking.formattedDate}</div>
                         <div className="text-sm text-gray-600">{booking.timeSlot}</div>
+                        {booking.subject && (
+                          <div className="flex items-center mt-1">
+                            <BookOpen className="h-3 w-3 text-gray-600 mr-1" />
+                            <span className="text-xs text-gray-600">{booking.subject}</span>
+                          </div>
+                        )}
                         {booking.studentName && (
                           <div className="flex items-center mt-1">
                             <User className="h-3 w-3 text-primary mr-1" />

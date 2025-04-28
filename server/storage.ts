@@ -219,6 +219,7 @@ export class MemStorage implements IStorage {
       ...insertBooking,
       id,
       studentId: insertBooking.studentId || null,
+      subject: insertBooking.subject || null,
       createdAt: now
     };
     this.bookings.set(id, booking);
