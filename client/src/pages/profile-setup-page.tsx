@@ -139,6 +139,10 @@ export default function ProfileSetupPage() {
         parentForm.setValue('prefecture', result.address1);
         parentForm.setValue('city', result.address2 + result.address3);
         
+        // バリデーション状態を更新
+        parentForm.trigger('prefecture');
+        parentForm.trigger('city');
+        
         toast({
           title: "住所が見つかりました",
           description: `${result.address1}${result.address2}${result.address3}`,

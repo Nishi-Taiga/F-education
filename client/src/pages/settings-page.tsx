@@ -60,6 +60,7 @@ export default function SettingsPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [currentTab, setCurrentTab] = useState("profile");
+  const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
 
   // 生徒情報のクエリ
   const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
@@ -232,6 +233,41 @@ export default function SettingsPage() {
       toast({
         title: "エラー",
         description: `生徒情報の保存に失敗しました: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // 生徒の更新
+  const updateStudentMutation = useMutation({
+    mutationFn: async (data: StudentForm & { id: number }) => {
+      const { id, ...updateData } = data;
+      const res = await apiRequest("PATCH", `/api/students/${id}`, updateData);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      toast({
+        title: "生徒情報が更新されました",
+        description: "生徒情報の更新が完了しました",
+      });
+      // 編集モードを解除
+      setEditingStudentId(null);
+      // フォームをリセット
+      studentForm.reset({
+        lastName: "",
+        firstName: "",
+        lastNameFurigana: "",
+        firstNameFurigana: "",
+        school: "",
+        grade: "",
+        birthDate: "",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "エラー",
+        description: `生徒情報の更新に失敗しました: ${error}`,
         variant: "destructive",
       });
     },
@@ -524,12 +560,84 @@ export default function SettingsPage() {
 
           {/* 生徒情報管理タブ */}
           <TabsContent value="students">
+            {/* 登録済み生徒一覧 - 上部に配置 */}
             <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-6">生徒情報登録</h3>
-              <p className="text-sm text-gray-500 mb-4">新しい生徒情報を追加して、兄弟・姉妹の家庭教師予約も可能になります。</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-6">登録済み生徒</h3>
+
+              {isLoadingStudents ? (
+                <div className="flex justify-center items-center p-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : students && students.length > 0 ? (
+                <div className="space-y-4">
+                  {students.map((student) => (
+                    <div key={student.id} className="p-4 border rounded-md bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-medium">{getFullName(student)}</div>
+                          <div className="text-sm text-gray-500">{getFullNameFurigana(student)}</div>
+                          <div className="mt-1 text-sm">
+                            {student.school} | {student.grade}
+                          </div>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            // 生徒情報をフォームにセット
+                            studentForm.reset({
+                              lastName: student.lastName,
+                              firstName: student.firstName,
+                              lastNameFurigana: student.lastNameFurigana,
+                              firstNameFurigana: student.firstNameFurigana,
+                              school: student.school,
+                              grade: student.grade,
+                              birthDate: student.birthDate,
+                            });
+                            // 編集モードを設定
+                            setEditingStudentId(student.id);
+                            // 編集フォームまでスクロール
+                            document.getElementById('student-form')?.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                          className="flex items-center"
+                        >
+                          編集
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-4 text-gray-500">
+                  生徒が登録されていません
+                </div>
+              )}
+            </div>
+
+            {/* 生徒情報登録/編集フォーム - 下部に配置 */}
+            <div id="student-form" className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-8">
+              <h3 className="text-lg font-medium text-gray-900 mb-6">
+                {editingStudentId ? "生徒情報編集" : "生徒情報登録"}
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                {editingStudentId 
+                  ? "生徒情報を更新します。" 
+                  : "新しい生徒情報を追加して、兄弟・姉妹の家庭教師予約も可能になります。"}
+              </p>
               
               <Form {...studentForm}>
-                <form onSubmit={studentForm.handleSubmit((data) => addStudentMutation.mutate(data))} className="space-y-6">
+                <form 
+                  onSubmit={studentForm.handleSubmit((data) => {
+                    if (editingStudentId) {
+                      // 編集モードの場合は更新処理
+                      updateStudentMutation.mutate({ id: editingStudentId, ...data });
+                    } else {
+                      // 新規追加モードの場合は追加処理
+                      addStudentMutation.mutate(data);
+                    }
+                  })} 
+                  className="space-y-6"
+                >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={studentForm.control}
@@ -651,17 +759,42 @@ export default function SettingsPage() {
                     )}
                   />
 
-                  <div className="flex justify-end">
+                  <div className="flex justify-end space-x-3">
+                    {editingStudentId && (
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => {
+                          // 編集モードをキャンセル
+                          setEditingStudentId(null);
+                          // フォームをリセット
+                          studentForm.reset({
+                            lastName: "",
+                            firstName: "",
+                            lastNameFurigana: "",
+                            firstNameFurigana: "",
+                            school: "",
+                            grade: "",
+                            birthDate: "",
+                          });
+                        }}
+                      >
+                        キャンセル
+                      </Button>
+                    )}
+                    
                     <Button 
                       type="submit" 
-                      disabled={addStudentMutation.isPending}
+                      disabled={addStudentMutation.isPending || updateStudentMutation.isPending}
                       className="flex items-center"
                     >
-                      {addStudentMutation.isPending ? (
+                      {addStudentMutation.isPending || updateStudentMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           保存中...
                         </>
+                      ) : editingStudentId ? (
+                        "更新する"
                       ) : (
                         <>
                           <PlusCircle className="mr-2 h-4 w-4" />
@@ -672,35 +805,6 @@ export default function SettingsPage() {
                   </div>
                 </form>
               </Form>
-            </div>
-
-            {/* 登録済み生徒一覧 */}
-            <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-6">登録済み生徒</h3>
-
-              {isLoadingStudents ? (
-                <div className="flex justify-center items-center p-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : students && students.length > 0 ? (
-                <ScrollArea className="h-[300px]">
-                  <div className="space-y-4">
-                    {students.map((student) => (
-                      <div key={student.id} className="p-4 border rounded-md bg-gray-50">
-                        <div className="font-medium">{getFullName(student)}</div>
-                        <div className="text-sm text-gray-500">{getFullNameFurigana(student)}</div>
-                        <div className="mt-1 text-sm">
-                          {student.school} | {student.grade}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <div className="text-center p-4 text-gray-500">
-                  生徒が登録されていません
-                </div>
-              )}
             </div>
           </TabsContent>
 
