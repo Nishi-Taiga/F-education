@@ -137,6 +137,12 @@ export default function BookingPage() {
           if (selectedStudent) {
             studentId = selectedStudent.id;
             studentName = `${selectedStudent.lastName} ${selectedStudent.firstName}`;
+            
+            // 生徒の学年から学校レベルを再確認
+            if (!studentSchoolLevel) {
+              const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
+              setStudentSchoolLevel(schoolLevel);
+            }
           }
         }
         
