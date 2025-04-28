@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -22,6 +23,12 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const usersRelations = relations(users, ({ many }) => ({
+  students: many(students),
+  bookings: many(bookings),
+  tutor: many(tutors),
+}));
+
 export const students = pgTable("students", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
@@ -36,6 +43,14 @@ export const students = pgTable("students", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const studentsRelations = relations(students, ({ one, many }) => ({
+  user: one(users, {
+    fields: [students.userId],
+    references: [users.id],
+  }),
+  bookings: many(bookings),
+}));
 
 // 講師テーブル
 export const tutors = pgTable("tutors", {
@@ -54,27 +69,65 @@ export const tutors = pgTable("tutors", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const tutorsRelations = relations(tutors, ({ one, many }) => ({
+  user: one(users, {
+    fields: [tutors.userId],
+    references: [users.id],
+  }),
+  shifts: many(tutorShifts),
+  bookings: many(bookings),
+}));
+
 // 講師シフトテーブル
 export const tutorShifts = pgTable("tutor_shifts", {
   id: serial("id").primaryKey(),
   tutorId: integer("tutor_id").notNull().references(() => tutors.id),
   date: text("date").notNull(), // in YYYY-MM-DD format
   timeSlot: text("time_slot").notNull(), // format: "HH:MM-HH:MM"
+  subject: text("subject").notNull(), // どの科目の授業が可能か
   isAvailable: boolean("is_available").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const tutorShiftsRelations = relations(tutorShifts, ({ one, many }) => ({
+  tutor: one(tutors, {
+    fields: [tutorShifts.tutorId],
+    references: [tutors.id],
+  }),
+  bookings: many(bookings),
+}));
 
 export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   studentId: integer("student_id").references(() => students.id),
-  tutorId: integer("tutor_id").references(() => tutors.id),
+  tutorId: integer("tutor_id").notNull().references(() => tutors.id),
+  tutorShiftId: integer("tutor_shift_id").notNull().references(() => tutorShifts.id),
   date: text("date").notNull(), // in YYYY-MM-DD format
   timeSlot: text("time_slot").notNull(), // format: "HH:MM-HH:MM"
-  subject: text("subject"), // 科目（数学、英語など）
+  subject: text("subject").notNull(), // 科目（数学、英語など）
   status: text("status").default("confirmed"), // "confirmed", "cancelled"
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const bookingsRelations = relations(bookings, ({ one }) => ({
+  user: one(users, {
+    fields: [bookings.userId],
+    references: [users.id],
+  }),
+  student: one(students, {
+    fields: [bookings.studentId],
+    references: [students.id],
+  }),
+  tutor: one(tutors, {
+    fields: [bookings.tutorId],
+    references: [tutors.id],
+  }),
+  tutorShift: one(tutorShifts, {
+    fields: [bookings.tutorShiftId],
+    references: [tutorShifts.id],
+  }),
+}));
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -120,6 +173,7 @@ export const insertTutorShiftSchema = createInsertSchema(tutorShifts).pick({
   tutorId: true,
   date: true,
   timeSlot: true,
+  subject: true,
   isAvailable: true,
 });
 
@@ -127,6 +181,7 @@ export const insertBookingSchema = createInsertSchema(bookings).pick({
   userId: true,
   studentId: true,
   tutorId: true,
+  tutorShiftId: true,
   date: true,
   timeSlot: true,
   subject: true,
