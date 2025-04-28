@@ -286,12 +286,22 @@ export default function SettingsPage() {
       const res = await apiRequest("DELETE", `/api/students/${studentId}`);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
+      // 削除情報を表示（キャンセルされた予約数とチケットの返却情報）
+      let description = "生徒情報の削除が完了しました";
+      if (data.cancelledBookings > 0) {
+        description = `生徒情報を削除しました。${data.cancelledBookings}件の予約がキャンセルされ、${data.returnedTickets}枚のチケットが返却されました。`;
+      }
+      
       toast({
         title: "生徒情報が削除されました",
-        description: "生徒情報の削除が完了しました",
+        description: description,
       });
+      
       // 編集モードを解除
       setEditingStudentId(null);
       // 削除ダイアログを閉じる
@@ -667,9 +677,13 @@ export default function SettingsPage() {
                 </DialogHeader>
                 
                 <div className="py-4">
-                  <p className="text-sm text-gray-700">
-                    削除した生徒のデータは復元できません。また、この生徒に関連する予約情報はすべて無効になります。
+                  <p className="text-sm text-gray-700 mb-3">
+                    削除した生徒のデータは復元できません。また、以下の処理が自動的に行われます：
                   </p>
+                  <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                    <li>この生徒に関連するすべての授業予約が自動的にキャンセルされます</li>
+                    <li>キャンセルされた授業分のチケットがアカウントに返却されます</li>
+                  </ul>
                 </div>
                 
                 <DialogFooter>

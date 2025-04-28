@@ -366,10 +366,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to delete this student" });
       }
       
+      // 生徒に関連する予約を取得
+      const userBookings = await storage.getBookingsByUserId(userId);
+      const studentBookings = userBookings.filter(booking => booking.studentId === studentId);
+      
+      // ユーザー情報を取得
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // 生徒の予約をすべてキャンセルし、チケットを返却
+      let cancelledBookings = 0;
+      let returnedTickets = 0;
+      
+      for (const booking of studentBookings) {
+        await storage.deleteBooking(booking.id);
+        cancelledBookings++;
+      }
+      
+      // 返却されるチケット数を予約数分加算
+      if (cancelledBookings > 0) {
+        const newTicketCount = user.ticketCount + cancelledBookings;
+        await storage.updateTicketCount(userId, newTicketCount);
+        returnedTickets = cancelledBookings;
+      }
+      
       // 生徒を削除（論理削除）
       await storage.deleteStudent(studentId);
       
-      res.json({ message: "Student deleted successfully" });
+      res.json({ 
+        message: "Student deleted successfully", 
+        cancelledBookings,
+        returnedTickets, 
+        newTicketCount: user.ticketCount + returnedTickets
+      });
     } catch (error) {
       res.status(400).json({ message: "Failed to delete student", error });
     }
