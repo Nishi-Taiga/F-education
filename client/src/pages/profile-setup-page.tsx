@@ -109,8 +109,10 @@ export default function ProfileSetupPage() {
       setStudents([...students, data]);
       // フォームをリセット
       studentForm.reset({
-        fullName: "",
-        furigana: "",
+        lastName: "",
+        firstName: "",
+        lastNameFurigana: "",
+        firstNameFurigana: "",
         school: "",
         grade: "",
         birthDate: "",
@@ -125,11 +127,56 @@ export default function ProfileSetupPage() {
     },
   });
 
+  // 郵便番号検索
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  
+  // 郵便番号から住所を検索する関数
+  const searchAddressByPostalCode = async (postalCode: string) => {
+    if (!postalCode || postalCode.length < 7) return;
+    
+    try {
+      setIsSearchingAddress(true);
+      // 郵便番号APIを使用して住所を検索
+      // 郵便番号から「-」を除去
+      const cleanPostalCode = postalCode.replace(/-/g, '');
+      const response = await axios.get(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${cleanPostalCode}`);
+      
+      if (response.data.results && response.data.results.length > 0) {
+        const result = response.data.results[0];
+        // フォームに住所情報をセット
+        parentForm.setValue('prefecture', result.address1);
+        parentForm.setValue('city', result.address2 + result.address3);
+        
+        toast({
+          title: "住所が見つかりました",
+          description: `${result.address1}${result.address2}${result.address3}`,
+        });
+      } else {
+        toast({
+          title: "住所が見つかりませんでした",
+          description: "正しい郵便番号を入力してください",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "エラー",
+        description: "住所検索に失敗しました",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearchingAddress(false);
+    }
+  };
+  
   // 保護者情報フォーム
   const parentForm = useForm<ParentProfileForm>({
     resolver: zodResolver(parentProfileSchema),
     defaultValues: {
       phone: user?.phone || "",
+      postalCode: user?.postalCode || "",
+      prefecture: user?.prefecture || "",
+      city: user?.city || "",
       address: user?.address || "",
     },
   });
@@ -138,8 +185,10 @@ export default function ProfileSetupPage() {
   const studentForm = useForm<StudentForm>({
     resolver: zodResolver(studentSchema),
     defaultValues: {
-      fullName: "",
-      furigana: "",
+      lastName: "",
+      firstName: "",
+      lastNameFurigana: "",
+      firstNameFurigana: "",
       school: "",
       grade: "",
       birthDate: "",
@@ -161,6 +210,16 @@ export default function ProfileSetupPage() {
     navigate("/");
   };
 
+  // 生徒の名前を結合する関数
+  const getFullName = (student: Student) => {
+    return `${student.lastName} ${student.firstName}`;
+  };
+  
+  // 生徒のふりがなを結合する関数
+  const getFullNameFurigana = (student: Student) => {
+    return `${student.lastNameFurigana} ${student.firstNameFurigana}`;
+  };
+  
   // プロフィール設定が完了しているかどうかをチェック
   const isProfileComplete = !!user && !!user.profileCompleted && students.length > 0;
   
@@ -247,14 +306,75 @@ export default function ProfileSetupPage() {
                     )}
                   />
 
+                  <div className="flex space-x-2">
+                    <FormField
+                      control={parentForm.control}
+                      name="postalCode"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>郵便番号</FormLabel>
+                          <div className="flex items-center space-x-2">
+                            <FormControl>
+                              <Input placeholder="123-4567" {...field} />
+                            </FormControl>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="icon"
+                              disabled={isSearchingAddress || !field.value || field.value.length < 7}
+                              onClick={() => searchAddressByPostalCode(field.value)}
+                            >
+                              {isSearchingAddress ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Search className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={parentForm.control}
+                      name="prefecture"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>都道府県</FormLabel>
+                          <FormControl>
+                            <Input placeholder="東京都" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={parentForm.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>市区町村</FormLabel>
+                          <FormControl>
+                            <Input placeholder="渋谷区" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={parentForm.control}
                     name="address"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>ご住所</FormLabel>
+                        <FormLabel>番地・マンション名等</FormLabel>
                         <FormControl>
-                          <Input placeholder="東京都渋谷区..." {...field} />
+                          <Input placeholder="1-2-3 ○○マンション101" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -295,12 +415,12 @@ export default function ProfileSetupPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={studentForm.control}
-                      name="fullName"
+                      name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>氏名</FormLabel>
+                          <FormLabel>姓</FormLabel>
                           <FormControl>
-                            <Input placeholder="山田 太郎" {...field} />
+                            <Input placeholder="山田" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -309,12 +429,42 @@ export default function ProfileSetupPage() {
 
                     <FormField
                       control={studentForm.control}
-                      name="furigana"
+                      name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>ふりがな</FormLabel>
+                          <FormLabel>名</FormLabel>
                           <FormControl>
-                            <Input placeholder="やまだ たろう" {...field} />
+                            <Input placeholder="太郎" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={studentForm.control}
+                      name="lastNameFurigana"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>姓（ふりがな）</FormLabel>
+                          <FormControl>
+                            <Input placeholder="やまだ" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={studentForm.control}
+                      name="firstNameFurigana"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>名（ふりがな）</FormLabel>
+                          <FormControl>
+                            <Input placeholder="たろう" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -424,8 +574,8 @@ export default function ProfileSetupPage() {
                   <div className="space-y-4">
                     {students.map((student) => (
                       <div key={student.id} className="p-4 border rounded-md bg-gray-50">
-                        <div className="font-medium">{student.fullName}</div>
-                        <div className="text-sm text-gray-500">{student.furigana}</div>
+                        <div className="font-medium">{getFullName(student)}</div>
+                        <div className="text-sm text-gray-500">{getFullNameFurigana(student)}</div>
                         <div className="mt-1 text-sm">
                           {student.school} | {student.grade}
                         </div>
