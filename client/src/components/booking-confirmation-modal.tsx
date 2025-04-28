@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertTriangle, Loader2, User } from "lucide-react";
+import { AlertTriangle, Loader2, User, GraduationCap } from "lucide-react";
 
 interface BookingConfirmationModalProps {
   isOpen: boolean;
@@ -10,7 +10,10 @@ interface BookingConfirmationModalProps {
     timeSlot: string;
     studentId?: number;
     studentName?: string;
-    subject?: string;
+    subject: string;
+    tutorId: number;
+    tutorShiftId: number;
+    tutorName: string;
   }>;
   onCancel: () => void;
   onConfirm: () => void;

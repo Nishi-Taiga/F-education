@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Ticket, Calendar, Loader2, User, BookOpen } from "lucide-react";
+import { ArrowLeft, Ticket, Calendar, Loader2, User, BookOpen, GraduationCap } from "lucide-react";
 import { CalendarView } from "@/components/calendar-view";
 import { BookingConfirmationModal } from "@/components/booking-confirmation-modal";
 import { format, parse } from "date-fns";
@@ -27,7 +27,10 @@ type BookingSelection = {
   timeSlot: string;
   studentId?: number;
   studentName?: string;
-  subject?: string;
+  subject: string;
+  tutorId: number;
+  tutorShiftId: number;
+  tutorName: string;
 };
 
 export default function BookingPage() {
@@ -41,6 +44,8 @@ export default function BookingPage() {
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [studentSchoolLevel, setStudentSchoolLevel] = useState<SchoolLevel | null>(null);
+  const [selectedTutorId, setSelectedTutorId] = useState<number | null>(null);
+  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
 
   // 登録済みの生徒一覧を取得
   const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
@@ -51,11 +56,32 @@ export default function BookingPage() {
     queryKey: ["/api/bookings"],
   });
 
+  // 利用可能な講師を取得
+  const { data: availableTutors, isLoading: isLoadingTutors } = useQuery({
+    queryKey: ["/api/tutors/available", selectedSubject, selectedDate, selectedTimeSlot],
+    queryFn: async () => {
+      if (!selectedSubject || !selectedDate || !selectedTimeSlot) return null;
+      
+      const params = new URLSearchParams({
+        subject: selectedSubject,
+        date: selectedDate,
+        timeSlot: selectedTimeSlot
+      });
+      
+      const res = await apiRequest('GET', `/api/tutors/available?${params}`);
+      if (!res.ok) throw new Error('講師情報の取得に失敗しました');
+      return await res.json();
+    },
+    enabled: !!selectedSubject && !!selectedDate && !!selectedTimeSlot,
+  });
+
   type BookingData = { 
     date: string;
     timeSlot: string;
     studentId?: number;
-    subject?: string;
+    tutorId: number;
+    tutorShiftId: number;
+    subject: string;
   };
   
   const bookingMutation = useMutation({
@@ -116,56 +142,8 @@ export default function BookingPage() {
 
   const handleTimeSlotSelection = (timeSlot: string) => {
     setSelectedTimeSlot(timeSlot);
-    
-    if (selectedDate) {
-      const dateObj = parse(selectedDate, "yyyy-MM-dd", new Date());
-      const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
-      
-      // Check if already selected
-      const isDuplicate = selectedBookings.some(
-        booking => booking.date === selectedDate && booking.timeSlot === timeSlot
-      );
-      
-      if (!isDuplicate) {
-        // 生徒情報を取得
-        let studentId: number | undefined = undefined;
-        let studentName: string | undefined = undefined;
-        let subject: string | undefined = selectedSubject || undefined;
-        
-        if (selectedStudentId && students) {
-          const selectedStudent = students.find(student => student.id === selectedStudentId);
-          if (selectedStudent) {
-            studentId = selectedStudent.id;
-            studentName = `${selectedStudent.lastName} ${selectedStudent.firstName}`;
-            
-            // 生徒の学年から学校レベルを再確認
-            if (!studentSchoolLevel) {
-              const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
-              setStudentSchoolLevel(schoolLevel);
-            }
-          }
-        }
-        
-        // 科目が選択されていない場合は警告を表示
-        if (!subject && studentSchoolLevel) {
-          toast({
-            title: "科目が選択されていません",
-            description: "授業科目を選択してください",
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        setSelectedBookings([...selectedBookings, {
-          date: selectedDate,
-          formattedDate,
-          timeSlot,
-          studentId,
-          studentName,
-          subject
-        }]);
-      }
-    }
+    // 講師と生徒情報はこの時点では選択されていない
+    // 講師選択UIが後ほど表示される
   };
 
   const removeBooking = (index: number) => {
@@ -178,6 +156,59 @@ export default function BookingPage() {
     setShowConfirmationModal(true);
   };
 
+  // 講師選択した時の処理
+  const handleTutorSelection = () => {
+    if (!selectedStudentId || !selectedSubject || !selectedDate || !selectedTimeSlot || !selectedTutorId || !selectedShiftId) {
+      toast({
+        title: "予約情報が不足しています",
+        description: "生徒、科目、日時、講師をすべて選択してください",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // 選択済みの講師情報を取得
+    const tutor = availableTutors.find(t => t.tutorId === selectedTutorId && t.shiftId === selectedShiftId);
+    if (!tutor) {
+      toast({
+        title: "講師情報が見つかりません",
+        description: "別の講師を選択してください",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // 生徒情報を取得
+    let studentName: string | undefined = undefined;
+    if (selectedStudentId && students) {
+      const student = students.find(s => s.id === selectedStudentId);
+      if (student) {
+        studentName = `${student.lastName} ${student.firstName}`;
+      }
+    }
+    
+    const dateObj = parse(selectedDate, "yyyy-MM-dd", new Date());
+    const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
+    
+    // 予約を追加
+    setSelectedBookings([...selectedBookings, {
+      date: selectedDate,
+      formattedDate,
+      timeSlot: selectedTimeSlot,
+      studentId: selectedStudentId,
+      studentName,
+      subject: selectedSubject,
+      tutorId: selectedTutorId,
+      tutorShiftId: selectedShiftId,
+      tutorName: tutor.name
+    }]);
+    
+    // 選択をリセット
+    setSelectedTutorId(null);
+    setSelectedShiftId(null);
+    setSelectedTimeSlot(null);
+  };
+  
   const completeBooking = () => {
     if (selectedBookings.length > 0) {
       // Create an array of booking data to send to the mutation
@@ -185,7 +216,9 @@ export default function BookingPage() {
         date: booking.date,
         timeSlot: booking.timeSlot,
         studentId: booking.studentId,
-        subject: booking.subject
+        subject: booking.subject,
+        tutorId: booking.tutorId,
+        tutorShiftId: booking.tutorShiftId
       }));
       
       // Process all bookings
@@ -433,6 +466,71 @@ export default function BookingPage() {
                       );
                     })}
                   </div>
+                  
+                  {/* 講師選択 */}
+                  {selectedTimeSlot && selectedDate && selectedSubject && (
+                    <div className="mt-6">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <GraduationCap className="h-4 w-4 text-primary" />
+                        <Label className="text-sm font-medium">講師を選択</Label>
+                      </div>
+                      
+                      {isLoadingTutors ? (
+                        <div className="flex items-center space-x-2 p-4">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <span className="text-sm text-gray-500">講師情報を読み込み中...</span>
+                        </div>
+                      ) : availableTutors && availableTutors.length > 0 ? (
+                        <div className="space-y-3">
+                          {availableTutors.map((tutor) => (
+                            <div 
+                              key={`${tutor.tutorId}-${tutor.shiftId}`}
+                              className={`p-3 border rounded-md cursor-pointer transition-colors 
+                                ${selectedTutorId === tutor.tutorId && selectedShiftId === tutor.shiftId 
+                                  ? 'bg-primary/10 border-primary' 
+                                  : 'bg-white hover:bg-gray-50'}`}
+                              onClick={() => {
+                                setSelectedTutorId(tutor.tutorId);
+                                setSelectedShiftId(tutor.shiftId);
+                              }}
+                            >
+                              <div className="font-medium text-gray-900">{tutor.name}</div>
+                              <div className="text-sm text-gray-600 mt-1">
+                                <div className="flex items-center">
+                                  <BookOpen className="h-3.5 w-3.5 text-gray-500 mr-1.5" />
+                                  <span>{tutor.subject}</span>
+                                </div>
+                                <div className="flex items-center mt-1">
+                                  <Calendar className="h-3.5 w-3.5 text-gray-500 mr-1.5" />
+                                  <span>
+                                    {format(parse(selectedDate, "yyyy-MM-dd", new Date()), "MM/dd")} ({selectedTimeSlot})
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          
+                          <Button
+                            className="w-full mt-3"
+                            disabled={!selectedTutorId || !selectedShiftId}
+                            onClick={handleTutorSelection}
+                          >
+                            この講師で予約する
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="p-4 border rounded-md bg-yellow-50 text-yellow-700 text-sm">
+                          <div className="flex items-start">
+                            <span className="mr-2">⚠️</span>
+                            <div>
+                              <p className="font-medium mb-1">利用可能な講師が見つかりません</p>
+                              <p>選択した日時・科目に対応可能な講師がいないか、すでに予約で埋まっています。別の日時や科目を選択してください。</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -466,6 +564,12 @@ export default function BookingPage() {
                           <div className="flex items-center mt-1">
                             <User className="h-3 w-3 text-primary mr-1" />
                             <span className="text-xs text-primary">{booking.studentName}</span>
+                          </div>
+                        )}
+                        {booking.tutorName && (
+                          <div className="flex items-center mt-1">
+                            <GraduationCap className="h-3 w-3 text-blue-600 mr-1" />
+                            <span className="text-xs text-blue-600">{booking.tutorName}</span>
                           </div>
                         )}
                       </div>
