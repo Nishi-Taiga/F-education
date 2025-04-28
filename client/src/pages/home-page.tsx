@@ -14,7 +14,7 @@ import type { Booking, Student } from "@shared/schema";
 
 export default function HomePage() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const [, navigate] = useLocation();
   
   // キャンセル関連の状態
@@ -143,12 +143,20 @@ export default function HomePage() {
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-gray-700">{user?.displayName || user?.username}</span>
-            <Button variant="ghost" size="icon" onClick={() => navigate("/auth")}>
-              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                logoutMutation.mutate();
+              }}
+              className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                 <polyline points="16 17 21 12 16 7"></polyline>
                 <line x1="21" y1="12" x2="9" y2="12"></line>
               </svg>
+              ログアウト
             </Button>
           </div>
         </div>
@@ -159,35 +167,39 @@ export default function HomePage() {
         <div className="md:flex md:items-start md:justify-between mb-8">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">マイページ</h2>
-            <p className="mt-1 text-sm text-gray-600">予約状況とチケット残数の確認</p>
+            <p className="mt-1 text-sm text-gray-600">
+              {user?.role === 'tutor' ? '講師ダッシュボード' : '予約状況とチケット残数の確認'}
+            </p>
           </div>
-          <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-4 border border-gray-200">
-            <div className="flex items-center">
-              <div className="mr-4 bg-primary bg-opacity-10 p-3 rounded-full">
-                <Ticket className="text-primary h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">チケット残数</p>
-                <div className="flex items-center">
-                  <p className="text-2xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
-                  <Button 
-                    variant="outline"
-                    size="icon"
-                    className="ml-2 h-7 w-7 rounded-full border-dashed"
-                    onClick={handleAddTickets}
-                    disabled={addTicketsMutation.isPending}
-                  >
-                    {addTicketsMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Plus className="h-3 w-3" />
-                    )}
-                  </Button>
+          {user?.role !== 'tutor' && (
+            <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center">
+                <div className="mr-4 bg-primary bg-opacity-10 p-3 rounded-full">
+                  <Ticket className="text-primary h-6 w-6" />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">※開発用：テスト用にチケットを追加できます</p>
+                <div>
+                  <p className="text-sm text-gray-600">チケット残数</p>
+                  <div className="flex items-center">
+                    <p className="text-2xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
+                    <Button 
+                      variant="outline"
+                      size="icon"
+                      className="ml-2 h-7 w-7 rounded-full border-dashed"
+                      onClick={handleAddTickets}
+                      disabled={addTicketsMutation.isPending}
+                    >
+                      {addTicketsMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Plus className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">※開発用：テスト用にチケットを追加できます</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Calendar - 生徒のみに表示 */}
