@@ -174,9 +174,9 @@ export default function TutorProfilePage() {
   // 講師でない場合はリダイレクト
   useEffect(() => {
     if (user && user.role !== "tutor") {
-      navigate("/");
+      setLocation("/");
     }
-  }, [user, navigate]);
+  }, [user, setLocation]);
   
   // フォーム送信時の処理
   const onSubmit = async (data: FormValues) => {
@@ -234,7 +234,7 @@ export default function TutorProfilePage() {
               編集する
             </Button>
           )}
-          <Button variant="outline" onClick={() => navigate("/")}>
+          <Button variant="outline" onClick={() => setLocation("/")}>
             ホームに戻る
           </Button>
         </div>
