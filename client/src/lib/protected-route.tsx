@@ -5,9 +5,11 @@ import { Redirect, Route } from "wouter";
 export function ProtectedRoute({
   path,
   component: Component,
+  skipProfileCheck,
 }: {
   path: string;
   component: () => React.JSX.Element;
+  skipProfileCheck?: boolean;
 }) {
   const { user, isLoading } = useAuth();
 
@@ -25,6 +27,16 @@ export function ProtectedRoute({
     return (
       <Route path={path}>
         <Redirect to="/auth" />
+      </Route>
+    );
+  }
+
+  // プロフィールチェックをスキップするルート（プロフィール設定ページ自体など）以外で、
+  // プロフィールが未設定の場合は、プロフィール設定ページにリダイレクト
+  if (!skipProfileCheck && !user.profileCompleted && path !== "/profile-setup") {
+    return (
+      <Route path={path}>
+        <Redirect to="/profile-setup" />
       </Route>
     );
   }

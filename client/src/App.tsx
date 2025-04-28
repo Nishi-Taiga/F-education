@@ -9,6 +9,7 @@ import AuthPage from "@/pages/auth-page";
 import TicketPurchasePage from "@/pages/ticket-purchase-page";
 import BookingPage from "@/pages/booking-page";
 import SettingsPage from "@/pages/settings-page";
+import ProfileSetupPage from "@/pages/profile-setup-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 
@@ -19,6 +20,7 @@ function Router() {
       <ProtectedRoute path="/tickets" component={TicketPurchasePage} />
       <ProtectedRoute path="/booking" component={BookingPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
+      <ProtectedRoute path="/profile-setup" component={ProfileSetupPage} skipProfileCheck={true} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

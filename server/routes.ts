@@ -145,7 +145,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       displayName,
       email,
       phone,
-      grade,
       emailNotifications,
       smsNotifications
     } = req.body;
@@ -155,7 +154,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         displayName,
         email,
         phone,
-        grade,
         emailNotifications,
         smsNotifications
       });
@@ -163,6 +161,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedUser);
     } catch (error) {
       res.status(400).json({ message: "Failed to update settings", error });
+    }
+  });
+  
+  // 保護者情報の更新
+  app.patch("/api/user/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const { phone, address } = req.body;
+    
+    try {
+      // バリデーション
+      if (!phone || phone.length < 10) {
+        return res.status(400).json({ message: "Valid phone number is required" });
+      }
+      
+      if (!address || address.length < 5) {
+        return res.status(400).json({ message: "Valid address is required" });
+      }
+      
+      const updatedUser = await storage.updateUserProfile(userId, phone, address);
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update profile", error });
+    }
+  });
+  
+  // 生徒情報の一覧取得
+  app.get("/api/students", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    
+    try {
+      const students = await storage.getStudentsByUserId(userId);
+      res.json(students);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to get students", error });
+    }
+  });
+  
+  // 生徒情報の登録
+  app.post("/api/students", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const { fullName, furigana, school, grade, birthDate } = req.body;
+    
+    try {
+      // バリデーション
+      if (!fullName || !furigana || !school || !grade || !birthDate) {
+        return res.status(400).json({ message: "All student fields are required" });
+      }
+      
+      const student = await storage.createStudent({
+        userId,
+        fullName,
+        furigana,
+        school,
+        grade,
+        birthDate
+      });
+      
+      res.status(201).json(student);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to create student", error });
+    }
+  });
+  
+  // 生徒情報の更新
+  app.patch("/api/students/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const studentId = parseInt(req.params.id);
+    
+    try {
+      // 生徒の存在チェック
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      
+      // 権限チェック
+      if (student.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to update this student" });
+      }
+      
+      const updatedStudent = await storage.updateStudent(studentId, req.body);
+      res.json(updatedStudent);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update student", error });
     }
   });
 

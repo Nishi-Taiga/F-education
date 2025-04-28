@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -9,15 +9,29 @@ export const users = pgTable("users", {
   displayName: text("display_name"),
   email: text("email"),
   phone: text("phone"),
-  grade: text("grade"),
+  address: text("address"),
+  profileCompleted: boolean("profile_completed").default(false),
   emailNotifications: boolean("email_notifications").default(true),
   smsNotifications: boolean("sms_notifications").default(false),
   ticketCount: integer("ticket_count").default(0).notNull(),
 });
 
+export const students = pgTable("students", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  fullName: text("full_name").notNull(),
+  furigana: text("furigana").notNull(),
+  school: text("school").notNull(),
+  grade: text("grade").notNull(),
+  birthDate: text("birth_date").notNull(), // in YYYY-MM-DD format
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
+  studentId: integer("student_id").references(() => students.id),
   date: text("date").notNull(), // in YYYY-MM-DD format
   timeSlot: text("time_slot").notNull(), // format: "HH:MM-HH:MM"
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -29,20 +43,42 @@ export const insertUserSchema = createInsertSchema(users).pick({
   displayName: true,
   email: true,
   phone: true,
+  address: true,
+  profileCompleted: true,
+});
+
+export const insertStudentSchema = createInsertSchema(students).pick({
+  userId: true,
+  fullName: true,
+  furigana: true,
+  school: true,
   grade: true,
+  birthDate: true,
 });
 
 export const insertBookingSchema = createInsertSchema(bookings).pick({
   userId: true,
+  studentId: true,
   date: true,
   timeSlot: true,
+});
+
+export const updateUserProfileSchema = z.object({
+  phone: z.string().min(10).max(15),
+  address: z.string().min(5),
+  profileCompleted: z.boolean().optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+export type InsertStudent = z.infer<typeof insertStudentSchema>;
+export type Student = typeof students.$inferSelect;
+
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
+
+export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
 
 export type TicketPurchase = {
   userId: number;
