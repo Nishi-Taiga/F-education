@@ -170,9 +170,16 @@ export default function TutorProfilePage() {
     <div className="container py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">講師プロフィール設定</h1>
-        <Button variant="outline" onClick={() => navigate("/")}>
-          マイページに戻る
-        </Button>
+        <div className="flex gap-2">
+          {tutorProfile && !isEditing && (
+            <Button variant="outline" onClick={() => setIsEditing(true)}>
+              編集する
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => navigate("/")}>
+            マイページに戻る
+          </Button>
+        </div>
       </div>
       
       <Card>
@@ -187,18 +194,7 @@ export default function TutorProfilePage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* 編集ボタン（プロフィールがあり、編集モードでない場合のみ表示） */}
-              {tutorProfile && !isEditing && (
-                <div className="flex justify-end">
-                  <Button 
-                    type="button" 
-                    onClick={() => setIsEditing(true)}
-                    variant="outline"
-                  >
-                    編集する
-                  </Button>
-                </div>
-              )}
+
               {/* 基本情報 */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">基本情報</h3>
