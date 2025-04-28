@@ -346,6 +346,7 @@ export default function TutorProfilePage() {
                                                   )
                                                 )
                                           }}
+                                          disabled={!isEditing}
                                         />
                                       </FormControl>
                                       <FormLabel className="font-normal">
@@ -386,6 +387,7 @@ export default function TutorProfilePage() {
                                                   )
                                                 )
                                           }}
+                                          disabled={!isEditing}
                                         />
                                       </FormControl>
                                       <FormLabel className="font-normal">
@@ -432,6 +434,7 @@ export default function TutorProfilePage() {
                                                         )
                                                       )
                                                 }}
+                                                disabled={!isEditing}
                                               />
                                             </FormControl>
                                             <FormLabel className="font-normal">
