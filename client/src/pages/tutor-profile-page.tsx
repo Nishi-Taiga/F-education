@@ -85,13 +85,17 @@ export default function TutorProfilePage() {
   // プロフィール保存中の状態
   const [isSaving, setIsSaving] = useState(false);
 
-  // 講師プロフィールの保存用ミューテーション（シンプルな実装）
-  const saveProfile = async (data: any) => {
-    try {
-      setIsSaving(true);
+  // 講師プロフィールの保存用ミューテーション
+  const saveProfileMutation = useMutation({
+    mutationFn: async (data: any) => {
       console.log("保存リクエスト開始:", data);
       const res = await apiRequest("POST", "/api/tutor/profile", data);
-      const result = await res.json();
+      return await res.json();
+    },
+    onMutate: () => {
+      setIsSaving(true);
+    },
+    onSuccess: (result) => {
       console.log("保存レスポンス:", result);
       
       // キャッシュを更新
@@ -101,16 +105,16 @@ export default function TutorProfilePage() {
       toast({
         title: "保存しました",
         description: "講師プロフィールが正常に更新されました。",
-        variant: "default",
-        duration: 3000,
       });
+      
+      // 編集モードを終了
+      setIsEditing(false);
       
       // リダイレクトフラグを設定
       console.log("保存完了状態に設定");
       setRedirectPending(true);
-      
-      return result;
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("保存エラー:", error);
       
       // エラー時に編集モードを維持
@@ -121,16 +125,14 @@ export default function TutorProfilePage() {
         title: "エラーが発生しました",
         description: error instanceof Error ? error.message : "不明なエラーが発生しました",
         variant: "destructive",
-        duration: 5000,
       });
-      
-      throw error;
-    } finally {
+    },
+    onSettled: () => {
       setTimeout(() => {
         setIsSaving(false);
       }, 500); // 少し遅延させてボタンの状態変化を見えるようにする
     }
-  };
+  });
   
   // フォームの初期化
   const form = useForm<FormValues>({
@@ -205,18 +207,8 @@ export default function TutorProfilePage() {
     
     console.log("送信データ:", tutorData);
     
-    try {
-      // 編集モードを終了
-      setIsEditing(false);
-      
-      // 新しい保存関数を使用
-      console.log("保存関数呼び出し");
-      await saveProfile(tutorData);
-      console.log("保存完了 - リダイレクト待機中");
-    } catch (error) {
-      console.error("プロフィール保存エラー:", error);
-      // エラー時の処理はsaveProfile内で行われるので、ここでは何もしない
-    }
+    // ミューテーションを実行
+    saveProfileMutation.mutate(tutorData);
   };
   
   if (!user) {
@@ -538,16 +530,16 @@ export default function TutorProfilePage() {
                           });
                         }
                       }}
-                      disabled={isSaving}
+                      disabled={saveProfileMutation.isPending}
                     >
                       キャンセル
                     </Button>
                     <Button 
                       type="submit" 
                       className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white"
-                      disabled={isSaving}
+                      disabled={saveProfileMutation.isPending}
                     >
-                      {isSaving ? (
+                      {saveProfileMutation.isPending ? (
                         <span className="flex items-center gap-1">
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-opacity-50 border-t-white"></span>
                           保存中...
