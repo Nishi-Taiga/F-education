@@ -44,20 +44,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid time slot" });
       }
       
-      // 同じ生徒が同じ日時に予約していないか確認
+      // 予約チェック：同じ生徒を同じ日時に予約できないようにする
       if (bookingData.studentId) {
-        const existingBookingForStudent = await storage.getBookingByDateAndTimeSlot(
-          userId, 
-          bookingData.date, 
-          bookingData.timeSlot,
-          bookingData.studentId
+        // 既存の予約の中から、同じ生徒IDで同じ日時に予約されているものを検索
+        const existingBookings = await storage.getBookingsByUserId(userId);
+        const duplicateBooking = existingBookings.find(booking => 
+          booking.date === bookingData.date && 
+          booking.timeSlot === bookingData.timeSlot && 
+          booking.studentId === bookingData.studentId
         );
         
-        if (existingBookingForStudent) {
+        if (duplicateBooking) {
           return res.status(400).json({ message: "この生徒は既にこの日時に予約があります" });
         }
       } else {
-        // 生徒が指定されていない場合は以前の動作（ユーザーごとに重複不可）を維持
+        // 生徒IDがない場合（レガシーサポート）
         const existingBooking = await storage.getBookingByDateAndTimeSlot(
           userId, 
           bookingData.date, 
