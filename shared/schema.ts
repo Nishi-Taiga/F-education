@@ -26,6 +26,7 @@ export const students = pgTable("students", {
   firstName: text("first_name").notNull(),
   lastNameFurigana: text("last_name_furigana").notNull(),
   firstNameFurigana: text("first_name_furigana").notNull(),
+  gender: text("gender").notNull(), // 性別: "男性" または "女性"
   school: text("school").notNull(),
   grade: text("grade").notNull(),
   birthDate: text("birth_date").notNull(), // in YYYY-MM-DD format
@@ -61,6 +62,7 @@ export const insertStudentSchema = createInsertSchema(students).pick({
   firstName: true,
   lastNameFurigana: true,
   firstNameFurigana: true,
+  gender: true,
   school: true,
   grade: true,
   birthDate: true,

@@ -47,6 +47,7 @@ type PasswordChangeForm = z.infer<typeof passwordChangeSchema>;
 // 生徒情報フォーム用のスキーマ
 const studentSchema = insertStudentSchema.extend({
   birthDate: z.string().min(1, "生年月日は必須です"),
+  gender: z.string().min(1, "性別を選択してください"),
 });
 
 type StudentForm = z.infer<typeof studentSchema>;
@@ -64,6 +65,7 @@ export default function SettingsPage() {
   const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   // 生徒情報のクエリ
   const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
@@ -117,6 +119,7 @@ export default function SettingsPage() {
       firstName: "",
       lastNameFurigana: "",
       firstNameFurigana: "",
+      gender: "",
       school: "",
       grade: "",
       birthDate: "",
