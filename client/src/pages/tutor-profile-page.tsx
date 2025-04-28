@@ -18,6 +18,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
+// 高校科目のカテゴリー
+const highSchoolCategories = {
+  "国語": ["高校現代文", "高校古典"],
+  "数学": ["高校数学"],
+  "理科": ["高校物理", "高校化学", "高校生物", "高校地学"],
+  "社会": ["高校地理", "高校日本史", "高校世界史", "高校公共"],
+  "英語": ["高校英語"],
+  "その他": ["高校情報"]
+};
+
 // 講師プロフィールのフォーム用スキーマ
 const tutorFormSchema = tutorProfileSchema.extend({
   selectedSubjects: z.array(z.string()).min(1, "少なくとも1つの科目を選択してください")
@@ -132,11 +142,17 @@ export default function TutorProfilePage() {
       university: data.university,
       birthDate: data.birthDate,
       subjects,
-      bio: data.bio
+      bio: "" // 自己紹介は不要のため空に設定
     };
     
-    // 講師プロフィールを保存
-    saveProfileMutation.mutate(tutorData);
+    try {
+      // 講師プロフィールを保存
+      await saveProfileMutation.mutateAsync(tutorData);
+      // 保存完了後にホームページに遷移
+      navigate("/");
+    } catch (error) {
+      console.error("プロフィール保存エラー:", error);
+    }
   };
   
   if (!user) {
@@ -250,13 +266,13 @@ export default function TutorProfilePage() {
                         <Input 
                           type="date" 
                           {...field} 
-                          // 20歳以上の方のみ登録可能に制限
-                          max={new Date(new Date().setFullYear(new Date().getFullYear() - 20))
+                          // 18歳以上の方のみ登録可能に制限
+                          max={new Date(new Date().setFullYear(new Date().getFullYear() - 18))
                             .toISOString().split('T')[0]} 
                         />
                       </FormControl>
                       <FormDescription>
-                        講師は20歳以上の方のみ登録可能です。
+                        講師は18歳以上の方のみ登録可能です。
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -361,74 +377,56 @@ export default function TutorProfilePage() {
                             ))}
                         </div>
                         
-                        {/* 高校生の科目 */}
-                        <div className="space-y-2">
+                        {/* 高校生の科目（カテゴリー分け） */}
+                        <div className="space-y-4">
                           <Label className="font-medium">高校生</Label>
-                          {allSubjects
-                            .filter(subject => subject.startsWith("高校"))
-                            .map(subject => (
-                              <FormField
-                                key={subject}
-                                control={form.control}
-                                name="selectedSubjects"
-                                render={({ field }) => {
+                          
+                          {/* カテゴリー別に科目を表示 */}
+                          {Object.entries(highSchoolCategories).map(([category, subjects]) => (
+                            <div key={category} className="mt-2">
+                              <Label className="text-sm font-medium text-gray-700">{category}</Label>
+                              <div className="ml-2 mt-1 space-y-1">
+                                {subjects.map(subject => {
+                                  const fullSubjectName = `高校${subject.replace('高校', '')}`;
                                   return (
-                                    <FormItem
-                                      key={subject}
-                                      className="flex flex-row items-start space-x-3 space-y-0"
-                                    >
-                                      <FormControl>
-                                        <Checkbox
-                                          checked={field.value?.includes(subject)}
-                                          onCheckedChange={(checked) => {
-                                            return checked
-                                              ? field.onChange([...field.value, subject])
-                                              : field.onChange(
-                                                  field.value?.filter(
-                                                    (value) => value !== subject
-                                                  )
-                                                )
-                                          }}
-                                        />
-                                      </FormControl>
-                                      <FormLabel className="font-normal">
-                                        {subject.replace("高校", "")}
-                                      </FormLabel>
-                                    </FormItem>
-                                  )
-                                }}
-                              />
-                            ))}
+                                    <FormField
+                                      key={fullSubjectName}
+                                      control={form.control}
+                                      name="selectedSubjects"
+                                      render={({ field }) => {
+                                        return (
+                                          <FormItem
+                                            key={fullSubjectName}
+                                            className="flex flex-row items-start space-x-3 space-y-0"
+                                          >
+                                            <FormControl>
+                                              <Checkbox
+                                                checked={field.value?.includes(fullSubjectName)}
+                                                onCheckedChange={(checked) => {
+                                                  return checked
+                                                    ? field.onChange([...field.value, fullSubjectName])
+                                                    : field.onChange(
+                                                        field.value?.filter(
+                                                          (value) => value !== fullSubjectName
+                                                        )
+                                                      )
+                                                }}
+                                              />
+                                            </FormControl>
+                                            <FormLabel className="font-normal">
+                                              {subject.replace("高校", "")}
+                                            </FormLabel>
+                                          </FormItem>
+                                        )
+                                      }}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <Separator />
-              
-              {/* 自己紹介 */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">自己紹介</h3>
-                <FormField
-                  control={form.control}
-                  name="bio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>自己紹介文</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="経歴や指導方針、得意分野などを入力してください"
-                          className="resize-none h-40"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        生徒や保護者に向けた自己紹介を記入してください。
-                        特に得意な科目や指導方法などのアピールポイントを含めると良いでしょう。
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

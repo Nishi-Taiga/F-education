@@ -33,10 +33,20 @@ export function ProtectedRoute({
 
   // プロフィールチェックをスキップするルート（プロフィール設定ページ自体など）以外で、
   // プロフィールが未設定の場合は、プロフィール設定ページにリダイレクト
-  if (!skipProfileCheck && !user.profileCompleted && path !== "/profile-setup") {
+  if (!skipProfileCheck && !user.profileCompleted && path !== "/profile-setup" && user.role !== "tutor") {
     return (
       <Route path={path}>
         <Redirect to="/profile-setup" />
+      </Route>
+    );
+  }
+  
+  // 講師ユーザーで、講師プロフィールページ以外にアクセスしようとした場合で、
+  // 講師プロフィールを未入力の場合は、講師プロフィール設定ページにリダイレクト
+  if (user.role === "tutor" && !user.tutorProfileCompleted && path !== "/tutor/profile") {
+    return (
+      <Route path={path}>
+        <Redirect to="/tutor/profile" />
       </Route>
     );
   }
