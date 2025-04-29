@@ -2,6 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html, body, #root {
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  /* メインコンテンツのモニター内収まる設定 */
+  .screen-container {
+    max-height: 100vh;
+    overflow-y: auto;
+    padding-bottom: 1rem;
+  }
+
+  /* スクロール可能なコンテナ */
+  .scrollable-container {
+    max-height: calc(100vh - 12rem);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+
+  /* カード要素のサイズ制限 */
+  .card-container {
+    max-height: calc(100vh - 16rem);
+    overflow-y: auto;
+  }
+
+  /* モバイル対応 */
+  @media (max-width: 640px) {
+    .scrollable-container {
+      max-height: calc(100vh - 8rem);
+    }
+    .card-container {
+      max-height: calc(100vh - 10rem);
+    }
+  }
+}
+
 :root {
       --background: 0 0% 100%;
 --foreground: 20 14.3% 4.1%;
