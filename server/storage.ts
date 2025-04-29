@@ -580,6 +580,33 @@ export class MemStorage implements IStorage {
       (booking) => booking.tutorId === tutorId
     );
   }
+  
+  // 予約IDで予約を取得
+  async getBookingById(id: number): Promise<Booking | undefined> {
+    return this.bookings.get(id);
+  }
+  
+  // 予約を削除
+  async deleteBooking(id: number): Promise<void> {
+    this.bookings.delete(id);
+  }
+  
+  // レポート状態と内容の更新（インメモリ実装）
+  async updateBookingReport(id: number, reportStatus: string, reportContent: string): Promise<Booking> {
+    const booking = await this.getBookingById(id);
+    if (!booking) {
+      throw new Error("Booking not found");
+    }
+    
+    const updatedBooking = {
+      ...booking,
+      reportStatus,
+      reportContent
+    };
+    
+    this.bookings.set(id, updatedBooking);
+    return updatedBooking;
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -973,6 +1000,29 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(bookings)
       .where(eq(bookings.id, id));
+  }
+  
+  // レポート状態と内容の更新
+  async updateBookingReport(id: number, reportStatus: string, reportContent: string): Promise<Booking> {
+    try {
+      const [updatedBooking] = await db
+        .update(bookings)
+        .set({ 
+          reportStatus, 
+          reportContent 
+        })
+        .where(eq(bookings.id, id))
+        .returning();
+      
+      if (!updatedBooking) {
+        throw new Error("Booking not found");
+      }
+      
+      return updatedBooking;
+    } catch (error) {
+      console.error("レポート更新エラー:", error);
+      throw new Error("Failed to update booking report");
+    }
   }
   
   // ユーザー名の更新
