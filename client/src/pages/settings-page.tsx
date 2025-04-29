@@ -78,10 +78,24 @@ export default function SettingsPage() {
     studentAccountId: number;
   } | null>(null);
   
+  // パスワード変更ダイアログ関連の状態
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  
   // ユーザー名変更ダイアログを表示する関数
   const updateStudentUsernameDialog = () => {
     setNewUsername("");
     setUsernameDialogOpen(true);
+  };
+  
+  // パスワード変更ダイアログを表示する関数
+  const updateStudentPasswordDialog = () => {
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError("");
+    setPasswordDialogOpen(true);
   };
 
   // 生徒情報のクエリ
@@ -471,6 +485,42 @@ export default function SettingsPage() {
       toast({
         title: "エラー",
         description: `ユーザー名の変更に失敗しました: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // 生徒アカウントのパスワード変更
+  const updateStudentPasswordMutation = useMutation({
+    mutationFn: async (data: { accountId: number; password: string }) => {
+      const res = await apiRequest("PATCH", `/api/students/account/${data.accountId}/password`, {
+        password: data.password
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'パスワードの変更に失敗しました');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      // アカウント情報を更新
+      setStudentAccountInfo({
+        ...studentAccountInfo!,
+        password: '••••••••', // パスワードは表示せず、マスクされた値を表示
+      });
+      
+      // ダイアログを閉じる
+      setPasswordDialogOpen(false);
+      
+      toast({
+        title: "パスワードが変更されました",
+        description: "新しいパスワードが設定されました",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "エラー",
+        description: `パスワードの変更に失敗しました: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -1522,18 +1572,31 @@ export default function SettingsPage() {
                       <p className="text-sm text-gray-500">パスワード</p>
                       <p className="font-medium">{studentAccountInfo.password}</p>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        if (studentAccountInfo && studentAccountInfo.studentAccountId) {
-                          console.log("Resetting password for account:", studentAccountInfo.studentAccountId);
-                          resetStudentPasswordMutation.mutate(studentAccountInfo.studentAccountId);
-                        }
-                      }}
-                    >
-                      リセット
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          if (studentAccountInfo && studentAccountInfo.studentAccountId) {
+                            updateStudentPasswordDialog();
+                          }
+                        }}
+                      >
+                        変更
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          if (studentAccountInfo && studentAccountInfo.studentAccountId) {
+                            console.log("Resetting password for account:", studentAccountInfo.studentAccountId);
+                            resetStudentPasswordMutation.mutate(studentAccountInfo.studentAccountId);
+                          }
+                        }}
+                      >
+                        リセット
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <p className="mt-4 text-sm text-gray-600">
@@ -1548,6 +1611,124 @@ export default function SettingsPage() {
                 閉じる
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* パスワード変更ダイアログ */}
+        <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>パスワードの変更</DialogTitle>
+              <DialogDescription>
+                {studentAccountInfo && (
+                  <>
+                    <span className="font-medium">{studentAccountInfo.fullName}</span>
+                    さんのパスワードを変更します。
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="py-4">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (newPassword && confirmPassword && studentAccountInfo) {
+                  // パスワードの検証
+                  if (newPassword.length < 8) {
+                    setPasswordError("パスワードは8文字以上である必要があります");
+                    return;
+                  }
+                  
+                  if (newPassword !== confirmPassword) {
+                    setPasswordError("パスワードが一致しません");
+                    return;
+                  }
+                  
+                  // エラーがなければパスワード変更を実行
+                  setPasswordError("");
+                  updateStudentPasswordMutation.mutate({
+                    accountId: studentAccountInfo.studentAccountId,
+                    password: newPassword
+                  });
+                }
+              }}>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">新しいパスワード</Label>
+                    <Input 
+                      id="new-password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        if (confirmPassword && e.target.value !== confirmPassword) {
+                          setPasswordError("パスワードが一致しません");
+                        } else {
+                          setPasswordError("");
+                        }
+                      }}
+                      placeholder="新しいパスワードを入力"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">パスワード確認</Label>
+                    <Input 
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        if (newPassword && e.target.value !== newPassword) {
+                          setPasswordError("パスワードが一致しません");
+                        } else {
+                          setPasswordError("");
+                        }
+                      }}
+                      placeholder="パスワードを再入力"
+                    />
+                  </div>
+                  
+                  {passwordError && (
+                    <p className="text-sm text-red-500">{passwordError}</p>
+                  )}
+                  
+                  <p className="text-sm text-gray-600">
+                    新しいパスワードは少なくとも8文字以上の長さが必要です。
+                    セキュリティのため、数字、記号、大文字を含めることをお勧めします。
+                  </p>
+                </div>
+                
+                <div className="flex justify-end space-x-2 mt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setPasswordDialogOpen(false)}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={
+                      !newPassword || 
+                      !confirmPassword ||
+                      newPassword.length < 8 ||
+                      newPassword !== confirmPassword ||
+                      updateStudentPasswordMutation.isPending
+                    }
+                  >
+                    {updateStudentPasswordMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        更新中...
+                      </>
+                    ) : (
+                      "変更する"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </DialogContent>
         </Dialog>
         
