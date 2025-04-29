@@ -140,7 +140,7 @@ export default function TutorSchedulePage() {
       
       dayShifts.shifts[timeSlot] = {
         exists: !!existingShift,
-        isAvailable: existingShift ? existingShift.isAvailable : true,
+        isAvailable: existingShift ? existingShift.isAvailable : false, // デフォルトでOFF（不可）に設定
         id: existingShift?.id
       };
     });
