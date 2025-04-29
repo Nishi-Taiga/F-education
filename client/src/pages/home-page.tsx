@@ -476,24 +476,12 @@ export default function HomePage() {
       ];
     }
     
-    // 実際のデータの場合は、終了した授業とレポートが未作成の授業をフィルタリング
+    // 未報告の授業をすべて取得（過去の未報告授業も含む）
     return bookings
-      .filter(booking => {
-        // 日付が今日より前の場合は終了している
-        if (booking.date < today) return true;
-        
-        // 今日の授業の場合、時間によって判断
-        if (booking.date === today) {
-          // タイムスロットの終了時間を取得して現在時刻と比較
-          const endTime = parseInt(booking.timeSlot.split('-')[1].split(':')[0]) * 60 + 
-                          parseInt(booking.timeSlot.split('-')[1].split(':')[1]);
-          return currentTime > endTime;
-        }
-        
-        return false;
-      })
       // レポートが未作成の授業だけをフィルタリング
       .filter(booking => booking.reportStatus !== "completed")
+      // 日付ごとに並べ替え（降順：新しい日付が上）
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       // 生徒名を追加
       .map(booking => ({
         ...booking,
@@ -960,7 +948,7 @@ export default function HomePage() {
                 
                 <div className="space-y-2">
                   {todaysBookingsForReport.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-1">
                       {todaysBookingsForReport.map((booking) => (
                         <Button
                           key={booking.id}
@@ -981,7 +969,7 @@ export default function HomePage() {
                                 {booking.studentName || "生徒不明"}
                               </div>
                               <div className={`text-xs ${selectedReportBooking.id === booking.id ? 'text-blue-100' : 'text-gray-500'}`}>
-                                {booking.timeSlot} - {booking.subject}
+                                {booking.date} {booking.timeSlot} - {booking.subject}
                               </div>
                             </div>
                             <div className="ml-2">
@@ -994,7 +982,9 @@ export default function HomePage() {
                                 (() => {
                                   const [, endTime] = booking.timeSlot.split('-');
                                   const lessonEndTime = new Date(`${booking.date}T${endTime}:00`);
+                                  // 日本時間を取得
                                   const now = new Date();
+                                  now.setHours(now.getHours() + 9); // UTC+9に調整
                                   
                                   if (lessonEndTime < now) {
                                     return (
@@ -1016,7 +1006,7 @@ export default function HomePage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-600">本日の授業予定はありません</p>
+                    <p className="text-sm text-gray-600">レポート対象の授業はありません</p>
                   )}
                 </div>
               </div>

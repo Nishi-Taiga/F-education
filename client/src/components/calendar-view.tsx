@@ -28,24 +28,27 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     
+    // 前月の最後の日曜日を計算
     // 月の最初の日の曜日を取得（0は日曜日）
     const startDay = getDay(monthStart);
-    
-    // 月の最後の日の曜日を取得
-    const endDay = getDay(monthEnd);
-    
-    // 前月の最後の日曜日を計算（最初の日が日曜日でない場合）
+    // 日曜日でない場合は前の日曜日まで戻る
     let calendarStart = monthStart;
     if (startDay > 0) {
       // startDay日分前に戻る
       calendarStart = subDays(monthStart, startDay);
     }
     
-    // 翌月の最初の日曜日を計算（最後の日が日曜日でない場合）
+    // 翌月の最初の日曜日を計算
+    // 月の最後の日の曜日を取得
+    const endDay = getDay(monthEnd);
+    // 土曜日でない場合は次の日曜日まで進む
     let calendarEnd = monthEnd;
     if (endDay < 6) {
       // 6 - endDay日分先に進む（土曜日までを含める）
       calendarEnd = addDays(monthEnd, 6 - endDay);
+    } else if (endDay === 6) {
+      // 土曜日の場合は次の日曜日（翌日）を含める
+      calendarEnd = addDays(monthEnd, 1);
     }
     
     // 計算された期間の日付配列を生成
@@ -155,16 +158,7 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
       
       {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-1 text-xs">
-        {/* Empty cells for days of previous month */}
-        {Array.from({ length: new Date(calendarDays[0]?.getFullYear(), calendarDays[0]?.getMonth(), 1).getDay() }).map((_, index) => (
-          <div key={`empty-start-${index}`} className="aspect-square p-0.5">
-            <div className="h-full rounded-md bg-gray-50 flex flex-col opacity-50">
-              <div className="p-0.5 text-center">
-                <span className="text-gray-400"></span>
-              </div>
-            </div>
-          </div>
-        ))}
+        {/* カレンダー日表示のみ（空セルは不要） */}
 
         {/* Days of current month */}
         {calendarDays.map((day) => {
