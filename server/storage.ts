@@ -1050,6 +1050,36 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Failed to update password");
     }
   }
+  
+  // レポート状態と内容の更新
+  async updateBookingReport(id: number, reportStatus: string, reportContent: string): Promise<Booking> {
+    try {
+      // 予約が存在するか確認
+      const booking = await this.getBookingById(id);
+      if (!booking) {
+        throw new Error("Booking not found");
+      }
+      
+      // 予約情報を更新
+      const [updatedBooking] = await db
+        .update(bookings)
+        .set({
+          reportStatus,
+          reportContent
+        })
+        .where(eq(bookings.id, id))
+        .returning();
+        
+      if (!updatedBooking) {
+        throw new Error("Failed to update booking report");
+      }
+      
+      return updatedBooking;
+    } catch (error) {
+      console.error("レポート更新エラー:", error);
+      throw new Error("Failed to update booking report");
+    }
+  }
 }
 
 // MemStorageからDatabaseStorageに変更
