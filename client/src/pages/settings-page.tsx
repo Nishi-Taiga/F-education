@@ -8,7 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Loader2, PlusCircle, Search, User, GraduationCap, UsersRound, XCircle, KeyRound } from "lucide-react";
+import { ArrowLeft, Loader2, PlusCircle, Search, User, GraduationCap, UsersRound, XCircle, KeyRound, CheckCircle } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
@@ -661,21 +661,28 @@ export default function SettingsPage() {
                           
                           {/* 生徒アカウント作成ボタン */}
                           <div className="mt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation(); // イベントの伝播を止める
-                                createStudentAccountMutation.mutate(student.id);
-                              }}
-                              disabled={createStudentAccountMutation.isPending && createStudentAccountMutation.variables === student.id}
-                            >
-                              <KeyRound className="mr-1 h-3 w-3" />
-                              {createStudentAccountMutation.isPending && createStudentAccountMutation.variables === student.id 
-                                ? '作成中...' 
-                                : '生徒アカウント作成'}
-                            </Button>
+                            {student.studentAccountId ? (
+                              <div className="text-xs flex items-center text-green-600">
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                アカウント発行済み
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // イベントの伝播を止める
+                                  createStudentAccountMutation.mutate(student.id);
+                                }}
+                                disabled={createStudentAccountMutation.isPending && createStudentAccountMutation.variables === student.id}
+                              >
+                                <KeyRound className="mr-1 h-3 w-3" />
+                                {createStudentAccountMutation.isPending && createStudentAccountMutation.variables === student.id 
+                                  ? '作成中...' 
+                                  : '生徒アカウント作成'}
+                              </Button>
+                            )}
                           </div>
                         </div>
                         <div className="flex space-x-2">

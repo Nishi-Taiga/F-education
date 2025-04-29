@@ -759,9 +759,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ticketCount: 0 // 生徒アカウントにはチケットは不要
       });
       
-      // 生徒情報に関連アカウントIDを設定
+      // 生徒情報を更新して関連アカウントIDを設定
+      // 注意: ここではuserId（親ID）をそのままにして、studentAccountIdを設定
       await storage.updateStudent(studentId, { 
-        userId: newUser.id,
+        studentAccountId: newUser.id,
         isActive: true
       });
       

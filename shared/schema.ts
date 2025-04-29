@@ -43,6 +43,7 @@ export const students = pgTable("students", {
   grade: text("grade").notNull(),
   birthDate: text("birth_date").notNull(), // in YYYY-MM-DD format
   isActive: boolean("is_active").default(true),
+  studentAccountId: integer("student_account_id"), // 生徒用アカウントのID（アカウント発行済みの場合）
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
