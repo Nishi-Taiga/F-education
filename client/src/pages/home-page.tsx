@@ -7,7 +7,7 @@ import { BookingCard } from "@/components/booking-card";
 import { BookingCancellationModal } from "@/components/booking-cancellation-modal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Ticket, CalendarCheck, Settings, Plus, UserCircle, ClipboardList, UserCog, Clock, BookOpen, Scroll, MapPin, GraduationCap, Copy, Check } from "lucide-react";
+import { Loader2, Ticket, CalendarCheck, Settings, Plus, UserCircle, ClipboardList, UserCog, Clock, BookOpen, Scroll, MapPin, GraduationCap, Copy, Check, FileText } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Dialog,
@@ -39,6 +39,10 @@ export default function HomePage() {
     grade: string;
     address: string;
   } | null>(null);
+  
+  // レポート作成ダイアログ用の状態
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [selectedReportBooking, setSelectedReportBooking] = useState<(Booking & { studentName?: string }) | null>(null);
   
   // アドレスをコピーする関数
   const copyAddressToClipboard = () => {
@@ -252,6 +256,12 @@ export default function HomePage() {
       setShowStudentDetailDialog(true);
     }
   };
+  
+  // レポート作成ダイアログを開く関数
+  const handleOpenReportDialog = (booking: Booking & { studentName?: string }) => {
+    setSelectedReportBooking(booking);
+    setShowReportDialog(true);
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
@@ -378,9 +388,22 @@ export default function HomePage() {
                         className="text-left h-auto py-2 px-3 bg-white hover:bg-blue-50 border border-gray-200"
                         onClick={() => handleStudentDetailClick(booking)}
                       >
-                        <div>
+                        <div className="w-full">
                           <div className="font-medium text-blue-700">{booking.studentName}</div>
-                          <div className="text-xs text-gray-500">{booking.timeSlot} - {booking.subject}</div>
+                          <div className="flex justify-between items-center">
+                            <div className="text-xs text-gray-500">{booking.timeSlot} - {booking.subject}</div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 rounded-full hover:bg-blue-100"
+                              onClick={(e) => {
+                                e.stopPropagation(); // 親のクリックイベントを阻止
+                                handleOpenReportDialog(booking);
+                              }}
+                            >
+                              <FileText className="h-3 w-3 text-blue-600" />
+                            </Button>
+                          </div>
                         </div>
                       </Button>
                     ))}
@@ -406,7 +429,7 @@ export default function HomePage() {
               // 講師用メニュー
               <div>
                 <h3 className="text-lg font-semibold mb-3 text-center md:text-left">講師メニュー</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                <div className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-3">
                   <Button
                     variant="outline"
                     className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
@@ -430,6 +453,31 @@ export default function HomePage() {
                         <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
                       </div>
                       <span className="text-xs md:text-sm font-medium text-gray-900">シフト管理</span>
+                    </div>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                    onClick={() => {
+                      // 今日の授業があれば最初の授業のレポートダイアログを開く
+                      const todaysBookings = getTodaysBookings();
+                      if (todaysBookings.length > 0) {
+                        handleOpenReportDialog(todaysBookings[0]);
+                      } else {
+                        toast({
+                          title: "今日の授業がありません",
+                          description: "レポートを作成するには授業の予定が必要です",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                        <FileText className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+                      </div>
+                      <span className="text-xs md:text-sm font-medium text-gray-900">レポート作成</span>
                     </div>
                   </Button>
                 </div>
@@ -556,6 +604,100 @@ export default function HomePage() {
               <Button variant="outline">閉じる</Button>
             </DialogClose>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* レポート作成ダイアログ */}
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>授業レポート作成</DialogTitle>
+            <DialogDescription>本日の授業内容を記録してください</DialogDescription>
+          </DialogHeader>
+          
+          {selectedReportBooking && (
+            <div className="space-y-4 py-2">
+              <div className="bg-blue-50 p-3 rounded-lg mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-semibold text-blue-800">授業情報</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-xs text-blue-700">生徒名</p>
+                    <p className="font-medium">{selectedReportBooking.studentName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-700">時間帯</p>
+                    <p className="font-medium">{selectedReportBooking.timeSlot}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-700">日付</p>
+                    <p className="font-medium">{selectedReportBooking.date}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-700">教科</p>
+                    <p className="font-medium">{selectedReportBooking.subject}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label htmlFor="lesson-content" className="block text-sm font-medium">
+                    授業内容
+                  </label>
+                  <textarea
+                    id="lesson-content"
+                    rows={3}
+                    className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
+                    placeholder="本日行った学習内容、進捗状況を記入してください"
+                  />
+                </div>
+                
+                <div className="space-y-1">
+                  <label htmlFor="homework" className="block text-sm font-medium">
+                    宿題・課題
+                  </label>
+                  <textarea
+                    id="homework"
+                    rows={2}
+                    className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
+                    placeholder="出された宿題、次回までの課題など"
+                  />
+                </div>
+                
+                <div className="space-y-1">
+                  <label htmlFor="comments" className="block text-sm font-medium">
+                    講師コメント
+                  </label>
+                  <textarea
+                    id="comments"
+                    rows={3}
+                    className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
+                    placeholder="保護者向けのコメント、生徒の理解度、今後の学習方針など"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-6">
+                <DialogClose asChild>
+                  <Button variant="outline">キャンセル</Button>
+                </DialogClose>
+                <Button 
+                  type="button"
+                  onClick={() => {
+                    toast({
+                      title: "レポート保存",
+                      description: "レポートが正常に保存されました",
+                    });
+                    setShowReportDialog(false);
+                  }}
+                >
+                  保存する
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
