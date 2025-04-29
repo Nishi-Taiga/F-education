@@ -89,10 +89,18 @@ export default function TutorProfilePage() {
   const saveProfileMutation = useMutation({
     mutationFn: async (data: any) => {
       console.log("保存リクエスト開始:", data);
-      const res = await apiRequest("POST", "/api/tutor/profile", data);
-      return await res.json();
+      try {
+        const res = await apiRequest("POST", "/api/tutor/profile", data);
+        const responseData = await res.json();
+        console.log("APIレスポンス成功:", responseData);
+        return responseData;
+      } catch (error) {
+        console.error("APIリクエストエラー:", error);
+        throw error; // エラーを再スローして onError ハンドラーに渡す
+      }
     },
     onMutate: () => {
+      console.log("ミューテーション開始");
       setIsSaving(true);
     },
     onSuccess: (result) => {
@@ -128,6 +136,7 @@ export default function TutorProfilePage() {
       });
     },
     onSettled: () => {
+      console.log("ミューテーション完了");
       setTimeout(() => {
         setIsSaving(false);
       }, 500); // 少し遅延させてボタンの状態変化を見えるようにする
@@ -188,27 +197,56 @@ export default function TutorProfilePage() {
     console.log("フォーム送信イベント発生");
     
     // バリデーションエラーの確認
-    console.log("フォームエラー:", form.formState.errors);
+    const errors = form.formState.errors;
+    console.log("フォームエラー:", errors);
     
-    // 科目の配列をカンマ区切りの文字列に変換
-    const subjects = data.selectedSubjects.join(",");
+    if (Object.keys(errors).length > 0) {
+      console.error("バリデーションエラーがあります:", errors);
+      toast({
+        title: "入力エラー",
+        description: "フォームに入力エラーがあります。エラーメッセージを確認してください。",
+        variant: "destructive",
+      });
+      return; // エラーがある場合は送信しない
+    }
     
-    // APIに送信するデータを構築
-    const tutorData = {
-      lastName: data.lastName,
-      firstName: data.firstName,
-      lastNameFurigana: data.lastNameFurigana,
-      firstNameFurigana: data.firstNameFurigana,
-      university: data.university,
-      birthDate: data.birthDate,
-      subjects,
-      bio: "" // 自己紹介は不要のため空に設定
-    };
-    
-    console.log("送信データ:", tutorData);
-    
-    // ミューテーションを実行
-    saveProfileMutation.mutate(tutorData);
+    try {
+      // 科目の配列をカンマ区切りの文字列に変換
+      const subjects = data.selectedSubjects.join(",");
+      
+      if (!subjects) {
+        toast({
+          title: "入力エラー",
+          description: "少なくとも1つの科目を選択してください。",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // APIに送信するデータを構築
+      const tutorData = {
+        lastName: data.lastName,
+        firstName: data.firstName,
+        lastNameFurigana: data.lastNameFurigana,
+        firstNameFurigana: data.firstNameFurigana,
+        university: data.university,
+        birthDate: data.birthDate,
+        subjects,
+        bio: data.bio || "" // 自己紹介がある場合は送信、なければ空文字
+      };
+      
+      console.log("送信データ:", tutorData);
+      
+      // ミューテーションを実行
+      saveProfileMutation.mutate(tutorData);
+    } catch (error) {
+      console.error("フォーム送信処理中にエラーが発生しました:", error);
+      toast({
+        title: "エラーが発生しました",
+        description: error instanceof Error ? error.message : "不明なエラーが発生しました",
+        variant: "destructive",
+      });
+    }
   };
   
   if (!user) {
