@@ -357,12 +357,25 @@ export default function SettingsPage() {
   // 生徒アカウント情報取得
   const viewStudentAccountMutation = useMutation({
     mutationFn: async (accountId: number) => {
-      const res = await apiRequest("GET", `/api/students/account/${accountId}`, {});
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || '生徒アカウント情報の取得に失敗しました');
+      try {
+        const res = await fetch(`/api/students/account/${accountId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || '生徒アカウント情報の取得に失敗しました');
+        }
+        
+        return res.json();
+      } catch (error) {
+        console.error("Error fetching student account:", error);
+        throw error;
       }
-      return res.json();
     },
     onSuccess: (data) => {
       setStudentAccountInfo({

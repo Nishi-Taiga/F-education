@@ -790,22 +790,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = req.user!.id;
 
     try {
-      // アカウントIDの生徒ユーザーを取得
-      const studentUser = await storage.getUser(parseInt(accountId));
-      
-      if (!studentUser) {
-        return res.status(404).json({ message: "Student account not found" });
+      // アカウントIDがない場合
+      if (!accountId) {
+        return res.status(400).json({ message: "Account ID is required" });
       }
+
+      console.log(`Fetching account info for accountId: ${accountId}`);
       
-      // 権限チェック（親アカウントIDが現在のユーザーIDと一致するか確認）
-      if (studentUser.parentId !== userId) {
-        return res.status(403).json({ message: "You do not have permission to view this account" });
-      }
+      // 当該studentId実際の生徒情報を取得
+      const allStudents = await storage.getStudentsByUserId(userId);
+      const student = allStudents.find(s => s.studentAccountId === parseInt(accountId));
       
-      // 生徒情報を取得
-      const student = await storage.getStudent(studentUser.studentId!);
       if (!student) {
-        return res.status(404).json({ message: "Student information not found" });
+        // 生徒が見つからない場合はユーザー情報から直接取得する方法を試みる
+        const studentUser = await storage.getUser(parseInt(accountId));
+        
+        if (!studentUser || studentUser.parentId !== userId) {
+          return res.status(404).json({ message: "Student account not found or you don't have permission" });
+        }
+        
+        // 生徒ユーザーのstudentIdから生徒情報を取得
+        const studentInfo = await storage.getStudent(studentUser.studentId!);
+        if (!studentInfo) {
+          return res.status(404).json({ message: "Student information not found" });
+        }
+        
+        // フルネーム作成
+        const fullName = `${studentInfo.lastName} ${studentInfo.firstName}`;
+        
+        // 生徒アカウント情報を返す
+        return res.json({
+          username: studentUser.username,
+          password: "password123", // TODO: 実際のパスワード管理方法に変更する
+          fullName,
+          email: studentUser.email
+        });
+      }
+      
+      // studentAccountIdを持つ生徒情報を基に、ユーザーアカウント情報を取得
+      const studentUser = await storage.getUser(student.studentAccountId);
+      if (!studentUser) {
+        return res.status(404).json({ message: "Student user account not found" });
       }
       
       // フルネーム作成
@@ -820,7 +845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Failed to get student account:", error);
-      res.status(500).json({ message: "Failed to get student account information", error });
+      res.status(500).json({ message: "Failed to get student account information", error: String(error) });
     }
   });
 
