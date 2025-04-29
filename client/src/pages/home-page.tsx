@@ -163,7 +163,7 @@ export default function HomePage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">
         <div className="md:flex md:items-start md:justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">マイページ</h2>
@@ -290,84 +290,91 @@ export default function HomePage() {
           </Card>
         )}
 
-        {/* Action Buttons */}
-        {user?.role === 'tutor' ? (
-          // 講師用メニュー
-          <div>
-            <h3 className="text-lg font-semibold mb-3">講師メニュー</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Button
-                variant="outline"
-                className="h-auto py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-                onClick={() => navigate("/tutor/profile")}
-              >
-                <div className="flex flex-col items-center justify-center">
-                  <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-2">
-                    <svg className="h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+        {/* Spacer to ensure footer stays at bottom */}
+        <div className="flex-grow min-h-[30px]"></div>
+        
+        {/* Action Buttons - Fixed to bottom */}
+        <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-md py-3 pb-4 mt-4 z-10">
+          <div className="max-w-7xl mx-auto px-4">
+            {user?.role === 'tutor' ? (
+              // 講師用メニュー
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-center md:text-left">講師メニュー</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                  <Button
+                    variant="outline"
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                    onClick={() => navigate("/tutor/profile")}
+                  >
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                        <svg className="h-4 w-4 md:h-5 md:w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <span className="text-xs md:text-sm font-medium text-gray-900">プロフィール設定</span>
+                    </div>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                    onClick={() => navigate("/tutor/schedule")}
+                  >
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                        <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      </div>
+                      <span className="text-xs md:text-sm font-medium text-gray-900">シフト管理</span>
+                    </div>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              // 生徒用メニュー
+              <div className="grid grid-cols-3 gap-2 md:gap-3">
+                <Button
+                  variant="outline"
+                  className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                  onClick={() => navigate("/tickets")}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                      <Ticket className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                    </div>
+                    <span className="text-xs md:text-sm font-medium text-gray-900">チケット購入</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-900">プロフィール設定</span>
-                </div>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="h-auto py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-                onClick={() => navigate("/tutor/schedule")}
-              >
-                <div className="flex flex-col items-center justify-center">
-                  <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-2">
-                    <CalendarCheck className="h-5 w-5 text-primary" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                  onClick={() => navigate("/booking")}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-2">
+                      <CalendarCheck className="h-5 w-5 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">授業予約</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-900">シフト管理</span>
-                </div>
-              </Button>
-            </div>
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                  onClick={() => navigate("/settings")}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-2">
+                      <Settings className="h-5 w-5 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">設定</span>
+                  </div>
+                </Button>
+              </div>
+            )}
           </div>
-        ) : (
-          // 生徒用メニュー
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Button
-              variant="outline"
-              className="h-auto py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-              onClick={() => navigate("/tickets")}
-            >
-              <div className="flex flex-col items-center justify-center">
-                <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-2">
-                  <Ticket className="h-5 w-5 text-primary" />
-                </div>
-                <span className="text-sm font-medium text-gray-900">チケット購入</span>
-              </div>
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="h-auto py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-              onClick={() => navigate("/booking")}
-            >
-              <div className="flex flex-col items-center justify-center">
-                <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-2">
-                  <CalendarCheck className="h-5 w-5 text-primary" />
-                </div>
-                <span className="text-sm font-medium text-gray-900">授業予約</span>
-              </div>
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="h-auto py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-              onClick={() => navigate("/settings")}
-            >
-              <div className="flex flex-col items-center justify-center">
-                <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-2">
-                  <Settings className="h-5 w-5 text-primary" />
-                </div>
-                <span className="text-sm font-medium text-gray-900">設定</span>
-              </div>
-            </Button>
-          </div>
-        )}
+        </div>
       </main>
       
       {/* キャンセル確認モーダル */}
