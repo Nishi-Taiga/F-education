@@ -829,6 +829,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // studentAccountIdを持つ生徒情報を基に、ユーザーアカウント情報を取得
+      if (!student.studentAccountId) {
+        return res.status(404).json({ message: "No student account found" });
+      }
       const studentUser = await storage.getUser(student.studentAccountId);
       if (!studentUser) {
         return res.status(404).json({ message: "Student user account not found" });
@@ -943,6 +946,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to update username:", error);
       res.status(500).json({ message: "Failed to update username", error: String(error) });
+    }
+  });
+  
+  // 生徒アカウントのパスワード変更
+  app.patch("/api/students/account/:accountId/password", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { accountId } = req.params;
+    const { password } = req.body;
+    const userId = req.user!.id;
+
+    try {
+      // 入力チェック
+      if (!accountId) {
+        return res.status(400).json({ message: "Account ID is required" });
+      }
+      
+      if (!password || password.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters long" });
+      }
+      
+      // 対象ユーザーが存在するか確認
+      const studentUser = await storage.getUser(parseInt(accountId));
+      if (!studentUser) {
+        return res.status(404).json({ message: "Student account not found" });
+      }
+      
+      // 権限チェック（親アカウントIDが現在のユーザーIDと一致するか確認）
+      if (studentUser.parentId !== userId) {
+        return res.status(403).json({ message: "You do not have permission to change this password" });
+      }
+      
+      // パスワードをハッシュ化
+      const hashedPassword = await hashPassword(password);
+      
+      // パスワードを更新
+      await storage.updateUserPassword(parseInt(accountId), hashedPassword);
+      
+      res.json({
+        success: true,
+        message: "Password updated successfully"
+      });
+    } catch (error) {
+      console.error("Failed to update password:", error);
+      res.status(500).json({ message: "Failed to update password", error: String(error) });
     }
   });
 
