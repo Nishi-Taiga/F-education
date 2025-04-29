@@ -71,12 +71,17 @@ export default function SettingsPage() {
   const [accountInfoDialogOpen, setAccountInfoDialogOpen] = useState(false);
   const [usernameDialogOpen, setUsernameDialogOpen] = useState(false);
   const [newUsername, setNewUsername] = useState("");
-  const [studentAccountInfo, setStudentAccountInfo] = useState<{ 
-    username: string; 
-    password: string; 
-    fullName: string; 
+  // 生徒アカウント情報の型定義
+  type StudentAccountInfo = {
+    username: string;
+    password: string;
+    fullName: string;
     studentAccountId: number;
-  } | null>(null);
+    email?: string;
+    passwordLastUpdated?: string;
+  };
+
+  const [studentAccountInfo, setStudentAccountInfo] = useState<StudentAccountInfo | null>(null);
   
   // パスワード変更ダイアログ関連の状態
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
@@ -406,11 +411,14 @@ export default function SettingsPage() {
       }
     },
     onSuccess: (data) => {
+      console.log("Retrieved student account info:", data);
       setStudentAccountInfo({
         username: data.username,
         password: data.password || '-', // パスワードがある場合のみ表示
         fullName: data.fullName,
         studentAccountId: data.accountId || 0,
+        email: data.email,
+        passwordLastUpdated: data.passwordLastUpdated,
       });
       setAccountInfoDialogOpen(true);
     },
