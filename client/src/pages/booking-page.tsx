@@ -50,6 +50,20 @@ export default function BookingPage() {
   // 登録済みの生徒一覧を取得
   const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
     queryKey: ["/api/students"],
+    onSuccess: (data) => {
+      // 生徒アカウントの場合は、自分のIDを自動選択
+      if (user?.role === 'student' && user?.studentId && data.length > 0) {
+        const studentId = user.studentId;
+        setSelectedStudentId(studentId);
+        
+        // 生徒の学年から学校レベルを取得
+        const selectedStudent = data.find(student => student.id === studentId);
+        if (selectedStudent) {
+          const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
+          setStudentSchoolLevel(schoolLevel);
+        }
+      }
+    }
   });
 
   const { data: existingBookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
