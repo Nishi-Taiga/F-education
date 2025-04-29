@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { toast } from "@/hooks/use-toast";
+import { PencilIcon, Home } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -319,11 +320,13 @@ export default function TutorProfilePage() {
         <h1 className="text-2xl font-bold">講師プロフィール設定</h1>
         <div className="flex gap-2">
           {!isEditing && (
-            <Button variant="outline" onClick={() => setIsEditing(true)}>
+            <Button variant="outline" onClick={() => setIsEditing(true)} className="flex items-center gap-2">
+              <PencilIcon className="h-4 w-4" />
               編集する
             </Button>
           )}
-          <Button variant="outline" onClick={() => setLocation("/")}>
+          <Button variant="outline" onClick={() => setLocation("/")} className="flex items-center gap-2">
+            <Home className="h-4 w-4" />
             ホームに戻る
           </Button>
         </div>

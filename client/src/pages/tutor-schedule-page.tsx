@@ -406,7 +406,7 @@ export default function TutorSchedulePage() {
                                   shift => shift.date === day.date && shift.timeSlot === timeSlot
                                 )?.isAvailable ?? 
                                 // なければ既存の設定を表示
-                                (shiftInfo?.isAvailable ?? true)
+                                (shiftInfo?.isAvailable ?? false)
                               }
                               onCheckedChange={() => 
                                 handleShiftToggle(
@@ -417,7 +417,7 @@ export default function TutorSchedulePage() {
                                     shift => shift.date === day.date && shift.timeSlot === timeSlot
                                   )?.isAvailable ?? 
                                   // なければ既存の設定を基準に切り替え
-                                  (shiftInfo?.isAvailable ?? true)
+                                  (shiftInfo?.isAvailable ?? false)
                                 )
                               }
                               disabled={isPast || updateShiftMutation.isPending}
@@ -427,7 +427,7 @@ export default function TutorSchedulePage() {
                             {pendingShifts.find(
                               shift => shift.date === day.date && shift.timeSlot === timeSlot
                             )?.isAvailable ?? 
-                            (shiftInfo?.isAvailable ?? true) ? "可能" : "不可"}
+                            (shiftInfo?.isAvailable ?? false) ? "可能" : "不可"}
                             {isPending && " (未保存)"}
                           </div>
                         </td>
@@ -453,11 +453,12 @@ export default function TutorSchedulePage() {
           
           <div className="mt-6">
             <Separator className="my-4" />
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground space-y-1">
               <p>※ 過去の日付のシフトは変更できません</p>
               <p>※ 変更は「変更を保存」ボタンを押すまで反映されません</p>
               <p>※ 黄色でハイライトされている項目は未保存の変更です</p>
               <p>※ 既に予約が入っている時間帯は、予約をキャンセルしない限りシフトを変更できません</p>
+              <p className="font-medium text-amber-600">※ シフト設定期限：各月分のシフトは<span className="underline">前月20日まで</span>に設定してください</p>
             </div>
           </div>
         </CardContent>
