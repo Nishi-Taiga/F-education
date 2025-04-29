@@ -67,6 +67,8 @@ export default function SettingsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [accountInfoDialogOpen, setAccountInfoDialogOpen] = useState(false);
+  const [studentAccountInfo, setStudentAccountInfo] = useState<{ username: string; password: string; fullName: string } | null>(null);
 
   // 生徒情報のクエリ
   const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
@@ -347,6 +349,33 @@ export default function SettingsPage() {
       toast({
         title: "エラー",
         description: `生徒アカウントの作成に失敗しました: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // 生徒アカウント情報取得
+  const viewStudentAccountMutation = useMutation({
+    mutationFn: async (accountId: number) => {
+      const res = await apiRequest("GET", `/api/students/account/${accountId}`, {});
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || '生徒アカウント情報の取得に失敗しました');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setStudentAccountInfo({
+        username: data.username,
+        password: data.password || '-', // パスワードがある場合のみ表示
+        fullName: data.fullName,
+      });
+      setAccountInfoDialogOpen(true);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "エラー",
+        description: `生徒アカウント情報の取得に失敗しました: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -662,9 +691,26 @@ export default function SettingsPage() {
                           {/* 生徒アカウント作成ボタン */}
                           <div className="mt-2">
                             {student.studentAccountId ? (
-                              <div className="text-xs flex items-center text-green-600">
-                                <CheckCircle className="mr-1 h-3 w-3" />
-                                アカウント発行済み
+                              <div className="flex flex-col">
+                                <div className="text-xs flex items-center text-green-600 mb-1">
+                                  <CheckCircle className="mr-1 h-3 w-3" />
+                                  アカウント発行済み
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="flex items-center text-xs h-6 px-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // 生徒アカウント情報を表示するために、アカウント情報APIを呼び出す
+                                    if (student.studentAccountId) {
+                                      viewStudentAccountMutation.mutate(student.studentAccountId);
+                                    }
+                                  }}
+                                >
+                                  <User className="mr-1 h-3 w-3" />
+                                  ログイン情報を確認
+                                </Button>
                               </div>
                             ) : (
                               <Button
@@ -726,15 +772,7 @@ export default function SettingsPage() {
                 </div>
               )}
               
-              {/* 「新規生徒登録」ボタンを追加 - 既存生徒がいる場合も表示 */}
-              {students && students.length > 0 && (
-                <div className="flex justify-center mt-4">
-                  <Button onClick={() => setAddDialogOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    新規生徒登録
-                  </Button>
-                </div>
-              )}
+              {/* 「生徒を追加」ボタン - 登録済み生徒が最後に表示 */}
             </div>
             
             {/* 生徒削除確認ダイアログ */}
@@ -1347,6 +1385,48 @@ export default function SettingsPage() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* 生徒アカウント情報ダイアログ */}
+        <Dialog open={accountInfoDialogOpen} onOpenChange={setAccountInfoDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>生徒アカウント情報</DialogTitle>
+              <DialogDescription>
+                {studentAccountInfo && (
+                  <>
+                    <span className="font-medium">{studentAccountInfo.fullName}</span>
+                    さんのログイン情報です。生徒に共有してください。
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {studentAccountInfo && (
+              <div className="py-4">
+                <div className="bg-slate-50 p-4 rounded space-y-3">
+                  <div>
+                    <p className="text-sm text-gray-500">ユーザー名</p>
+                    <p className="font-medium">{studentAccountInfo.username}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">パスワード</p>
+                    <p className="font-medium">{studentAccountInfo.password}</p>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm text-gray-600">
+                  このログイン情報で生徒は自分の予約状況を確認できます。
+                  セキュリティのため、ログイン情報は安全に保管してください。
+                </p>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button type="button" onClick={() => setAccountInfoDialogOpen(false)}>
+                閉じる
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
