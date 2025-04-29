@@ -78,29 +78,31 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
 
   return (
     <div className="overflow-visible">
-      <div className="flex justify-between items-center mb-2">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span className="py-1 text-sm font-medium">{formattedMonth}</span>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-      
-      {/* 色の凡例 */}
-      <div className="flex items-center justify-center gap-3 mb-2 text-xs">
-        <div className="flex items-center">
-          <div className="w-3 h-3 bg-blue-200 mr-1 rounded-full"></div>
-          <span>予定</span>
+      <div className="flex flex-col md:flex-row justify-between items-center mb-2">
+        <div className="flex items-center mb-2 md:mb-0">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="py-1 text-lg font-medium">{formattedMonth}</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
-        <div className="flex items-center">
-          <div className="w-3 h-3 bg-red-200 mr-1 rounded-full"></div>
-          <span>未報告</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-3 h-3 bg-green-200 mr-1 rounded-full"></div>
-          <span>報告済</span>
+        
+        {/* 色の凡例 */}
+        <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-blue-200 mr-1 rounded-full"></div>
+            <span>予定</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-red-200 mr-1 rounded-full"></div>
+            <span>未報告</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-green-200 mr-1 rounded-full"></div>
+            <span>報告済</span>
+          </div>
         </div>
       </div>
 
