@@ -52,7 +52,7 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
   };
 
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-visible">
       <div className="flex justify-between items-center mb-2">
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
           <ChevronLeft className="h-4 w-4" />

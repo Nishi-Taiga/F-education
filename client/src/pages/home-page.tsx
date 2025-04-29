@@ -202,13 +202,13 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Calendar - 共通表示 */}
+        {/* Calendar - 非スクロール領域 */}
         <Card className="p-3 mb-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-base font-medium text-gray-900">予約済み授業</h3>
           </div>
           
-          <div className="scrollable-container">
+          <div className="calendar-section">
             {isLoadingBookings || isLoadingStudents ? (
               <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -221,31 +221,31 @@ export default function HomePage() {
                 })) || []} 
               />
             )}
-            
-            <div className="mt-3">
-              <div className="text-sm text-gray-600 mb-2">授業予定</div>
-              <div className="space-y-2 card-container">
-                {isLoadingBookings || isLoadingStudents ? (
-                  <div className="flex justify-center items-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  </div>
-                ) : bookings && bookings.length > 0 ? (
-                  bookings.map((booking) => (
-                    <BookingCard 
-                      key={booking.id} 
-                      booking={{
-                        ...booking,
-                        studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-                      }}
-                      onCancelClick={user?.role !== 'tutor' ? handleCancelClick : undefined}
-                    />
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-gray-500">
-                    予約済みの授業はありません
-                  </div>
-                )}
-              </div>
+          </div>
+          
+          <div className="mt-3">
+            <div className="text-sm text-gray-600 mb-2">授業予定</div>
+            <div className="space-y-2 bookings-container overflow-y-auto" style={{ maxHeight: '200px' }}>
+              {isLoadingBookings || isLoadingStudents ? (
+                <div className="flex justify-center items-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                </div>
+              ) : bookings && bookings.length > 0 ? (
+                bookings.map((booking) => (
+                  <BookingCard 
+                    key={booking.id} 
+                    booking={{
+                      ...booking,
+                      studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+                    }}
+                    onCancelClick={user?.role !== 'tutor' ? handleCancelClick : undefined}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  予約済みの授業はありません
+                </div>
+              )}
             </div>
           </div>
         </Card>
