@@ -8,7 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Loader2, PlusCircle, Search, User, GraduationCap, UsersRound, XCircle } from "lucide-react";
+import { ArrowLeft, Loader2, PlusCircle, Search, User, GraduationCap, UsersRound, XCircle, KeyRound } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
@@ -311,6 +311,28 @@ export default function SettingsPage() {
       toast({
         title: "エラー",
         description: `生徒情報の削除に失敗しました: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // 生徒アカウント作成
+  const createStudentAccountMutation = useMutation({
+    mutationFn: async (studentId: number) => {
+      const res = await apiRequest("POST", `/api/students/${studentId}/account`, {});
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      toast({
+        title: "生徒アカウントが作成されました",
+        description: `ユーザー名: ${data.student.username}\nこのアカウントで生徒が直接ログインできるようになりました。`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "エラー",
+        description: `生徒アカウントの作成に失敗しました: ${error}`,
         variant: "destructive",
       });
     },
@@ -622,6 +644,20 @@ export default function SettingsPage() {
                           <div className="mt-1 text-sm">
                             {student.school} | {student.grade}
                           </div>
+                          
+                          {/* 生徒アカウント作成ボタン */}
+                          <div className="mt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center text-xs"
+                              onClick={() => createStudentAccountMutation.mutate(student.id)}
+                              disabled={createStudentAccountMutation.isPending}
+                            >
+                              <KeyRound className="mr-1 h-3 w-3" />
+                              {createStudentAccountMutation.isPending ? '作成中...' : '生徒アカウント作成'}
+                            </Button>
+                          </div>
                         </div>
                         <div className="flex space-x-2">
                           <Button 
@@ -655,8 +691,22 @@ export default function SettingsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center p-4 text-gray-500">
-                  生徒が登録されていません
+                <div className="text-center p-4 border rounded-md bg-gray-50">
+                  <p className="text-gray-500">生徒が登録されていません</p>
+                  <Button className="mt-4" onClick={() => setAddDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    新規生徒登録
+                  </Button>
+                </div>
+              )}
+              
+              {/* 「新規生徒登録」ボタンを追加 - 既存生徒がいる場合も表示 */}
+              {students && students.length > 0 && (
+                <div className="flex justify-center mt-4">
+                  <Button onClick={() => setAddDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    新規生徒登録
+                  </Button>
                 </div>
               )}
             </div>
