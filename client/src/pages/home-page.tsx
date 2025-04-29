@@ -7,7 +7,7 @@ import { BookingCard } from "@/components/booking-card";
 import { BookingCancellationModal } from "@/components/booking-cancellation-modal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Ticket, CalendarCheck, Settings, Plus, UserCircle, ClipboardList, UserCog, Clock, BookOpen, Scroll, MapPin, GraduationCap } from "lucide-react";
+import { Loader2, Ticket, CalendarCheck, Settings, Plus, UserCircle, ClipboardList, UserCog, Clock, BookOpen, Scroll, MapPin, GraduationCap, Copy, Check } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Dialog,
@@ -31,6 +31,7 @@ export default function HomePage() {
   
   // 講師の生徒詳細ダイアログ用の状態
   const [showStudentDetailDialog, setShowStudentDetailDialog] = useState(false);
+  const [addressCopied, setAddressCopied] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<{
     name: string;
     time: string;
@@ -38,6 +39,29 @@ export default function HomePage() {
     grade: string;
     address: string;
   } | null>(null);
+  
+  // アドレスをコピーする関数
+  const copyAddressToClipboard = () => {
+    if (selectedStudent?.address) {
+      navigator.clipboard.writeText(selectedStudent.address)
+        .then(() => {
+          setAddressCopied(true);
+          setTimeout(() => setAddressCopied(false), 2000);
+          toast({
+            title: "コピー完了",
+            description: "住所をクリップボードにコピーしました",
+          });
+        })
+        .catch((err) => {
+          console.error("クリップボードへのコピーに失敗しました:", err);
+          toast({
+            title: "コピーエラー",
+            description: "住所のコピーに失敗しました",
+            variant: "destructive",
+          });
+        });
+    }
+  };
 
   const { data: bookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
@@ -263,9 +287,9 @@ export default function HomePage() {
         <div className="md:flex md:items-start md:justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">マイページ</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              {user?.role === 'tutor' ? '講師ダッシュボード' : '予約状況とチケット残数の確認'}
-            </p>
+            {user?.role !== 'tutor' && (
+              <p className="mt-1 text-sm text-gray-600">予約状況とチケット残数の確認</p>
+            )}
           </div>
           {user?.role !== 'tutor' && (
             <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-3 border border-gray-200">
@@ -506,7 +530,22 @@ export default function HomePage() {
               </div>
               
               <div className="bg-gray-50 p-2 rounded-md">
-                <p className="text-xs text-gray-500">住所</p>
+                <div className="flex justify-between items-start">
+                  <p className="text-xs text-gray-500">住所</p>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="h-6 w-6 rounded-full hover:bg-gray-200 -mt-1 -mr-1"
+                    onClick={copyAddressToClipboard}
+                    disabled={addressCopied}
+                  >
+                    {addressCopied ? (
+                      <Check className="h-3 w-3 text-green-600" />
+                    ) : (
+                      <Copy className="h-3 w-3 text-gray-500" />
+                    )}
+                  </Button>
+                </div>
                 <p className="text-sm">{selectedStudent.address}</p>
               </div>
             </div>
