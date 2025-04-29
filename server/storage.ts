@@ -283,7 +283,7 @@ export class MemStorage implements IStorage {
       id, 
       username: insertUser.username,
       password: insertUser.password,
-      ticketCount: 0, 
+      ticketCount: insertUser.ticketCount !== undefined ? insertUser.ticketCount : 0, 
       displayName: insertUser.displayName || null,
       email: insertUser.email || null,
       phone: null,
@@ -293,9 +293,11 @@ export class MemStorage implements IStorage {
       address: null,
       profileCompleted: false,
       tutorProfileCompleted: false,
+      studentId: insertUser.studentId || null,
+      parentId: insertUser.parentId || null,
       emailNotifications: true, 
       smsNotifications: false,
-      role: insertUser.role || "user", // "user" または "tutor"
+      role: insertUser.role || "parent", // "parent", "student", "tutor"
       createdAt: new Date()
     };
     this.users.set(id, user);

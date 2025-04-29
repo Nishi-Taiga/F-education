@@ -320,19 +320,33 @@ export default function SettingsPage() {
   const createStudentAccountMutation = useMutation({
     mutationFn: async (studentId: number) => {
       const res = await apiRequest("POST", `/api/students/${studentId}/account`, {});
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || '生徒アカウント作成に失敗しました');
+      }
       return res.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
       toast({
         title: "生徒アカウントが作成されました",
-        description: `ユーザー名: ${data.student.username}\nこのアカウントで生徒が直接ログインできるようになりました。`,
+        description: (
+          <div className="space-y-2">
+            <p>
+              <span className="font-medium">{data.student.name}</span>さんのアカウントが作成されました
+            </p>
+            <div className="bg-slate-50 p-2 rounded text-sm">
+              <p><span className="font-medium">ユーザー名:</span> {data.student.username}</p>
+            </div>
+            <p className="text-xs text-slate-600">このアカウントで生徒が直接ログインできるようになりました</p>
+          </div>
+        ),
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "エラー",
-        description: `生徒アカウントの作成に失敗しました: ${error}`,
+        description: `生徒アカウントの作成に失敗しました: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -651,11 +665,16 @@ export default function SettingsPage() {
                               variant="outline"
                               size="sm"
                               className="flex items-center text-xs"
-                              onClick={() => createStudentAccountMutation.mutate(student.id)}
-                              disabled={createStudentAccountMutation.isPending}
+                              onClick={(e) => {
+                                e.stopPropagation(); // イベントの伝播を止める
+                                createStudentAccountMutation.mutate(student.id);
+                              }}
+                              disabled={createStudentAccountMutation.isPending && createStudentAccountMutation.variables === student.id}
                             >
                               <KeyRound className="mr-1 h-3 w-3" />
-                              {createStudentAccountMutation.isPending ? '作成中...' : '生徒アカウント作成'}
+                              {createStudentAccountMutation.isPending && createStudentAccountMutation.variables === student.id 
+                                ? '作成中...' 
+                                : '生徒アカウント作成'}
                             </Button>
                           </div>
                         </div>
