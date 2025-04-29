@@ -65,31 +65,31 @@ export default function AuthPage() {
   }, [user, navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row items-stretch">
-      <div className="flex-1 flex items-center justify-center p-6 bg-white">
+    <div className="min-h-screen flex flex-col md:flex-row items-stretch screen-container">
+      <div className="flex-1 flex items-center justify-center p-4 bg-white">
         <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-primary mb-2">家庭教師サービス</h1>
-            <p className="text-gray-600">サービスをご利用するには、アカウントへのログインが必要です</p>
+          <div className="text-center mb-4">
+            <h1 className="text-2xl font-bold text-primary mb-2">家庭教師サービス</h1>
+            <p className="text-sm text-gray-600">サービスをご利用するには、アカウントへのログインが必要です</p>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-6">
+            <TabsList className="grid grid-cols-2 mb-4">
               <TabsTrigger value="login">ログイン</TabsTrigger>
               <TabsTrigger value="register">アカウント作成</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
-              <Card>
-                <CardHeader>
-                  <CardTitle>アカウントにログイン</CardTitle>
-                  <CardDescription>
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">アカウントにログイン</CardTitle>
+                  <CardDescription className="text-xs">
                     既存のアカウント情報を入力してください
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pb-2">
                   <Form {...loginForm}>
-                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-3">
                       <FormField
                         control={loginForm.control}
                         name="username"
@@ -129,8 +129,8 @@ export default function AuthPage() {
                     </form>
                   </Form>
                 </CardContent>
-                <CardFooter className="flex justify-center">
-                  <Button variant="link" onClick={() => setActiveTab("register")}>
+                <CardFooter className="flex justify-center py-2">
+                  <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setActiveTab("register")}>
                     アカウントをお持ちでない方はこちら
                   </Button>
                 </CardFooter>
@@ -138,16 +138,16 @@ export default function AuthPage() {
             </TabsContent>
             
             <TabsContent value="register">
-              <Card>
-                <CardHeader>
-                  <CardTitle>新規アカウント作成</CardTitle>
-                  <CardDescription>
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">新規アカウント作成</CardTitle>
+                  <CardDescription className="text-xs">
                     新しいアカウントを作成してサービスを利用開始しましょう
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pb-2">
                   <Form {...registerForm}>
-                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-3">
                       <FormField
                         control={registerForm.control}
                         name="username"
@@ -213,8 +213,8 @@ export default function AuthPage() {
                     </form>
                   </Form>
                 </CardContent>
-                <CardFooter className="flex justify-center">
-                  <Button variant="link" onClick={() => setActiveTab("login")}>
+                <CardFooter className="flex justify-center py-2">
+                  <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setActiveTab("login")}>
                     既にアカウントをお持ちの方はこちら
                   </Button>
                 </CardFooter>
@@ -223,27 +223,27 @@ export default function AuthPage() {
           </Tabs>
         </div>
       </div>
-      <div className="flex-1 bg-primary p-12 text-white hidden md:flex flex-col justify-center">
+      <div className="flex-1 bg-primary p-6 text-white hidden md:flex flex-col justify-center form-container">
         <div className="max-w-md">
-          <h2 className="text-4xl font-bold mb-6">効率的に学習、質の高い家庭教師サービス</h2>
-          <ul className="space-y-4">
+          <h2 className="text-2xl font-bold mb-4">効率的に学習、質の高い家庭教師サービス</h2>
+          <ul className="space-y-3">
             <li className="flex items-start">
-              <svg className="h-6 w-6 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
               </svg>
-              <span>素早く簡単に授業の予約ができます</span>
+              <span className="text-sm">素早く簡単に授業の予約ができます</span>
             </li>
             <li className="flex items-start">
-              <svg className="h-6 w-6 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
               </svg>
-              <span>経験豊富な教師陣が丁寧に指導します</span>
+              <span className="text-sm">経験豊富な教師陣が丁寧に指導します</span>
             </li>
             <li className="flex items-start">
-              <svg className="h-6 w-6 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
               </svg>
-              <span>オンラインでチケットを購入して、好きな時間に授業を受けられます</span>
+              <span className="text-sm">オンラインでチケットを購入して、好きな時間に授業を受けられます</span>
             </li>
           </ul>
         </div>
