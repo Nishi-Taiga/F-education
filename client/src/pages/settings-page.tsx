@@ -8,8 +8,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Loader2, PlusCircle, Search, User, GraduationCap, UsersRound, XCircle, KeyRound, CheckCircle } from "lucide-react";
+import { ArrowLeft, Loader2, PlusCircle, Search, User, GraduationCap, UsersRound, XCircle, KeyRound, CheckCircle, RefreshCw } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -68,7 +69,20 @@ export default function SettingsPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [accountInfoDialogOpen, setAccountInfoDialogOpen] = useState(false);
-  const [studentAccountInfo, setStudentAccountInfo] = useState<{ username: string; password: string; fullName: string } | null>(null);
+  const [usernameDialogOpen, setUsernameDialogOpen] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [studentAccountInfo, setStudentAccountInfo] = useState<{ 
+    username: string; 
+    password: string; 
+    fullName: string; 
+    studentAccountId: number;
+  } | null>(null);
+  
+  // ユーザー名変更ダイアログを表示する関数
+  const updateStudentUsernameDialog = () => {
+    setNewUsername("");
+    setUsernameDialogOpen(true);
+  };
 
   // 生徒情報のクエリ
   const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
@@ -382,6 +396,7 @@ export default function SettingsPage() {
         username: data.username,
         password: data.password || '-', // パスワードがある場合のみ表示
         fullName: data.fullName,
+        studentAccountId: data.accountId || 0,
       });
       setAccountInfoDialogOpen(true);
     },
@@ -389,6 +404,73 @@ export default function SettingsPage() {
       toast({
         title: "エラー",
         description: `生徒アカウント情報の取得に失敗しました: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // 生徒アカウントのパスワードリセット
+  const resetStudentPasswordMutation = useMutation({
+    mutationFn: async (accountId: number) => {
+      const res = await apiRequest("POST", `/api/students/account/${accountId}/reset-password`, {});
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'パスワードのリセットに失敗しました');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      // アカウント情報を更新
+      setStudentAccountInfo({
+        ...studentAccountInfo!,
+        password: data.password,
+      });
+      
+      toast({
+        title: "パスワードがリセットされました",
+        description: "新しいパスワードが発行されました",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "エラー",
+        description: `パスワードのリセットに失敗しました: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // 生徒アカウントのユーザー名変更
+  const updateStudentUsernameMutation = useMutation({
+    mutationFn: async (data: { accountId: number; username: string }) => {
+      const res = await apiRequest("PATCH", `/api/students/account/${data.accountId}/username`, {
+        username: data.username
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'ユーザー名の変更に失敗しました');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      // アカウント情報を更新
+      setStudentAccountInfo({
+        ...studentAccountInfo!,
+        username: data.username,
+      });
+      
+      // ダイアログを閉じる
+      setUsernameDialogOpen(false);
+      
+      toast({
+        title: "ユーザー名が変更されました",
+        description: "新しいユーザー名に更新されました",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "エラー",
+        description: `ユーザー名の変更に失敗しました: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -1417,13 +1499,39 @@ export default function SettingsPage() {
             {studentAccountInfo && (
               <div className="py-4">
                 <div className="bg-slate-50 p-4 rounded space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-500">ユーザー名</p>
-                    <p className="font-medium">{studentAccountInfo.username}</p>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-gray-500">ユーザー名</p>
+                      <p className="font-medium">{studentAccountInfo.username}</p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (editingStudentId && studentAccountInfo) {
+                          updateStudentUsernameDialog();
+                        }
+                      }}
+                    >
+                      変更
+                    </Button>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">パスワード</p>
-                    <p className="font-medium">{studentAccountInfo.password}</p>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-gray-500">パスワード</p>
+                      <p className="font-medium">{studentAccountInfo.password}</p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (editingStudentId && studentAccountInfo) {
+                          resetStudentPasswordMutation.mutate(studentAccountInfo.studentAccountId);
+                        }
+                      }}
+                    >
+                      リセット
+                    </Button>
                   </div>
                 </div>
                 <p className="mt-4 text-sm text-gray-600">
@@ -1438,6 +1546,79 @@ export default function SettingsPage() {
                 閉じる
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* ユーザー名変更ダイアログ */}
+        <Dialog open={usernameDialogOpen} onOpenChange={setUsernameDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>ユーザー名の変更</DialogTitle>
+              <DialogDescription>
+                {studentAccountInfo && (
+                  <>
+                    <span className="font-medium">{studentAccountInfo.fullName}</span>
+                    さんのユーザー名を変更します。
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="py-4">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (newUsername && studentAccountInfo) {
+                  updateStudentUsernameMutation.mutate({
+                    accountId: studentAccountInfo.studentAccountId,
+                    username: newUsername
+                  });
+                }
+              }}>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-username">新しいユーザー名</Label>
+                    <Input 
+                      id="new-username"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      placeholder="新しいユーザー名を入力"
+                    />
+                  </div>
+                  
+                  <p className="text-sm text-gray-600">
+                    新しいユーザー名は少なくとも4文字以上の長さが必要です。
+                    ユーザー名はログインの際に利用するため、覚えやすいものを選んでください。
+                  </p>
+                </div>
+                
+                <div className="flex justify-end space-x-2 mt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setUsernameDialogOpen(false)}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={
+                      !newUsername || 
+                      newUsername.length < 4 || 
+                      updateStudentUsernameMutation.isPending
+                    }
+                  >
+                    {updateStudentUsernameMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        更新中...
+                      </>
+                    ) : (
+                      "変更する"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </DialogContent>
         </Dialog>
       </main>

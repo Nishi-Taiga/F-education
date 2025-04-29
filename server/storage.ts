@@ -29,6 +29,8 @@ export interface IStorage {
     city: string,
     address: string
   ): Promise<User>;
+  updateUsername(userId: number, username: string): Promise<void>;
+  updateUserPassword(userId: number, hashedPassword: string): Promise<void>;
   
   // 生徒関連
   getStudentsByUserId(userId: number): Promise<Student[]>;
@@ -949,6 +951,32 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(bookings)
       .where(eq(bookings.id, id));
+  }
+  
+  // ユーザー名の更新
+  async updateUsername(userId: number, username: string): Promise<void> {
+    try {
+      await db
+        .update(users)
+        .set({ username })
+        .where(eq(users.id, userId));
+    } catch (error) {
+      console.error("ユーザー名変更エラー:", error);
+      throw new Error("Failed to update username");
+    }
+  }
+  
+  // パスワードの更新
+  async updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
+    try {
+      await db
+        .update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.id, userId));
+    } catch (error) {
+      console.error("パスワード変更エラー:", error);
+      throw new Error("Failed to update password");
+    }
   }
 }
 

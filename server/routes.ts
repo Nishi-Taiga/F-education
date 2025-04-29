@@ -823,7 +823,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: studentUser.username,
           password: "password123", // TODO: 実際のパスワード管理方法に変更する
           fullName,
-          email: studentUser.email
+          email: studentUser.email,
+          accountId: studentUser.id
         });
       }
       
@@ -841,11 +842,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: studentUser.username,
         password: "password123", // TODO: 実際のパスワード管理方法に変更する
         fullName,
-        email: studentUser.email
+        email: studentUser.email,
+        accountId: studentUser.id
       });
     } catch (error) {
       console.error("Failed to get student account:", error);
       res.status(500).json({ message: "Failed to get student account information", error: String(error) });
+    }
+  });
+  
+  // 生徒アカウントのパスワードリセット
+  app.post("/api/students/account/:accountId/reset-password", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { accountId } = req.params;
+    const userId = req.user!.id;
+
+    try {
+      // アカウントID存在チェック
+      if (!accountId) {
+        return res.status(400).json({ message: "Account ID is required" });
+      }
+      
+      // 対象ユーザーが存在するか確認
+      const studentUser = await storage.getUser(parseInt(accountId));
+      if (!studentUser) {
+        return res.status(404).json({ message: "Student account not found" });
+      }
+      
+      // 権限チェック（親アカウントIDが現在のユーザーIDと一致するか確認）
+      if (studentUser.parentId !== userId) {
+        return res.status(403).json({ message: "You do not have permission to reset this password" });
+      }
+      
+      // 新しいパスワードを生成（単純化のため固定文字列 + ランダム数字）
+      const newPassword = `student${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      // パスワードをハッシュ化
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // ユーザー情報を更新
+      await storage.updateUserPassword(parseInt(accountId), hashedPassword);
+      
+      res.json({
+        success: true,
+        password: newPassword
+      });
+    } catch (error) {
+      console.error("Failed to reset password:", error);
+      res.status(500).json({ message: "Failed to reset password", error: String(error) });
+    }
+  });
+  
+  // 生徒アカウントのユーザー名変更
+  app.patch("/api/students/account/:accountId/username", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { accountId } = req.params;
+    const { username } = req.body;
+    const userId = req.user!.id;
+
+    try {
+      // 入力チェック
+      if (!accountId) {
+        return res.status(400).json({ message: "Account ID is required" });
+      }
+      
+      if (!username || username.length < 4) {
+        return res.status(400).json({ message: "Username must be at least 4 characters long" });
+      }
+      
+      // 対象ユーザーが存在するか確認
+      const studentUser = await storage.getUser(parseInt(accountId));
+      if (!studentUser) {
+        return res.status(404).json({ message: "Student account not found" });
+      }
+      
+      // 権限チェック（親アカウントIDが現在のユーザーIDと一致するか確認）
+      if (studentUser.parentId !== userId) {
+        return res.status(403).json({ message: "You do not have permission to change this username" });
+      }
+      
+      // ユーザー名の重複チェック
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser && existingUser.id !== parseInt(accountId)) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      // ユーザー名を更新
+      await storage.updateUsername(parseInt(accountId), username);
+      
+      res.json({
+        success: true,
+        username
+      });
+    } catch (error) {
+      console.error("Failed to update username:", error);
+      res.status(500).json({ message: "Failed to update username", error: String(error) });
     }
   });
 
