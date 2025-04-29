@@ -154,6 +154,42 @@ export default function HomePage() {
   // 今日の授業を取得する関数
   const getTodaysBookings = (): (Booking & { studentName?: string })[] => {
     if (!bookings) return [];
+    
+    // 実際の予約がない場合はテスト用データを返す（講師アカウントの場合のみ）
+    if (bookings.length === 0 && user?.role === 'tutor') {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式
+      
+      // テスト用の授業データ
+      return [
+        {
+          id: 1001,
+          createdAt: new Date(),
+          userId: user.id,
+          tutorId: user.id,
+          studentId: 1,
+          tutorShiftId: 1,
+          date: today,
+          timeSlot: "16:00-17:30",
+          subject: "数学",
+          status: "confirmed",
+          studentName: "山田 太郎"
+        },
+        {
+          id: 1002,
+          createdAt: new Date(),
+          userId: user.id,
+          tutorId: user.id,
+          studentId: 2,
+          tutorShiftId: 2,
+          date: today,
+          timeSlot: "18:00-19:30",
+          subject: "英語",
+          status: "confirmed",
+          studentName: "佐藤 花子"
+        }
+      ];
+    }
+    
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式
     return bookings
       .filter(booking => booking.date === today)
@@ -165,6 +201,21 @@ export default function HomePage() {
   
   // 生徒詳細を表示する関数
   const handleStudentDetailClick = (booking: Booking & { studentName?: string }) => {
+    // テスト生徒データかどうかチェック (studentIdが1または2の場合はテストデータと判断)
+    if (booking.studentId === 1 || booking.studentId === 2) {
+      // テスト用データの場合
+      setSelectedStudent({
+        name: booking.studentName || "生徒名",
+        time: booking.timeSlot,
+        subject: booking.subject,
+        grade: booking.studentId === 1 ? "中学3年生" : "高校2年生",
+        address: "テスト用住所：東京都新宿区西新宿2-8-1"
+      });
+      setShowStudentDetailDialog(true);
+      return;
+    }
+    
+    // 実データの場合
     const student = students?.find(s => s.id === booking.studentId);
     if (student) {
       setSelectedStudent({
@@ -260,38 +311,18 @@ export default function HomePage() {
               </div>
             ) : (
               <CalendarView 
-                bookings={bookings?.map(booking => ({
-                  ...booking,
-                  studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-                })) || []} 
-              />
-            )}
-          </div>
-          
-          <div className="mt-3">
-            <div className="text-sm text-gray-600 mb-2">授業予定</div>
-            <div className="space-y-2 bookings-container overflow-y-auto" style={{ maxHeight: '200px' }}>
-              {isLoadingBookings || isLoadingStudents ? (
-                <div className="flex justify-center items-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                </div>
-              ) : bookings && bookings.length > 0 ? (
-                bookings.map((booking) => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={{
+                bookings={user?.role === 'tutor' 
+                  ? [...(bookings || []), ...getTodaysBookings()].map(booking => ({
+                      ...booking,
+                      studentName: booking.studentName || (booking.studentId ? getStudentName(booking.studentId) : undefined)
+                    }))
+                  : (bookings || []).map(booking => ({
                       ...booking,
                       studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-                    }}
-                    onCancelClick={user?.role !== 'tutor' ? handleCancelClick : undefined}
-                  />
-                ))
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  予約済みの授業はありません
-                </div>
-              )}
-            </div>
+                    }))
+                } 
+              />
+            )}
           </div>
         </Card>
         
@@ -302,69 +333,42 @@ export default function HomePage() {
               <h3 className="text-base font-medium text-gray-900">講師ダッシュボード</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <h4 className="text-xs font-medium text-gray-500 mb-1">今日の授業</h4>
-                <div className="flex items-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">今日の授業</h4>
+                <div className="flex items-center mb-1">
                   <p className="text-lg font-bold">{getTodaysBookings().length}</p>
                   <span className="ml-1 text-xs text-gray-500">件</span>
                 </div>
-                <p className="text-xs text-gray-500">※テスト環境：テスト講師にはまだ予約がありません</p>
+                <p className="text-xs text-gray-500">※テスト用授業を追加しました</p>
               </div>
               
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <h4 className="text-xs font-medium text-gray-500 mb-1">今週の授業</h4>
-                <div className="flex items-center">
-                  <p className="text-lg font-bold">{bookings?.length || 0}</p>
-                  <span className="ml-1 text-xs text-gray-500">件</span>
-                </div>
-                <p className="text-xs text-gray-500">※週の集計は日曜〜土曜で計算</p>
-              </div>
-              
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <h4 className="text-xs font-medium text-gray-500 mb-1">合計シフト</h4>
-                <div className="flex items-center">
-                  <p className="text-lg font-bold">{bookings?.length || 0}</p>
-                  <span className="ml-1 text-xs text-gray-500">件</span>
-                </div>
-                <p className="text-xs text-gray-500">※過去のシフトも含む</p>
-              </div>
-            </div>
-            
-            {getTodaysBookings().length > 0 ? (
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">今日の担当授業生徒一覧</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  {getTodaysBookings().map((booking) => (
-                    <Button
-                      key={booking.id}
-                      variant="outline"
-                      className="text-left h-auto py-2 px-3 bg-white hover:bg-blue-50 border border-gray-200"
-                      onClick={() => handleStudentDetailClick(booking)}
-                    >
-                      <div>
-                        <div className="font-medium text-blue-700">{booking.studentName}</div>
-                        <div className="text-xs text-gray-500">{booking.timeSlot}</div>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-4 bg-gray-50 rounded-lg mb-4">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-2">今日の授業予定はありません</p>
-                  <div className="flex space-x-4 mt-2">
-                    <Button variant="outline" size="sm" onClick={() => navigate("/tutor/profile")}>
-                      プロフィール設定
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => navigate("/tutor/schedule")}>
-                      シフト登録
-                    </Button>
+              {getTodaysBookings().length > 0 ? (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">授業予定</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {getTodaysBookings().map((booking) => (
+                      <Button
+                        key={booking.id}
+                        variant="outline"
+                        className="text-left h-auto py-2 px-3 bg-white hover:bg-blue-50 border border-gray-200"
+                        onClick={() => handleStudentDetailClick(booking)}
+                      >
+                        <div>
+                          <div className="font-medium text-blue-700">{booking.studentName}</div>
+                          <div className="text-xs text-gray-500">{booking.timeSlot} - {booking.subject}</div>
+                        </div>
+                      </Button>
+                    ))}
                   </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">授業予定</h4>
+                  <p className="text-sm text-gray-600">本日の授業予定はありません</p>
+                </div>
+              )}
+            </div>
           </Card>
         )}
 
