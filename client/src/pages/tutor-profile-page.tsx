@@ -191,8 +191,12 @@ export default function TutorProfilePage() {
   
   // フォーム送信時の処理
   const onSubmit = async (data: FormValues) => {
+    
     // 保存中なら何もしない
-    if (isSaving) return;
+    if (isSaving || saveProfileMutation.isPending) {
+      console.log("保存処理中のため、新しい送信をスキップします");
+      return;
+    }
     
     console.log("フォーム送信イベント発生");
     
@@ -223,6 +227,9 @@ export default function TutorProfilePage() {
         return;
       }
       
+      // 保存中状態を設定
+      setIsSaving(true);
+      
       // APIに送信するデータを構築
       const tutorData = {
         lastName: data.lastName,
@@ -232,13 +239,58 @@ export default function TutorProfilePage() {
         university: data.university,
         birthDate: data.birthDate,
         subjects,
-        bio: data.bio || "" // 自己紹介がある場合は送信、なければ空文字
+        bio: data.bio || "", // 自己紹介がある場合は送信、なければ空文字
+        profileCompleted: true // プロフィール完了フラグを明示的に設定
       };
       
       console.log("送信データ:", tutorData);
       
-      // ミューテーションを実行
-      saveProfileMutation.mutate(tutorData);
+      // 直接APIを呼び出す方法を試してみる（React Queryのmutationに問題がある可能性）
+      try {
+        const response = await fetch("/api/tutor/profile", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(tutorData),
+          credentials: "include" // Cookieを含める
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log("API保存成功:", result);
+        
+        // 成功後の処理
+        queryClient.invalidateQueries({ queryKey: ["/api/tutor/profile"] });
+        
+        toast({
+          title: "保存しました",
+          description: "講師プロフィールが正常に更新されました。",
+        });
+        
+        // 編集モードを終了
+        setIsEditing(false);
+        
+        // リダイレクトフラグを設定
+        setRedirectPending(true);
+        
+      } catch (apiError) {
+        console.error("API呼び出しエラー:", apiError);
+        toast({
+          title: "保存に失敗しました",
+          description: apiError instanceof Error ? apiError.message : "APIエラーが発生しました",
+          variant: "destructive",
+        });
+      } finally {
+        // 処理完了後に保存中状態を解除
+        setTimeout(() => {
+          setIsSaving(false);
+        }, 500);
+      }
+      
     } catch (error) {
       console.error("フォーム送信処理中にエラーが発生しました:", error);
       toast({
@@ -246,6 +298,7 @@ export default function TutorProfilePage() {
         description: error instanceof Error ? error.message : "不明なエラーが発生しました",
         variant: "destructive",
       });
+      setIsSaving(false);
     }
   };
   
@@ -552,8 +605,11 @@ export default function TutorProfilePage() {
                       type="button" 
                       variant="outline"
                       onClick={() => {
+                        // プロフィールデータが存在する場合
                         if (tutorProfile) {
+                          // 編集モードを終了
                           setIsEditing(false);
+                          
                           // フォームを元の値に戻す
                           const subjects = tutorProfile.subjects ? tutorProfile.subjects.split(",") : [];
                           form.reset({
@@ -566,18 +622,32 @@ export default function TutorProfilePage() {
                             selectedSubjects: subjects,
                             bio: tutorProfile.bio || ""
                           });
+                          
+                          // キャンセルメッセージ
+                          toast({
+                            title: "編集をキャンセルしました",
+                            description: "変更は保存されませんでした",
+                          });
+                        } else {
+                          // 新規作成の場合はホームに戻る
+                          setLocation("/");
                         }
                       }}
-                      disabled={saveProfileMutation.isPending}
+                      disabled={isSaving || saveProfileMutation.isPending}
                     >
                       キャンセル
                     </Button>
+                    
                     <Button 
                       type="submit" 
                       className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white"
-                      disabled={saveProfileMutation.isPending}
+                      disabled={isSaving || saveProfileMutation.isPending}
+                      onClick={() => {
+                        // ボタンクリック時もフォームエラーをコンソールに表示（デバッグ用）
+                        console.log("保存ボタンクリック - フォームエラー:", form.formState.errors);
+                      }}
                     >
-                      {saveProfileMutation.isPending ? (
+                      {isSaving || saveProfileMutation.isPending ? (
                         <span className="flex items-center gap-1">
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-opacity-50 border-t-white"></span>
                           保存中...
