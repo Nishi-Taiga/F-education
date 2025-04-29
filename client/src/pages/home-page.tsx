@@ -43,6 +43,7 @@ export default function HomePage() {
   // レポート作成ダイアログ用の状態
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [selectedReportBooking, setSelectedReportBooking] = useState<(Booking & { studentName?: string }) | null>(null);
+  const [todaysBookingsForReport, setTodaysBookingsForReport] = useState<(Booking & { studentName?: string })[]>([]);
   
   // アドレスをコピーする関数
   const copyAddressToClipboard = () => {
@@ -259,6 +260,11 @@ export default function HomePage() {
   
   // レポート作成ダイアログを開く関数
   const handleOpenReportDialog = (booking: Booking & { studentName?: string }) => {
+    // 今日の授業一覧を取得し、状態を設定
+    const todaysBookings = getTodaysBookings();
+    setTodaysBookingsForReport(todaysBookings);
+    
+    // 選択された授業を設定
     setSelectedReportBooking(booking);
     setShowReportDialog(true);
   };
@@ -617,30 +623,101 @@ export default function HomePage() {
           
           {selectedReportBooking && (
             <div className="space-y-4 py-2">
+              {/* 生徒選択セクション */}
               <div className="bg-blue-50 p-3 rounded-lg mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold text-blue-800">授業情報</h3>
+                  <h3 className="font-semibold text-blue-800">レポート対象の授業を選択</h3>
+                </div>
+                
+                <div className="space-y-2">
+                  {todaysBookingsForReport.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-2">
+                      {todaysBookingsForReport.map((booking) => (
+                        <Button
+                          key={booking.id}
+                          variant={selectedReportBooking.id === booking.id ? "default" : "outline"}
+                          className={`w-full justify-start text-left h-auto py-2 px-3 ${selectedReportBooking.id === booking.id ? 'bg-blue-600' : 'bg-white hover:bg-blue-50'} border border-gray-200`}
+                          onClick={() => setSelectedReportBooking(booking)}
+                        >
+                          <div className="flex items-center w-full">
+                            <div className="mr-2">
+                              {selectedReportBooking.id === booking.id ? (
+                                <Check className="h-4 w-4 text-white" />
+                              ) : (
+                                <div className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className={`font-medium ${selectedReportBooking.id === booking.id ? 'text-white' : 'text-blue-700'}`}>
+                                {booking.studentName || "生徒不明"}
+                              </div>
+                              <div className={`text-xs ${selectedReportBooking.id === booking.id ? 'text-blue-100' : 'text-gray-500'}`}>
+                                {booking.timeSlot} - {booking.subject}
+                              </div>
+                            </div>
+                            <div className="ml-2">
+                              {booking.reportStatus === 'completed' ? (
+                                <div className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">
+                                  報告済み
+                                </div>
+                              ) : (
+                                // 授業が終了しているかどうかを判定
+                                (() => {
+                                  const [, endTime] = booking.timeSlot.split('-');
+                                  const lessonEndTime = new Date(`${booking.date}T${endTime}:00`);
+                                  const now = new Date();
+                                  
+                                  if (lessonEndTime < now) {
+                                    return (
+                                      <div className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
+                                        未報告
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                      予定
+                                    </div>
+                                  );
+                                })()
+                              )}
+                            </div>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">本日の授業予定はありません</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* 授業情報 */}
+              <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-semibold text-gray-800">授業情報</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <p className="text-xs text-blue-700">生徒名</p>
-                    <p className="font-medium">{selectedReportBooking.studentName}</p>
+                    <p className="text-xs text-gray-500">生徒名</p>
+                    <p className="font-medium">{selectedReportBooking.studentName || "生徒不明"}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-blue-700">時間帯</p>
+                    <p className="text-xs text-gray-500">時間帯</p>
                     <p className="font-medium">{selectedReportBooking.timeSlot}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-blue-700">日付</p>
+                    <p className="text-xs text-gray-500">日付</p>
                     <p className="font-medium">{selectedReportBooking.date}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-blue-700">教科</p>
+                    <p className="text-xs text-gray-500">教科</p>
                     <p className="font-medium">{selectedReportBooking.subject}</p>
                   </div>
                 </div>
               </div>
               
+              {/* 報告書フォーム */}
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label htmlFor="lesson-content" className="block text-sm font-medium">

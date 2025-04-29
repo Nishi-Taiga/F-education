@@ -142,36 +142,54 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
                     {day.getDate()}
                   </span>
                 </div>
-                {dayBookings.map((booking, index) => (
-                  <div key={index} className="mt-auto mb-0.5 mx-0.5">
-                    <div 
-                      className="px-0.5 py-0.5 text-[8px] leading-tight rounded bg-primary text-white text-center relative group overflow-hidden"
-                      title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})` : '予約済み'}
-                    >
-                      <span className="block truncate">{booking.timeSlot.split('-')[0]}</span>
-                      {booking.studentName && (
-                        <span className="block truncate whitespace-nowrap text-[7px] bg-opacity-70 bg-primary-foreground text-primary rounded-sm">
-                          {booking.studentName}
-                        </span>
-                      )}
-                      {/* 学生情報のツールチップ */}
-                      <div className="absolute left-0 bottom-full mb-1 w-max z-10 hidden group-hover:block">
-                        <div className="bg-gray-800 text-white text-[10px] rounded py-1 px-2 shadow-lg">
-                          {booking.studentName ? (
-                            <>
-                              <div className="font-semibold">{booking.studentName}</div>
-                              <div>{booking.timeSlot} - {booking.subject}</div>
-                            </>
-                          ) : booking.studentId ? (
-                            <span>生徒ID: {booking.studentId}</span>
-                          ) : (
-                            <span>予約済み</span>
-                          )}
+                {dayBookings.map((booking, index) => {
+                  // 授業状態に応じた色分け
+                  const lessonStatus = getLessonStatus(booking);
+                  let bgColorClass = "bg-blue-500"; // デフォルト：これから（青）
+                  
+                  if (lessonStatus === 'completed-no-report') {
+                    bgColorClass = "bg-red-500"; // 未報告（赤）
+                  } else if (lessonStatus === 'completed-with-report') {
+                    bgColorClass = "bg-green-500"; // 報告済（緑）
+                  }
+                  
+                  return (
+                    <div key={index} className="mt-auto mb-0.5 mx-0.5">
+                      <div 
+                        className={`px-0.5 py-0.5 text-[8px] leading-tight rounded ${bgColorClass} text-white text-center relative group overflow-hidden`}
+                        title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
+                      >
+                        <span className="block truncate">{booking.timeSlot.split('-')[0]}</span>
+                        {booking.studentName && (
+                          <span className="block truncate whitespace-nowrap text-[7px] bg-opacity-70 bg-primary-foreground text-primary rounded-sm">
+                            {booking.studentName}
+                          </span>
+                        )}
+                        {/* 学生情報のツールチップ */}
+                        <div className="absolute left-0 bottom-full mb-1 w-max z-10 hidden group-hover:block">
+                          <div className="bg-gray-800 text-white text-[10px] rounded py-1 px-2 shadow-lg">
+                            {booking.studentName ? (
+                              <>
+                                <div className="font-semibold">{booking.studentName}</div>
+                                <div>{booking.timeSlot} - {booking.subject}</div>
+                                {lessonStatus === 'completed-no-report' && (
+                                  <div className="text-red-300 font-semibold mt-1">⚠️ 報告書未作成</div>
+                                )}
+                                {lessonStatus === 'completed-with-report' && (
+                                  <div className="text-green-300 font-semibold mt-1">✓ 報告書作成済</div>
+                                )}
+                              </>
+                            ) : booking.studentId ? (
+                              <span>生徒ID: {booking.studentId}</span>
+                            ) : (
+                              <span>予約済み</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
