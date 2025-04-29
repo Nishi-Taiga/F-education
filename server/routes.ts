@@ -988,10 +988,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // パスワードを更新
       await storage.updateUserPassword(parseInt(accountId), hashedPassword);
       
-      res.json({
+      // 明示的にJSON形式で返す
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.stringify({
         success: true,
         message: "Password updated successfully"
-      });
+      }));
     } catch (error) {
       console.error("Failed to update password:", error);
       res.status(500).json({ message: "Failed to update password", error: String(error) });
