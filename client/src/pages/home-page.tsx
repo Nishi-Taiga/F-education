@@ -307,8 +307,8 @@ export default function HomePage() {
                     onClick={() => navigate("/tutor/profile")}
                   >
                     <div className="flex flex-col items-center justify-center">
-                      <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
-                        <UserCog className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                        <UserCog className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
                       </div>
                       <span className="text-xs md:text-sm font-medium text-gray-900">プロフィール設定</span>
                     </div>
@@ -320,8 +320,8 @@ export default function HomePage() {
                     onClick={() => navigate("/tutor/schedule")}
                   >
                     <div className="flex flex-col items-center justify-center">
-                      <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
-                        <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-amber-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                        <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
                       </div>
                       <span className="text-xs md:text-sm font-medium text-gray-900">シフト管理</span>
                     </div>
@@ -339,8 +339,8 @@ export default function HomePage() {
                     onClick={() => navigate("/tickets")}
                   >
                     <div className="flex flex-col items-center justify-center">
-                      <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
-                        <Ticket className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-green-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                        <Ticket className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
                       </div>
                       <span className="text-xs md:text-sm font-medium text-gray-900">チケット購入</span>
                     </div>
@@ -354,8 +354,8 @@ export default function HomePage() {
                   onClick={() => navigate("/booking")}
                 >
                   <div className="flex flex-col items-center justify-center">
-                    <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
-                      <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                      <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
                     </div>
                     <span className="text-xs md:text-sm font-medium text-gray-900">授業予約</span>
                   </div>
@@ -369,8 +369,8 @@ export default function HomePage() {
                     onClick={() => navigate("/settings")}
                   >
                     <div className="flex flex-col items-center justify-center">
-                      <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
-                        <Settings className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-gray-100 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                        <Settings className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
                       </div>
                       <span className="text-xs md:text-sm font-medium text-gray-900">設定</span>
                     </div>
