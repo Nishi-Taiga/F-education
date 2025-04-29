@@ -289,18 +289,18 @@ export default function BookingPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">授業予約</h2>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-gray-900">授業予約</h2>
           <p className="mt-1 text-sm text-gray-600">希望する日時を選択してください</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Calendar for booking */}
           <div className="lg:col-span-2">
-            <Card className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">カレンダー</h3>
+            <Card className="p-3">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-base font-medium text-gray-900">カレンダー</h3>
               </div>
               
               {/* 生徒選択 */}
@@ -414,8 +414,8 @@ export default function BookingPage() {
 
           {/* Time slots and selected bookings */}
           <div className="lg:col-span-1">
-            <Card className="p-4 mb-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">授業時間を選択</h3>
+            <Card className="p-3 mb-3">
+              <h3 className="text-base font-medium text-gray-900 mb-3">授業時間を選択</h3>
               
               {!selectedStudentId || !selectedSubject ? (
                 <div className="p-4 border rounded-md bg-gray-50 text-center">
@@ -540,10 +540,10 @@ export default function BookingPage() {
               )}
             </Card>
             
-            <Card className="p-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">選択済み授業</h3>
+            <Card className="p-3">
+              <h3 className="text-base font-medium text-gray-900 mb-3">選択済み授業</h3>
               
-              <div className="space-y-3 mb-6">
+              <div className="space-y-2 mb-4 card-container">
                 {selectedBookings.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-gray-600">授業が選択されていません</p>

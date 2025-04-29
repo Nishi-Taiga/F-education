@@ -53,18 +53,18 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
 
   return (
     <div className="overflow-hidden">
-      <div className="flex justify-between items-center mb-4">
-        <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
-          <ChevronLeft className="h-5 w-5" />
+      <div className="flex justify-between items-center mb-2">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
+          <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="py-2 font-medium">{formattedMonth}</span>
-        <Button variant="ghost" size="icon" onClick={goToNextMonth}>
-          <ChevronRight className="h-5 w-5" />
+        <span className="py-1 text-sm font-medium">{formattedMonth}</span>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Day labels */}
-      <div className="grid grid-cols-7 gap-1 text-center text-sm font-medium mb-2">
+      <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium mb-1">
         <div className="text-red-600">日</div>
         <div className="text-gray-500">月</div>
         <div className="text-gray-500">火</div>
@@ -75,12 +75,12 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
       </div>
       
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1 text-sm">
+      <div className="grid grid-cols-7 gap-1 text-xs">
         {/* Empty cells for days of previous month */}
         {Array.from({ length: new Date(calendarDays[0]?.getFullYear(), calendarDays[0]?.getMonth(), 1).getDay() }).map((_, index) => (
-          <div key={`empty-start-${index}`} className="aspect-square p-1">
+          <div key={`empty-start-${index}`} className="aspect-square p-0.5">
             <div className="h-full rounded-md bg-gray-50 flex flex-col opacity-50">
-              <div className="p-1 text-center">
+              <div className="p-0.5 text-center">
                 <span className="text-gray-400"></span>
               </div>
             </div>
@@ -104,30 +104,30 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
           }
           
           return (
-            <div key={day.toString()} className="aspect-square p-1">
+            <div key={day.toString()} className="aspect-square p-0.5">
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} flex flex-col ${isPast ? 'opacity-60' : ''}`}
                 onClick={() => isSelectable && handleDayClick(day)}
               >
-                <div className="p-1 text-center">
+                <div className="p-0.5 text-center">
                   <span className={`
-                    ${isToday(day) ? 'bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center mx-auto' : ''}
+                    ${isToday(day) ? 'bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center mx-auto' : ''}
                     ${!isCurrentMonth ? 'text-gray-400' : textColorClass}
                   `}>
                     {day.getDate()}
                   </span>
                 </div>
                 {dayBookings.map((booking, index) => (
-                  <div key={index} className="mt-auto mb-1 mx-1">
+                  <div key={index} className="mt-auto mb-0.5 mx-0.5">
                     <div 
-                      className="px-1 py-0.5 text-xs rounded bg-primary text-white text-center relative group"
+                      className="px-0.5 py-0.5 text-[10px] rounded bg-primary text-white text-center relative group"
                       title={booking.studentName ? `${booking.studentName}` : '予約済み'}
                     >
                       <span className="block truncate">{booking.timeSlot.split('-')[0]}</span>
                       {/* 学生情報のツールチップ */}
                       {booking.studentId && (
                         <div className="absolute left-0 bottom-full mb-1 w-max z-10 hidden group-hover:block">
-                          <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 shadow-lg">
+                          <div className="bg-gray-800 text-white text-[10px] rounded py-0.5 px-1.5 shadow-lg">
                             {booking.studentName ? (
                               <span>{booking.studentName}</span>
                             ) : (
