@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { addMonths, subMonths, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isBefore, parse, getDay } from "date-fns";
+import { 
+  addMonths, subMonths, format, startOfMonth, endOfMonth, 
+  eachDayOfInterval, isSameMonth, isToday, isBefore, getDay,
+  addDays, subDays
+} from "date-fns";
 import { type Booking } from "@shared/schema";
 
 // 予約情報に生徒名を追加するための拡張型
@@ -20,11 +24,33 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
   const [calendarDays, setCalendarDays] = useState<Date[]>([]);
 
   useEffect(() => {
-    // Generate array of all days in current month
+    // 月の最初と最後の日を取得
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
-    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    setCalendarDays(daysInMonth);
+    
+    // 月の最初の日の曜日を取得（0は日曜日）
+    const startDay = getDay(monthStart);
+    
+    // 月の最後の日の曜日を取得
+    const endDay = getDay(monthEnd);
+    
+    // 前月の最後の日曜日を計算（最初の日が日曜日でない場合）
+    let calendarStart = monthStart;
+    if (startDay > 0) {
+      // startDay日分前に戻る
+      calendarStart = subDays(monthStart, startDay);
+    }
+    
+    // 翌月の最初の日曜日を計算（最後の日が日曜日でない場合）
+    let calendarEnd = monthEnd;
+    if (endDay < 6) {
+      // 6 - endDay日分先に進む（土曜日までを含める）
+      calendarEnd = addDays(monthEnd, 6 - endDay);
+    }
+    
+    // 計算された期間の日付配列を生成
+    const daysInCalendar = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+    setCalendarDays(daysInCalendar);
   }, [currentDate]);
 
   const goToPreviousMonth = () => {
@@ -117,7 +143,7 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
       </div>
 
       {/* Day labels */}
-      <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium mb-1">
+      <div className="grid grid-cols-7 gap-1 text-center text-sm font-medium mb-1">
         <div className="text-red-600">日</div>
         <div className="text-gray-500">月</div>
         <div className="text-gray-500">火</div>
@@ -165,7 +191,7 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
               >
                 <div className="p-0.5 text-center">
                   <span className={`
-                    ${format(day, 'yyyy-MM-dd') === format(japanTime, 'yyyy-MM-dd') ? 'bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center mx-auto' : ''}
+                    ${format(day, 'yyyy-MM-dd') === format(japanTime, 'yyyy-MM-dd') ? 'bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center mx-auto text-sm' : 'text-sm'}
                     ${!isCurrentMonth ? 'text-gray-400' : textColorClass}
                   `}>
                     {day.getDate()}
@@ -185,12 +211,12 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
                   return (
                     <div key={index} className="mt-auto mb-0.5 mx-0.5">
                       <div 
-                        className={`px-0.5 py-0.5 text-[8px] leading-tight rounded ${bgColorClass} text-white text-center relative group overflow-hidden`}
+                        className={`px-1 py-0.5 text-[9px] leading-tight rounded ${bgColorClass} text-white text-center relative group overflow-hidden`}
                         title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
                       >
-                        <span className="block truncate">{booking.timeSlot.split('-')[0]}</span>
+                        <span className="block truncate font-medium">{booking.timeSlot.split('-')[0]}</span>
                         {booking.studentName && (
-                          <span className="block truncate whitespace-nowrap text-[7px] bg-opacity-70 bg-primary-foreground text-primary rounded-sm">
+                          <span className="block truncate whitespace-nowrap text-[8px] bg-opacity-80 bg-primary-foreground text-primary rounded-sm font-medium">
                             {booking.studentName}
                           </span>
                         )}
