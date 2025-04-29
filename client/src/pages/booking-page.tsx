@@ -49,22 +49,23 @@ export default function BookingPage() {
 
   // 登録済みの生徒一覧を取得
   const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
-    queryKey: ["/api/students"],
-    onSuccess: (data: Student[]) => {
-      // 生徒アカウントの場合は、自分のIDを自動選択
-      if (user?.role === 'student' && user?.studentId && data.length > 0) {
-        const studentId = user.studentId;
-        setSelectedStudentId(studentId);
-        
-        // 生徒の学年から学校レベルを取得
-        const selectedStudent = data.find((student: Student) => student.id === studentId);
-        if (selectedStudent) {
-          const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
-          setStudentSchoolLevel(schoolLevel);
-        }
+    queryKey: ["/api/students"]
+  });
+  
+  // 生徒アカウントの場合は初期設定
+  useEffect(() => {
+    if (user?.role === 'student' && user?.studentId && students && students.length > 0) {
+      // 生徒IDを設定
+      setSelectedStudentId(user.studentId);
+      
+      // 生徒情報から学校レベルを取得して設定
+      const studentInfo = students.find(s => s.id === user.studentId);
+      if (studentInfo) {
+        const schoolLevel = getSchoolLevelFromGrade(studentInfo.grade);
+        setStudentSchoolLevel(schoolLevel);
       }
     }
-  });
+  }, [user, students]);
 
   const { data: existingBookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
@@ -372,30 +373,56 @@ export default function BookingPage() {
                   <BookOpen className="h-4 w-4 text-primary" />
                   <Label className="text-sm font-medium">授業科目を選択</Label>
                 </div>
-                {!selectedStudentId ? (
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
-                    先に生徒を選択してください
-                  </div>
-                ) : studentSchoolLevel ? (
-                  <Select
-                    value={selectedSubject || ""}
-                    onValueChange={(value) => setSelectedSubject(value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="科目を選択してください" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjectsBySchoolLevel[studentSchoolLevel].map((subject) => (
-                        <SelectItem key={subject} value={subject}>
-                          {subject}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {user?.role === 'student' ? (
+                  // 生徒アカウントの場合は学年から科目選択
+                  studentSchoolLevel ? (
+                    <Select
+                      value={selectedSubject || ""}
+                      onValueChange={(value) => setSelectedSubject(value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="科目を選択してください" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjectsBySchoolLevel[studentSchoolLevel].map((subject) => (
+                          <SelectItem key={subject} value={subject}>
+                            {subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
+                      生徒の学年情報が取得できませんでした
+                    </div>
+                  )
                 ) : (
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
-                    生徒の学年情報が取得できませんでした
-                  </div>
+                  // 親アカウントの場合は生徒選択必須
+                  !selectedStudentId ? (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
+                      先に生徒を選択してください
+                    </div>
+                  ) : studentSchoolLevel ? (
+                    <Select
+                      value={selectedSubject || ""}
+                      onValueChange={(value) => setSelectedSubject(value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="科目を選択してください" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjectsBySchoolLevel[studentSchoolLevel].map((subject) => (
+                          <SelectItem key={subject} value={subject}>
+                            {subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
+                      生徒の学年情報が取得できませんでした
+                    </div>
+                  )
                 )}
               </div>
               
@@ -403,15 +430,17 @@ export default function BookingPage() {
                 <div className="flex justify-center items-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : !selectedStudentId || !selectedSubject ? (
+              ) : ((user?.role !== 'student' && !selectedStudentId) || !selectedSubject) ? (
                 <div className="border rounded-md p-6 text-center bg-gray-50">
                   <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 mb-2">授業の予約には以下の情報が必要です</p>
                   <ul className="text-sm text-gray-600 mb-4 space-y-1">
-                    <li className="flex items-center justify-center">
-                      <User className="h-3.5 w-3.5 text-primary mr-1.5" />
-                      <span>受講する生徒</span>
-                    </li>
+                    {user?.role !== 'student' && (
+                      <li className="flex items-center justify-center">
+                        <User className="h-3.5 w-3.5 text-primary mr-1.5" />
+                        <span>受講する生徒</span>
+                      </li>
+                    )}
                     <li className="flex items-center justify-center">
                       <BookOpen className="h-3.5 w-3.5 text-primary mr-1.5" />
                       <span>授業科目</span>
@@ -433,17 +462,17 @@ export default function BookingPage() {
             <Card className="p-3 mb-3">
               <h3 className="text-base font-medium text-gray-900 mb-3">授業時間を選択</h3>
               
-              {!selectedStudentId || !selectedSubject ? (
+              {((user?.role !== 'student' && !selectedStudentId) || (!user?.role && !selectedStudentId) || !selectedSubject) ? (
                 <div className="p-4 border rounded-md bg-gray-50 text-center">
                   <p className="text-gray-600 mb-2">授業時間を選択するには</p>
                   <ul className="text-sm text-gray-600 mb-2 space-y-1">
-                    {!selectedStudentId && (
+                    {user?.role !== 'student' && !selectedStudentId && (
                       <li className="flex items-center justify-center">
                         <User className="h-3.5 w-3.5 text-amber-500 mr-1.5" />
                         <span className="text-amber-700">生徒を選択してください</span>
                       </li>
                     )}
-                    {selectedStudentId && !selectedSubject && (
+                    {!selectedSubject && (
                       <li className="flex items-center justify-center">
                         <BookOpen className="h-3.5 w-3.5 text-amber-500 mr-1.5" />
                         <span className="text-amber-700">科目を選択してください</span>
