@@ -7,8 +7,16 @@ import { BookingCard } from "@/components/booking-card";
 import { BookingCancellationModal } from "@/components/booking-cancellation-modal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Ticket, CalendarCheck, Settings, Plus, UserCircle, ClipboardList, UserCog } from "lucide-react";
+import { Loader2, Ticket, CalendarCheck, Settings, Plus, UserCircle, ClipboardList, UserCog, Clock, BookOpen, Scroll, MapPin, GraduationCap } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Booking, Student } from "@shared/schema";
 
@@ -20,6 +28,16 @@ export default function HomePage() {
   // キャンセル関連の状態
   const [selectedBooking, setSelectedBooking] = useState<(Booking & { studentName?: string }) | null>(null);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
+  
+  // 講師の生徒詳細ダイアログ用の状態
+  const [showStudentDetailDialog, setShowStudentDetailDialog] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<{
+    name: string;
+    time: string;
+    subject: string;
+    grade: string;
+    address: string;
+  } | null>(null);
 
   const { data: bookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
