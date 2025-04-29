@@ -206,56 +206,115 @@ export default function HomePage() {
     return undefined;
   };
   
-  // 今日の授業を取得する関数
-  const getTodaysBookings = (): (Booking & { studentName?: string })[] => {
+  // 指定日の授業を取得する関数
+  const getBookingsByDate = (date: string): (Booking & { studentName?: string })[] => {
     if (!bookings) return [];
     
     // 実際の予約がない場合はテスト用データを返す（講師アカウントの場合のみ）
     if (bookings.length === 0 && user?.role === 'tutor') {
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
       
-      // テスト用の授業データ
-      return [
-        {
-          id: 1001,
-          createdAt: new Date(),
-          userId: user.id,
-          tutorId: user.id,
-          studentId: 1,
-          tutorShiftId: 1,
-          date: today,
-          timeSlot: "16:00-17:30",
-          subject: "数学",
-          status: "confirmed",
-          reportStatus: null,
-          reportContent: null,
-          studentName: "山田 太郎"
-        },
-        {
-          id: 1002,
-          createdAt: new Date(),
-          userId: user.id,
-          tutorId: user.id,
-          studentId: 2,
-          tutorShiftId: 2,
-          date: today,
-          timeSlot: "18:00-19:30",
-          subject: "英語",
-          status: "confirmed",
-          reportStatus: null,
-          reportContent: null,
-          studentName: "佐藤 花子"
-        }
-      ];
+      // テスト用の授業データ（今日と明日用）
+      if (date === today) {
+        return [
+          {
+            id: 1001,
+            createdAt: new Date(),
+            userId: user.id,
+            tutorId: user.id,
+            studentId: 1,
+            tutorShiftId: 1,
+            date: today,
+            timeSlot: "16:00-17:30",
+            subject: "数学",
+            status: "confirmed",
+            reportStatus: null,
+            reportContent: null,
+            studentName: "山田 太郎"
+          },
+          {
+            id: 1002,
+            createdAt: new Date(),
+            userId: user.id,
+            tutorId: user.id,
+            studentId: 2,
+            tutorShiftId: 2,
+            date: today,
+            timeSlot: "18:00-19:30",
+            subject: "英語",
+            status: "confirmed",
+            reportStatus: null,
+            reportContent: null,
+            studentName: "佐藤 花子"
+          }
+        ];
+      } else if (date === tomorrowStr) {
+        return [
+          {
+            id: 1003,
+            createdAt: new Date(),
+            userId: user.id,
+            tutorId: user.id,
+            studentId: 1,
+            tutorShiftId: 3,
+            date: tomorrowStr,
+            timeSlot: "16:00-17:30",
+            subject: "国語",
+            status: "confirmed",
+            reportStatus: null,
+            reportContent: null,
+            studentName: "山田 太郎"
+          },
+          {
+            id: 1004,
+            createdAt: new Date(),
+            userId: user.id,
+            tutorId: user.id,
+            studentId: 2,
+            tutorShiftId: 4,
+            date: tomorrowStr,
+            timeSlot: "18:00-19:30",
+            subject: "社会",
+            status: "confirmed",
+            reportStatus: null,
+            reportContent: null,
+            studentName: "佐藤 花子"
+          },
+          {
+            id: 1005,
+            createdAt: new Date(),
+            userId: user.id,
+            tutorId: user.id,
+            studentId: 3,
+            tutorShiftId: 5,
+            date: tomorrowStr,
+            timeSlot: "20:00-21:30",
+            subject: "理科",
+            status: "confirmed",
+            reportStatus: null,
+            reportContent: null,
+            studentName: "鈴木 一郎"
+          }
+        ];
+      }
     }
     
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式
+    // 実際のデータをフィルタリング
     return bookings
-      .filter(booking => booking.date === today)
+      .filter(booking => booking.date === date)
       .map(booking => ({
         ...booking,
         studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
       }));
+  };
+  
+  // 今日の授業を取得する関数
+  const getTodaysBookings = (): (Booking & { studentName?: string })[] => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式
+    return getBookingsByDate(today);
   };
   
   // 生徒詳細を表示する関数
@@ -288,14 +347,48 @@ export default function HomePage() {
     }
   };
   
-  // レポート作成ダイアログを開く関数
-  const handleOpenReportDialog = (booking: Booking & { studentName?: string }) => {
-    // 今日の授業一覧を取得し、状態を設定
-    const todaysBookings = getTodaysBookings();
-    setTodaysBookingsForReport(todaysBookings);
+  // レポート作成対象の授業を取得する関数
+  const getUnreportedBookings = (): (Booking & { studentName?: string })[] => {
+    if (!bookings) return [];
     
-    // 選択された授業を設定
-    setSelectedReportBooking(booking);
+    // 現在の日時を取得
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const today = now.toISOString().split('T')[0];
+    
+    // 終了した授業とレポートが未作成の授業をフィルタリング
+    return bookings
+      .filter(booking => {
+        // 日付が今日より前の場合は終了している
+        if (booking.date < today) return true;
+        
+        // 今日の授業の場合、時間によって判断
+        if (booking.date === today) {
+          // タイムスロットの終了時間を取得して現在時刻と比較
+          const endTime = parseInt(booking.timeSlot.split('-')[1].split(':')[0]) * 60 + 
+                          parseInt(booking.timeSlot.split('-')[1].split(':')[1]);
+          return currentTime > endTime;
+        }
+        
+        return false;
+      })
+      // レポートが未作成の授業だけをフィルタリング
+      .filter(booking => booking.reportStatus !== "completed")
+      // 生徒名を追加
+      .map(booking => ({
+        ...booking,
+        studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+      }));
+  };
+  
+  // レポート作成ダイアログを開く関数
+  const handleOpenReportDialog = (booking?: Booking & { studentName?: string }) => {
+    // 未報告の授業一覧を取得し、状態を設定
+    const unreportedBookings = getUnreportedBookings();
+    setTodaysBookingsForReport(unreportedBookings);
+    
+    // 選択された授業を設定（指定がない場合は最初の授業か空に）
+    setSelectedReportBooking(booking || (unreportedBookings.length > 0 ? unreportedBookings[0] : null));
     setShowReportDialog(true);
   };
 
@@ -403,54 +496,52 @@ export default function HomePage() {
               <h3 className="text-base font-medium text-gray-900">講師ダッシュボード</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">今日の授業</h4>
-                <div className="flex items-center mb-1">
-                  <p className="text-lg font-bold">{getTodaysBookings().length}</p>
-                  <span className="ml-1 text-xs text-gray-500">件</span>
-                </div>
-                <p className="text-xs text-gray-500">※テスト用授業を追加しました</p>
-              </div>
-              
-              {getTodaysBookings().length > 0 ? (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">授業予定</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {getTodaysBookings().map((booking) => (
-                      <Button
-                        key={booking.id}
-                        variant="outline"
-                        className="text-left h-auto py-2 px-3 bg-white hover:bg-blue-50 border border-gray-200"
-                        onClick={() => handleStudentDetailClick(booking)}
-                      >
-                        <div className="w-full">
-                          <div className="font-medium text-blue-700">{booking.studentName}</div>
-                          <div className="flex justify-between items-center">
-                            <div className="text-xs text-gray-500">{booking.timeSlot} - {booking.subject}</div>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6 rounded-full hover:bg-blue-100"
-                              onClick={(e) => {
-                                e.stopPropagation(); // 親のクリックイベントを阻止
-                                handleOpenReportDialog(booking);
-                              }}
-                            >
-                              <FileText className="h-3 w-3 text-blue-600" />
-                            </Button>
-                          </div>
-                        </div>
-                      </Button>
-                    ))}
+            <div className="grid grid-cols-1 gap-4 mb-4">
+              <div className="grid grid-cols-4 md:grid-cols-12 gap-4">
+                <div className="col-span-4 md:col-span-3 bg-gray-50 p-4 rounded-lg flex flex-col justify-center">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">今日の授業</h4>
+                  <div className="flex items-center">
+                    <p className="text-lg font-bold">{getTodaysBookings().length}</p>
+                    <span className="ml-1 text-xs text-gray-500">件</span>
                   </div>
                 </div>
-              ) : (
-                <div className="bg-gray-50 p-4 rounded-lg">
+                
+                <div className="col-span-4 md:col-span-9 bg-gray-50 p-4 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">授業予定</h4>
-                  <p className="text-sm text-gray-600">本日の授業予定はありません</p>
+                  {getTodaysBookings().length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {getTodaysBookings().map((booking) => (
+                        <Button
+                          key={booking.id}
+                          variant="outline"
+                          className="text-left h-auto py-2 px-3 bg-white hover:bg-blue-50 border border-gray-200"
+                          onClick={() => handleStudentDetailClick(booking)}
+                        >
+                          <div className="w-full">
+                            <div className="font-medium text-blue-700">{booking.studentName}</div>
+                            <div className="flex justify-between items-center">
+                              <div className="text-xs text-gray-500">{booking.timeSlot} - {booking.subject}</div>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 rounded-full hover:bg-blue-100"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // 親のクリックイベントを阻止
+                                  handleOpenReportDialog(booking);
+                                }}
+                              >
+                                <FileText className="h-3 w-3 text-blue-600" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">本日の授業予定はありません</p>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </Card>
         )}
@@ -496,16 +587,13 @@ export default function HomePage() {
                     variant="outline"
                     className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
                     onClick={() => {
-                      // 今日の授業があれば最初の授業のレポートダイアログを開く
-                      const todaysBookings = getTodaysBookings();
-                      if (todaysBookings.length > 0) {
-                        handleOpenReportDialog(todaysBookings[0]);
+                      // 未報告の授業があればレポートダイアログを開く
+                      const unreportedBookings = getUnreportedBookings();
+                      if (unreportedBookings.length > 0) {
+                        handleOpenReportDialog();
                       } else {
-                        toast({
-                          title: "今日の授業がありません",
-                          description: "レポートを作成するには授業の予定が必要です",
-                          variant: "destructive",
-                        });
+                        // 未報告の授業がない場合でもダイアログを開くがリストは空
+                        handleOpenReportDialog();
                       }
                     }}
                   >
@@ -648,7 +736,7 @@ export default function HomePage() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>授業レポート作成</DialogTitle>
-            <DialogDescription>本日の授業内容を記録してください</DialogDescription>
+            <DialogDescription>授業内容を記録してください（未報告の授業を選択）</DialogDescription>
           </DialogHeader>
           
           {selectedReportBooking && (

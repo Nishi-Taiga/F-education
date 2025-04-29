@@ -87,6 +87,22 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+      
+      {/* 色の凡例 */}
+      <div className="flex items-center justify-center gap-3 mb-2 text-xs">
+        <div className="flex items-center">
+          <div className="w-3 h-3 bg-blue-200 mr-1 rounded-full"></div>
+          <span>予定</span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-3 h-3 bg-red-200 mr-1 rounded-full"></div>
+          <span>未報告</span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-3 h-3 bg-green-200 mr-1 rounded-full"></div>
+          <span>報告済</span>
+        </div>
+      </div>
 
       {/* Day labels */}
       <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium mb-1">
