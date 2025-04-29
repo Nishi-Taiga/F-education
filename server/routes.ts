@@ -753,8 +753,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parentId: userId,
         displayName: `${student.lastName} ${student.firstName}`,
         email: req.user!.email || "",
-        emailNotifications: false,
-        smsNotifications: false,
         ticketCount: 0 // 生徒アカウントにはチケットは不要
       });
       

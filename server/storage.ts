@@ -609,12 +609,60 @@ export class DatabaseStorage implements IStorage {
 
   // ユーザー関連
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    // データベースからユーザー情報を取得 (columns() を使用して必要なカラムのみを選択)
+    const [user] = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        password: users.password,
+        displayName: users.displayName,
+        email: users.email,
+        phone: users.phone,
+        postalCode: users.postalCode,
+        prefecture: users.prefecture,
+        city: users.city,
+        address: users.address,
+        profileCompleted: users.profileCompleted,
+        tutorProfileCompleted: users.tutorProfileCompleted,
+        emailNotifications: users.emailNotifications,
+        smsNotifications: users.smsNotifications,
+        ticketCount: users.ticketCount,
+        role: users.role,
+        studentId: users.studentId,
+        parentId: users.parentId,
+        createdAt: users.createdAt
+      })
+      .from(users)
+      .where(eq(users.id, id));
+    
     return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        password: users.password,
+        displayName: users.displayName,
+        email: users.email,
+        phone: users.phone,
+        postalCode: users.postalCode,
+        prefecture: users.prefecture,
+        city: users.city,
+        address: users.address,
+        profileCompleted: users.profileCompleted,
+        tutorProfileCompleted: users.tutorProfileCompleted,
+        emailNotifications: users.emailNotifications,
+        smsNotifications: users.smsNotifications,
+        ticketCount: users.ticketCount,
+        role: users.role,
+        studentId: users.studentId,
+        parentId: users.parentId,
+        createdAt: users.createdAt
+      })
+      .from(users)
+      .where(eq(users.username, username));
     return user;
   }
 
