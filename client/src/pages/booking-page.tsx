@@ -317,36 +317,19 @@ export default function BookingPage() {
                 <h3 className="text-base font-medium text-gray-900">カレンダー</h3>
               </div>
               
-              {/* 生徒選択または表示 */}
-              <div className="mb-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <User className="h-4 w-4 text-primary" />
-                  <Label className="text-sm font-medium">
-                    {user?.role === 'student' ? '受講生徒情報' : '受講する生徒を選択'}
-                  </Label>
-                </div>
-                {isLoadingStudents ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    <span className="text-sm text-gray-500">生徒情報を読み込み中...</span>
+              {/* 生徒選択 (保護者アカウントの場合のみ表示) */}
+              {user?.role !== 'student' && (
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <User className="h-4 w-4 text-primary" />
+                    <Label className="text-sm font-medium">受講する生徒を選択</Label>
                   </div>
-                ) : students && students.length > 0 ? (
-                  user?.role === 'student' ? (
-                    // 生徒アカウントの場合は自分の情報のみ表示
-                    students
-                      .filter(student => student.id === user.studentId)
-                      .map(student => (
-                        <div key={student.id} className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                          <p className="text-sm font-medium text-blue-800">
-                            {student.lastName} {student.firstName}
-                          </p>
-                          <p className="text-xs text-blue-600">
-                            {student.school} {student.grade}
-                          </p>
-                        </div>
-                      ))
-                  ) : (
-                    // 保護者アカウントの場合は生徒選択UI
+                  {isLoadingStudents ? (
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <span className="text-sm text-gray-500">生徒情報を読み込み中...</span>
+                    </div>
+                  ) : students && students.length > 0 ? (
                     <Select 
                       value={selectedStudentId?.toString() || ""} 
                       onValueChange={(value) => {
@@ -375,13 +358,13 @@ export default function BookingPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                  )
-                ) : (
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700">
-                    生徒情報が登録されていません。設定ページから生徒情報を登録してください。
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700">
+                      生徒情報が登録されていません。設定ページから生徒情報を登録してください。
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* 科目選択 */}
               <div className="mb-6">
