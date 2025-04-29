@@ -982,12 +982,21 @@ export default function HomePage() {
                                   // 授業が終了しているかどうかを判定
                                   (() => {
                                     const [, endTime] = booking.timeSlot.split('-');
-                                    const lessonEndTime = new Date(`${booking.date}T${endTime}:00`);
-                                    // 日本時間を取得
-                                    const now = new Date();
-                                    now.setHours(now.getHours() + 9); // UTC+9に調整
                                     
-                                    if (lessonEndTime < now) {
+                                    // 授業日と終了時間を正確に解析（日本時間）
+                                    const [year, month, day] = booking.date.split('-').map(Number);
+                                    const [hours, minutes] = endTime.split(':').map(Number);
+                                    
+                                    // 授業終了時刻
+                                    const lessonEndTime = new Date(year, month - 1, day, hours, minutes);
+                                    
+                                    // 現在時刻（UTC）
+                                    const now = new Date();
+                                    
+                                    // 日本時間に変換（+9時間）
+                                    const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+                                    
+                                    if (lessonEndTime < nowJapan) {
                                       return (
                                         <div className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
                                           未報告

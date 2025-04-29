@@ -79,28 +79,35 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
 
   // 授業の状態を確認する関数
   const getLessonStatus = (booking: ExtendedBooking): 'upcoming' | 'completed-no-report' | 'completed-with-report' => {
-    // 授業終了時間を計算
-    const [startTime, endTime] = booking.timeSlot.split('-');
-    const lessonDate = new Date(`${booking.date}T${endTime}:00`);
-    
     // キャンセルされた授業は含めない
     if (booking.status === 'cancelled') {
-      return 'upcoming';
-    }
-    
-    // 日本時間で現在時刻を取得
-    const nowJapan = getJapanTime();
-    
-    // 現在時刻より未来のレッスンは「これから」（日本時間で比較）
-    // ここで日付を比較する前に、2025-04-30のような実際の日付と時間を比較 
-    const today = format(nowJapan, 'yyyy-MM-dd');
-    if (booking.date > today || (booking.date === today && lessonDate > nowJapan)) {
       return 'upcoming';
     }
     
     // 過去のレッスンで、レポート完了状態なら「完了済み」
     if (booking.reportStatus === 'completed') {
       return 'completed-with-report';
+    }
+    
+    // 授業終了時間を計算
+    const [, endTime] = booking.timeSlot.split('-');
+    
+    // 授業日と終了時間を正確に解析（日本時間）
+    const [year, month, day] = booking.date.split('-').map(Number);
+    const [hours, minutes] = endTime.split(':').map(Number);
+    
+    // 授業終了時刻
+    const lessonEndTime = new Date(year, month - 1, day, hours, minutes);
+    
+    // 現在時刻（UTC）
+    const now = new Date();
+    
+    // 日本時間に変換（+9時間）
+    const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    
+    // 終了時刻が現在時刻よりも後の場合は「これから」
+    if (lessonEndTime > nowJapan) {
+      return 'upcoming';
     }
     
     // 過去のレッスンで、レポート未完了なら「要報告」
@@ -212,7 +219,7 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
                       >
                         <span className="block truncate font-medium">{booking.timeSlot.split('-')[0]}</span>
                         {booking.studentName && (
-                          <span className="block truncate text-[9px] bg-white bg-opacity-80 text-primary-foreground rounded-sm font-medium">
+                          <span className="block truncate text-[9px] bg-white bg-opacity-80 text-gray-900 rounded-sm font-medium">
                             {booking.studentName}
                           </span>
                         )}
