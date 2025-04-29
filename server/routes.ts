@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
 import { insertBookingSchema, timeSlots } from "@shared/schema";
 
@@ -719,12 +719,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // 生徒用アカウントの作成
-  app.post("/api/students/:id/create-account", async (req, res) => {
+  app.post("/api/students/:id/account", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     const userId = req.user!.id;
     const studentId = parseInt(req.params.id);
-    const { username, password } = req.body;
     
     try {
       // 生徒情報の取得
@@ -738,16 +737,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to create account for this student" });
       }
       
-      // ユーザー名の重複チェック
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
+      // ランダムなユーザー名を生成（生徒ID + ランダムな4桁の数字）
+      const randomDigits = Math.floor(1000 + Math.random() * 9000);
+      const username = `student${student.id}_${randomDigits}`;
+      
+      // ランダムなパスワードを生成
+      const password = `pass${Math.floor(100000 + Math.random() * 900000)}`;
+      
+      // パスワードをハッシュ化
+      const hashedPassword = await hashPassword(password);
       
       // 生徒アカウントの作成
       const newUser = await storage.createUser({
         username,
-        password,
+        password: hashedPassword,
         role: "student",
         studentId: studentId,
         parentId: userId,
