@@ -948,62 +948,64 @@ export default function HomePage() {
                 
                 <div className="space-y-2">
                   {todaysBookingsForReport.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-1">
-                      {todaysBookingsForReport.map((booking) => (
-                        <Button
-                          key={booking.id}
-                          variant={selectedReportBooking.id === booking.id ? "default" : "outline"}
-                          className={`w-full justify-start text-left h-auto py-2 px-3 ${selectedReportBooking.id === booking.id ? 'bg-blue-600' : 'bg-white hover:bg-blue-50'} border border-gray-200`}
-                          onClick={() => setSelectedReportBooking(booking)}
-                        >
-                          <div className="flex items-center w-full">
-                            <div className="mr-2">
-                              {selectedReportBooking.id === booking.id ? (
-                                <Check className="h-4 w-4 text-white" />
-                              ) : (
-                                <div className="h-4 w-4" />
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <div className={`font-medium ${selectedReportBooking.id === booking.id ? 'text-white' : 'text-blue-700'}`}>
-                                {booking.studentName || "生徒不明"}
+                    <div className="bg-white rounded-md border border-gray-200 max-h-[250px] overflow-y-auto">
+                      <div className="p-1">
+                        {todaysBookingsForReport.map((booking) => (
+                          <Button
+                            key={booking.id}
+                            variant={selectedReportBooking.id === booking.id ? "default" : "outline"}
+                            className={`w-full justify-start text-left h-auto py-2 px-3 mb-1 ${selectedReportBooking.id === booking.id ? 'bg-blue-600' : 'bg-white hover:bg-blue-50'} border border-gray-200`}
+                            onClick={() => setSelectedReportBooking(booking)}
+                          >
+                            <div className="flex items-center w-full">
+                              <div className="mr-2">
+                                {selectedReportBooking.id === booking.id ? (
+                                  <Check className="h-4 w-4 text-white" />
+                                ) : (
+                                  <div className="h-4 w-4" />
+                                )}
                               </div>
-                              <div className={`text-xs ${selectedReportBooking.id === booking.id ? 'text-blue-100' : 'text-gray-500'}`}>
-                                {booking.date} {booking.timeSlot} - {booking.subject}
-                              </div>
-                            </div>
-                            <div className="ml-2">
-                              {booking.reportStatus === 'completed' ? (
-                                <div className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">
-                                  報告済み
+                              <div className="flex-1">
+                                <div className={`font-medium ${selectedReportBooking.id === booking.id ? 'text-white' : 'text-blue-700'}`}>
+                                  {booking.studentName || "生徒不明"}
                                 </div>
-                              ) : (
-                                // 授業が終了しているかどうかを判定
-                                (() => {
-                                  const [, endTime] = booking.timeSlot.split('-');
-                                  const lessonEndTime = new Date(`${booking.date}T${endTime}:00`);
-                                  // 日本時間を取得
-                                  const now = new Date();
-                                  now.setHours(now.getHours() + 9); // UTC+9に調整
-                                  
-                                  if (lessonEndTime < now) {
+                                <div className={`text-xs ${selectedReportBooking.id === booking.id ? 'text-blue-100' : 'text-gray-500'}`}>
+                                  {booking.date} {booking.timeSlot} - {booking.subject}
+                                </div>
+                              </div>
+                              <div className="ml-2">
+                                {booking.reportStatus === 'completed' ? (
+                                  <div className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">
+                                    報告済み
+                                  </div>
+                                ) : (
+                                  // 授業が終了しているかどうかを判定
+                                  (() => {
+                                    const [, endTime] = booking.timeSlot.split('-');
+                                    const lessonEndTime = new Date(`${booking.date}T${endTime}:00`);
+                                    // 日本時間を取得
+                                    const now = new Date();
+                                    now.setHours(now.getHours() + 9); // UTC+9に調整
+                                    
+                                    if (lessonEndTime < now) {
+                                      return (
+                                        <div className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
+                                          未報告
+                                        </div>
+                                      );
+                                    }
                                     return (
-                                      <div className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
-                                        未報告
+                                      <div className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                        予定
                                       </div>
                                     );
-                                  }
-                                  return (
-                                    <div className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                                      予定
-                                    </div>
-                                  );
-                                })()
-                              )}
+                                  })()
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </Button>
-                      ))}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <p className="text-sm text-gray-600">レポート対象の授業はありません</p>

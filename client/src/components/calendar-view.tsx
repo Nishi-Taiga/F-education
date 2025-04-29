@@ -117,43 +117,43 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
 
   return (
     <div className="overflow-visible">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-2">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-3">
         <div className="flex items-center mb-2 md:mb-0">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
           </Button>
-          <span className="py-1 text-lg font-medium">{formattedMonth}</span>
+          <span className="py-1 text-xl font-bold">{formattedMonth}</span>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
         
         {/* 色の凡例 */}
-        <div className="flex items-center gap-3 text-xs">
+        <div className="flex items-center gap-3 text-xs bg-gray-50 p-2 rounded-lg">
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-blue-200 mr-1 rounded-full"></div>
-            <span>予定</span>
+            <div className="w-4 h-4 bg-blue-500 mr-1 rounded-full"></div>
+            <span className="font-medium">予定</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-red-200 mr-1 rounded-full"></div>
-            <span>未報告</span>
+            <div className="w-4 h-4 bg-red-500 mr-1 rounded-full"></div>
+            <span className="font-medium">未報告</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-green-200 mr-1 rounded-full"></div>
-            <span>報告済</span>
+            <div className="w-4 h-4 bg-green-500 mr-1 rounded-full"></div>
+            <span className="font-medium">報告済</span>
           </div>
         </div>
       </div>
 
       {/* Day labels */}
-      <div className="grid grid-cols-7 gap-1 text-center text-sm font-medium mb-1">
-        <div className="text-red-600">日</div>
-        <div className="text-gray-500">月</div>
-        <div className="text-gray-500">火</div>
-        <div className="text-gray-500">水</div>
-        <div className="text-gray-500">木</div>
-        <div className="text-gray-500">金</div>
-        <div className="text-blue-600">土</div>
+      <div className="grid grid-cols-7 gap-1 text-center font-medium mb-2">
+        <div className="text-red-600 text-base">日</div>
+        <div className="text-gray-700 text-base">月</div>
+        <div className="text-gray-700 text-base">火</div>
+        <div className="text-gray-700 text-base">水</div>
+        <div className="text-gray-700 text-base">木</div>
+        <div className="text-gray-700 text-base">金</div>
+        <div className="text-blue-600 text-base">土</div>
       </div>
       
       {/* Calendar grid */}
@@ -185,7 +185,7 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
               >
                 <div className="p-0.5 text-center">
                   <span className={`
-                    ${format(day, 'yyyy-MM-dd') === format(japanTime, 'yyyy-MM-dd') ? 'bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center mx-auto text-sm' : 'text-sm'}
+                    ${format(day, 'yyyy-MM-dd') === format(japanTime, 'yyyy-MM-dd') ? 'bg-primary text-white rounded-full w-7 h-7 flex items-center justify-center mx-auto text-base font-medium' : 'text-base font-medium'}
                     ${!isCurrentMonth ? 'text-gray-400' : textColorClass}
                   `}>
                     {day.getDate()}
@@ -205,22 +205,22 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
                   return (
                     <div key={index} className="mt-auto mb-0.5 mx-0.5">
                       <div 
-                        className={`px-1 py-0.5 text-[9px] leading-tight rounded ${bgColorClass} text-white text-center relative group overflow-hidden`}
+                        className={`px-1 py-0.5 text-[10px] leading-tight rounded ${bgColorClass} text-white text-center relative group overflow-hidden`}
                         title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
                       >
                         <span className="block truncate font-medium">{booking.timeSlot.split('-')[0]}</span>
                         {booking.studentName && (
-                          <span className="block truncate whitespace-nowrap text-[8px] bg-opacity-80 bg-primary-foreground text-primary rounded-sm font-medium">
+                          <span className="block truncate whitespace-nowrap text-[9px] bg-opacity-80 bg-primary-foreground text-primary rounded-sm font-medium">
                             {booking.studentName}
                           </span>
                         )}
                         {/* 学生情報のツールチップ */}
                         <div className="absolute left-0 bottom-full mb-1 w-max z-10 hidden group-hover:block">
-                          <div className="bg-gray-800 text-white text-[10px] rounded py-1 px-2 shadow-lg">
+                          <div className="bg-gray-800 text-white text-xs rounded py-2 px-3 shadow-lg">
                             {booking.studentName ? (
                               <>
-                                <div className="font-semibold">{booking.studentName}</div>
-                                <div>{booking.timeSlot} - {booking.subject}</div>
+                                <div className="font-semibold text-sm">{booking.studentName}</div>
+                                <div className="mt-1">{booking.timeSlot} - {booking.subject}</div>
                                 {lessonStatus === 'completed-no-report' && (
                                   <div className="text-red-300 font-semibold mt-1">⚠️ 報告書未作成</div>
                                 )}
