@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --vh: 1vh; /* JavaScriptで動的に設定 */
+  }
+
   html, body, #root {
     height: 100%;
     overflow-x: hidden;
@@ -10,31 +14,60 @@
 
   /* メインコンテンツのモニター内収まる設定 */
   .screen-container {
-    max-height: 100vh;
+    max-height: 100vh; /* fallback */
+    max-height: calc(var(--vh, 1vh) * 100);
     overflow-y: auto;
     padding-bottom: 1rem;
   }
 
   /* スクロール可能なコンテナ */
   .scrollable-container {
-    max-height: calc(100vh - 12rem);
+    max-height: calc(100vh - 12rem); /* fallback */
+    max-height: calc((var(--vh, 1vh) * 100) - 12rem);
     overflow-y: auto;
     padding-right: 0.5rem;
   }
 
   /* カード要素のサイズ制限 */
   .card-container {
-    max-height: calc(100vh - 16rem);
+    max-height: calc(100vh - 16rem); /* fallback */
+    max-height: calc((var(--vh, 1vh) * 100) - 16rem);
     overflow-y: auto;
+  }
+
+  /* フォームコンテナ */
+  .form-container {
+    max-height: calc(100vh - 10rem); /* fallback */
+    max-height: calc((var(--vh, 1vh) * 100) - 10rem);
+    overflow-y: auto;
+  }
+
+  /* コンテンツセクション */
+  .content-section {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.5rem;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   }
 
   /* モバイル対応 */
   @media (max-width: 640px) {
     .scrollable-container {
       max-height: calc(100vh - 8rem);
+      max-height: calc((var(--vh, 1vh) * 100) - 8rem);
     }
     .card-container {
       max-height: calc(100vh - 10rem);
+      max-height: calc((var(--vh, 1vh) * 100) - 10rem);
+    }
+    .form-container {
+      max-height: calc(100vh - 8rem);
+      max-height: calc((var(--vh, 1vh) * 100) - 8rem);
+    }
+    .content-section {
+      padding: 1rem;
+      margin-bottom: 1rem;
     }
   }
 }

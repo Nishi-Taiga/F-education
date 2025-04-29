@@ -268,22 +268,22 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex justify-between items-center">
           <div className="flex items-center">
             <Button variant="ghost" size="icon" className="mr-2" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-2xl font-bold text-primary">家庭教師サービス</h1>
+            <h1 className="text-xl font-bold text-primary">家庭教師サービス</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="bg-primary bg-opacity-10 px-3 py-1 rounded-full flex items-center">
-              <Ticket className="text-primary h-4 w-4 mr-2" />
-              <span className="text-gray-700 font-medium">{user?.ticketCount || 0}</span>
+            <div className="bg-primary bg-opacity-10 px-2 py-1 rounded-full flex items-center">
+              <Ticket className="text-primary h-4 w-4 mr-1" />
+              <span className="text-gray-700 text-sm font-medium">{user?.ticketCount || 0}</span>
             </div>
-            <span className="text-gray-700">{user?.displayName || user?.username}</span>
+            <span className="text-gray-700 text-sm">{user?.displayName || user?.username}</span>
           </div>
         </div>
       </header>

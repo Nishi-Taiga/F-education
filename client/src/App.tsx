@@ -15,6 +15,7 @@ import TutorSchedulePage from "@/pages/tutor-schedule-page";
 import TutorBookingsPage from "@/pages/tutor-bookings-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
+import { useEffect } from "react";
 
 function Router() {
   return (
@@ -35,12 +36,32 @@ function Router() {
 }
 
 function App() {
+  // ビューポートの高さを設定（モバイルブラウザ対応）
+  useEffect(() => {
+    const setVhProperty = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+
+    // 初期設定とリサイズイベントリスナー
+    setVhProperty();
+    window.addEventListener('resize', setVhProperty);
+    
+    return () => {
+      window.removeEventListener('resize', setVhProperty);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
-          <Toaster />
-          <Router />
+          <div className="flex flex-col min-h-screen screen-container">
+            <Toaster />
+            <main className="flex-1 w-full max-w-screen-xl mx-auto px-4">
+              <Router />
+            </main>
+          </div>
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
