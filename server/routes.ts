@@ -821,10 +821,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // 生徒アカウント情報を返す
         return res.json({
           username: studentUser.username,
-          password: "password123", // TODO: 実際のパスワード管理方法に変更する
+          password: "••••••••", // パスワードはマスクする
           fullName,
           email: studentUser.email,
-          accountId: studentUser.id
+          accountId: studentUser.id,
+          passwordLastUpdated: new Date().toISOString() // パスワード更新時刻を追加
         });
       }
       
@@ -843,10 +844,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 生徒アカウント情報を返す
       res.json({
         username: studentUser.username,
-        password: "password123", // TODO: 実際のパスワード管理方法に変更する
+        password: "••••••••", // パスワードはマスクする
         fullName,
         email: studentUser.email,
-        accountId: studentUser.id
+        accountId: studentUser.id,
+        passwordLastUpdated: new Date().toISOString() // パスワード更新時刻を追加
       });
     } catch (error) {
       console.error("Failed to get student account:", error);

@@ -527,12 +527,33 @@ export default function SettingsPage() {
         throw error;
       }
     },
-    onSuccess: (data) => {
-      // アカウント情報を更新
-      setStudentAccountInfo({
-        ...studentAccountInfo!,
-        password: '••••••••', // パスワードは表示せず、マスクされた値を表示
-      });
+    onSuccess: async (data) => {
+      console.log("Password updated successfully", data);
+      
+      try {
+        // パスワード変更後に最新の生徒アカウント情報を再取得
+        const response = await fetch(`/api/students/account/${studentAccountInfo?.studentAccountId}`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const updatedStudentAccount = await response.json();
+          console.log("Updated student account info:", updatedStudentAccount);
+          
+          // アカウント情報を更新
+          setStudentAccountInfo({
+            ...updatedStudentAccount,
+            studentAccountId: studentAccountInfo!.studentAccountId
+          });
+        } else {
+          console.error("Failed to refresh student account info after password update");
+        }
+      } catch (error) {
+        console.error("Error refreshing student account info:", error);
+      }
       
       // ダイアログを閉じる
       setPasswordDialogOpen(false);
