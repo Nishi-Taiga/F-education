@@ -1015,6 +1015,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // レポート更新エンドポイント
+  app.post("/api/bookings/:id/report", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) return res.status(401).json({ message: "認証が必要です" });
+      
+      const userId = req.user!.id;
+      const bookingId = parseInt(req.params.id);
+      const { reportContent } = req.body;
+      
+      if (isNaN(bookingId)) {
+        return res.status(400).json({ message: "予約IDが無効です" });
+      }
+      
+      if (!reportContent || typeof reportContent !== 'string') {
+        return res.status(400).json({ message: "レポート内容が無効です" });
+      }
+      
+      // 予約情報を取得
+      const booking = await storage.getBookingById(bookingId);
+      
+      if (!booking) {
+        return res.status(404).json({ message: "予約が見つかりません" });
+      }
+      
+      // 予約が講師のものか確認（講師のみがレポートを作成可能）
+      if (booking.tutorId !== userId) {
+        return res.status(403).json({ message: "この予約のレポートを作成する権限がありません" });
+      }
+      
+      // レポートを更新
+      const updatedBooking = await storage.updateBookingReport(bookingId, "completed", reportContent);
+      
+      res.status(200).json({
+        message: "レポートが正常に保存されました",
+        booking: updatedBooking
+      });
+    } catch (error) {
+      console.error("レポート更新エラー:", error);
+      res.status(500).json({ message: "レポート更新中にエラーが発生しました" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

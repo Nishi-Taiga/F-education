@@ -44,6 +44,8 @@ export default function HomePage() {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [selectedReportBooking, setSelectedReportBooking] = useState<(Booking & { studentName?: string }) | null>(null);
   const [todaysBookingsForReport, setTodaysBookingsForReport] = useState<(Booking & { studentName?: string })[]>([]);
+  const [reportContent, setReportContent] = useState('');
+  const [reportSaving, setReportSaving] = useState(false);
   
   // アドレスをコピーする関数
   const copyAddressToClipboard = () => {
@@ -170,6 +172,30 @@ export default function HomePage() {
     }
   };
   
+  // レポート保存のミューテーション
+  const saveReportMutation = useMutation({
+    mutationFn: async ({ bookingId, content }: { bookingId: number, content: string }) => {
+      const res = await apiRequest("POST", `/api/bookings/${bookingId}/report`, { reportContent: content });
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "レポート保存完了",
+        description: "授業レポートが保存されました",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      setShowReportDialog(false);
+      setReportContent('');
+    },
+    onError: (error) => {
+      toast({
+        title: "レポート保存エラー",
+        description: error instanceof Error ? error.message : "レポートの保存に失敗しました",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // 生徒の名前を取得する関数
   const getStudentName = (studentId: number | null): string | undefined => {
     if (!studentId || !students) return undefined;
@@ -201,6 +227,8 @@ export default function HomePage() {
           timeSlot: "16:00-17:30",
           subject: "数学",
           status: "confirmed",
+          reportStatus: null,
+          reportContent: null,
           studentName: "山田 太郎"
         },
         {
@@ -214,6 +242,8 @@ export default function HomePage() {
           timeSlot: "18:00-19:30",
           subject: "英語",
           status: "confirmed",
+          reportStatus: null,
+          reportContent: null,
           studentName: "佐藤 花子"
         }
       ];
@@ -728,7 +758,13 @@ export default function HomePage() {
                     rows={3}
                     className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
                     placeholder="本日行った学習内容、進捗状況を記入してください"
+                    value={reportContent}
+                    onChange={(e) => setReportContent(e.target.value)}
                   />
+                </div>
+                
+                <div className="space-y-1 text-xs text-gray-500 mt-2">
+                  <p>※ 以下の項目はフォーマットされて授業内容に含まれます</p>
                 </div>
                 
                 <div className="space-y-1">
@@ -740,6 +776,16 @@ export default function HomePage() {
                     rows={2}
                     className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
                     placeholder="出された宿題、次回までの課題など"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const homeworkContent = `\n\n【宿題・課題】\n${e.target.value}`;
+                        setReportContent(prev => 
+                          prev.includes('【宿題・課題】') 
+                            ? prev.replace(/\n\n【宿題・課題】[\s\S]*?(\n\n【|$)/, `\n\n【宿題・課題】\n${e.target.value}$1`)
+                            : prev + homeworkContent
+                        );
+                      }
+                    }}
                   />
                 </div>
                 
@@ -752,6 +798,16 @@ export default function HomePage() {
                     rows={3}
                     className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
                     placeholder="保護者向けのコメント、生徒の理解度、今後の学習方針など"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const commentsContent = `\n\n【講師コメント】\n${e.target.value}`;
+                        setReportContent(prev => 
+                          prev.includes('【講師コメント】') 
+                            ? prev.replace(/\n\n【講師コメント】[\s\S]*?(\n\n【|$)/, `\n\n【講師コメント】\n${e.target.value}$1`)
+                            : prev + commentsContent
+                        );
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -763,14 +819,33 @@ export default function HomePage() {
                 <Button 
                   type="button"
                   onClick={() => {
-                    toast({
-                      title: "レポート保存",
-                      description: "レポートが正常に保存されました",
-                    });
-                    setShowReportDialog(false);
+                    if (!reportContent.trim()) {
+                      toast({
+                        title: "入力エラー",
+                        description: "授業内容を入力してください",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    if (selectedReportBooking) {
+                      setReportSaving(true);
+                      saveReportMutation.mutate({
+                        bookingId: selectedReportBooking.id,
+                        content: reportContent
+                      });
+                    }
                   }}
+                  disabled={saveReportMutation.isPending || reportSaving || !reportContent.trim()}
                 >
-                  保存する
+                  {saveReportMutation.isPending || reportSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      保存中...
+                    </>
+                  ) : (
+                    "保存する"
+                  )}
                 </Button>
               </div>
             </div>
