@@ -1508,7 +1508,8 @@ export default function SettingsPage() {
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        if (editingStudentId && studentAccountInfo) {
+                        if (studentAccountInfo && studentAccountInfo.studentAccountId) {
+                          console.log("Showing username dialog for account:", studentAccountInfo.studentAccountId);
                           updateStudentUsernameDialog();
                         }
                       }}
@@ -1525,7 +1526,8 @@ export default function SettingsPage() {
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        if (editingStudentId && studentAccountInfo) {
+                        if (studentAccountInfo && studentAccountInfo.studentAccountId) {
+                          console.log("Resetting password for account:", studentAccountInfo.studentAccountId);
                           resetStudentPasswordMutation.mutate(studentAccountInfo.studentAccountId);
                         }
                       }}
