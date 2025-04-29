@@ -50,14 +50,14 @@ export default function BookingPage() {
   // 登録済みの生徒一覧を取得
   const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
     queryKey: ["/api/students"],
-    onSuccess: (data) => {
+    onSuccess: (data: Student[]) => {
       // 生徒アカウントの場合は、自分のIDを自動選択
       if (user?.role === 'student' && user?.studentId && data.length > 0) {
         const studentId = user.studentId;
         setSelectedStudentId(studentId);
         
         // 生徒の学年から学校レベルを取得
-        const selectedStudent = data.find(student => student.id === studentId);
+        const selectedStudent = data.find((student: Student) => student.id === studentId);
         if (selectedStudent) {
           const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
           setStudentSchoolLevel(schoolLevel);
@@ -195,7 +195,7 @@ export default function BookingPage() {
     // 生徒情報を取得
     let studentName: string | undefined = undefined;
     if (selectedStudentId && students) {
-      const student = students.find(s => s.id === selectedStudentId);
+      const student = students.find((s: Student) => s.id === selectedStudentId);
       if (student) {
         studentName = `${student.lastName} ${student.firstName}`;
       }
@@ -317,11 +317,13 @@ export default function BookingPage() {
                 <h3 className="text-base font-medium text-gray-900">カレンダー</h3>
               </div>
               
-              {/* 生徒選択 */}
+              {/* 生徒選択または表示 */}
               <div className="mb-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <User className="h-4 w-4 text-primary" />
-                  <Label className="text-sm font-medium">受講する生徒を選択</Label>
+                  <Label className="text-sm font-medium">
+                    {user?.role === 'student' ? '受講生徒情報' : '受講する生徒を選択'}
+                  </Label>
                 </div>
                 {isLoadingStudents ? (
                   <div className="flex items-center space-x-2">
@@ -329,34 +331,51 @@ export default function BookingPage() {
                     <span className="text-sm text-gray-500">生徒情報を読み込み中...</span>
                   </div>
                 ) : students && students.length > 0 ? (
-                  <Select 
-                    value={selectedStudentId?.toString() || ""} 
-                    onValueChange={(value) => {
-                      const studentId = parseInt(value);
-                      setSelectedStudentId(studentId);
-                      setSelectedSubject(null);
-                      
-                      // 生徒の学年から学校レベルを取得
-                      const selectedStudent = students.find(student => student.id === studentId);
-                      if (selectedStudent) {
-                        const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
-                        setStudentSchoolLevel(schoolLevel);
-                      } else {
-                        setStudentSchoolLevel(null);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="生徒を選択してください" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {students.map((student) => (
-                        <SelectItem key={student.id} value={student.id.toString()}>
-                          {student.lastName} {student.firstName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  user?.role === 'student' ? (
+                    // 生徒アカウントの場合は自分の情報のみ表示
+                    students
+                      .filter(student => student.id === user.studentId)
+                      .map(student => (
+                        <div key={student.id} className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                          <p className="text-sm font-medium text-blue-800">
+                            {student.lastName} {student.firstName}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            {student.school} {student.grade}
+                          </p>
+                        </div>
+                      ))
+                  ) : (
+                    // 保護者アカウントの場合は生徒選択UI
+                    <Select 
+                      value={selectedStudentId?.toString() || ""} 
+                      onValueChange={(value) => {
+                        const studentId = parseInt(value);
+                        setSelectedStudentId(studentId);
+                        setSelectedSubject(null);
+                        
+                        // 生徒の学年から学校レベルを取得
+                        const selectedStudent = students.find(student => student.id === studentId);
+                        if (selectedStudent) {
+                          const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
+                          setStudentSchoolLevel(schoolLevel);
+                        } else {
+                          setStudentSchoolLevel(null);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="生徒を選択してください" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {students.map((student) => (
+                          <SelectItem key={student.id} value={student.id.toString()}>
+                            {student.lastName} {student.firstName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )
                 ) : (
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700">
                     生徒情報が登録されていません。設定ページから生徒情報を登録してください。

@@ -342,9 +342,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     const userId = req.user!.id;
+    const role = req.user!.role;
     
     try {
-      const students = await storage.getStudentsByUserId(userId);
+      let students: Student[] = [];
+      
+      // 生徒アカウントの場合は自分の情報のみを取得
+      if (role === 'student' && req.user!.studentId) {
+        const studentId = req.user!.studentId;
+        const student = await storage.getStudent(studentId);
+        if (student) {
+          students = [student];
+        }
+      } else {
+        // 保護者または通常アカウントの場合は全ての生徒情報を取得
+        students = await storage.getStudentsByUserId(userId);
+      }
+      
       res.json(students);
     } catch (error) {
       res.status(400).json({ message: "Failed to get students", error });
