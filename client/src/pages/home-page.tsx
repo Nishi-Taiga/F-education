@@ -329,10 +329,10 @@ export default function HomePage() {
                 </div>
               </div>
             ) : (
-              // 生徒用メニュー
+              // 保護者/生徒用メニュー
               <div className="grid grid-cols-3 gap-2 md:gap-3">
-                {/* 生徒アカウント(student)の場合は設定ページへのナビゲーションを表示しない */}
-                {user?.role !== 'student' && (
+                {/* 保護者アカウントのみにチケット購入ボタンを表示 */}
+                {user?.role !== 'student' && user?.role !== 'tutor' && (
                   <Button
                     variant="outline"
                     className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
@@ -347,6 +347,7 @@ export default function HomePage() {
                   </Button>
                 )}
                 
+                {/* 全てのユーザーに授業予約ボタンを表示 */}
                 <Button
                   variant="outline"
                   className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
@@ -360,8 +361,8 @@ export default function HomePage() {
                   </div>
                 </Button>
                 
-                {/* 生徒アカウント(student)の場合は設定ページへのナビゲーションを表示しない */}
-                {user?.role !== 'student' && (
+                {/* 保護者アカウントのみに設定ボタンを表示 */}
+                {user?.role !== 'student' && user?.role !== 'tutor' && (
                   <Button
                     variant="outline"
                     className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"

@@ -80,7 +80,7 @@ export function setupAuth(app: Express) {
   app.post("/api/register", async (req, res, next) => {
     const existingUser = await storage.getUserByUsername(req.body.username);
     if (existingUser) {
-      return res.status(400).send("Username already exists");
+      return res.status(400).json({ message: "このユーザー名は既に使用されています" });
     }
 
     const user = await storage.createUser({
@@ -103,7 +103,7 @@ export function setupAuth(app: Express) {
       
       if (!user) {
         console.log("Login failed for username:", req.body.username);
-        return res.status(401).json({ message: "Invalid username or password" });
+        return res.status(401).json({ message: "ユーザー名またはパスワードが正しくありません" });
       }
       
       req.login(user, (loginErr) => {
