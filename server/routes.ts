@@ -780,6 +780,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 生徒アカウント情報を取得（親アカウントのみ）
+  app.get("/api/students/account/:accountId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { accountId } = req.params;
+    const userId = req.user!.id;
+
+    try {
+      // アカウントIDの生徒ユーザーを取得
+      const studentUser = await storage.getUser(parseInt(accountId));
+      
+      if (!studentUser) {
+        return res.status(404).json({ message: "Student account not found" });
+      }
+      
+      // 権限チェック（親アカウントIDが現在のユーザーIDと一致するか確認）
+      if (studentUser.parentId !== userId) {
+        return res.status(403).json({ message: "You do not have permission to view this account" });
+      }
+      
+      // 生徒情報を取得
+      const student = await storage.getStudent(studentUser.studentId!);
+      if (!student) {
+        return res.status(404).json({ message: "Student information not found" });
+      }
+      
+      // フルネーム作成
+      const fullName = `${student.lastName} ${student.firstName}`;
+      
+      // 生徒アカウント情報を返す
+      res.json({
+        username: studentUser.username,
+        password: "password123", // TODO: 実際のパスワード管理方法に変更する
+        fullName,
+        email: studentUser.email
+      });
+    } catch (error) {
+      console.error("Failed to get student account:", error);
+      res.status(500).json({ message: "Failed to get student account information", error });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
