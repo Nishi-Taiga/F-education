@@ -41,6 +41,13 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
     return bookings.filter(booking => booking.date === dateString);
   };
   
+  // 日本時間を取得するヘルパー関数
+  const getJapanTime = () => {
+    const now = new Date();
+    // 日本時間（UTC+9）に調整
+    return new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  };
+
   // 授業の状態を確認する関数
   const getLessonStatus = (booking: ExtendedBooking): 'upcoming' | 'completed-no-report' | 'completed-with-report' => {
     // 授業終了時間を計算
@@ -52,8 +59,11 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
       return 'upcoming';
     }
     
-    // 現在時刻より未来のレッスンは「これから」
-    if (lessonDate > new Date()) {
+    // 日本時間で現在時刻を取得
+    const nowJapan = getJapanTime();
+    
+    // 現在時刻より未来のレッスンは「これから」（日本時間で比較）
+    if (lessonDate > nowJapan) {
       return 'upcoming';
     }
     
@@ -133,7 +143,8 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
         {/* Days of current month */}
         {calendarDays.map((day) => {
           const dayBookings = getBookingsForDay(day);
-          const isPast = isBefore(day, new Date()) && !isToday(day);
+          const japanTime = getJapanTime();
+          const isPast = isBefore(day, japanTime) && !isToday(day);
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isSelectable = interactive && !isPast;
           const dayOfWeek = getDay(day);
@@ -154,7 +165,7 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
               >
                 <div className="p-0.5 text-center">
                   <span className={`
-                    ${isToday(day) ? 'bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center mx-auto' : ''}
+                    ${format(day, 'yyyy-MM-dd') === format(japanTime, 'yyyy-MM-dd') ? 'bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center mx-auto' : ''}
                     ${!isCurrentMonth ? 'text-gray-400' : textColorClass}
                   `}>
                     {day.getDate()}
