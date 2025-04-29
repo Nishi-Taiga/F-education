@@ -494,21 +494,34 @@ export default function SettingsPage() {
   const updateStudentPasswordMutation = useMutation({
     mutationFn: async (data: { accountId: number; password: string }) => {
       try {
-        const res = await fetch(`/api/students/account/${data.accountId}/password`, {
+        const response = await fetch(`/api/students/account/${data.accountId}/password`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json'
           },
           body: JSON.stringify({ password: data.password }),
           credentials: 'include',
         });
         
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || 'パスワードの変更に失敗しました');
+        if (!response.ok) {
+          // エラーレスポンスの処理
+          try {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'パスワードの変更に失敗しました');
+          } catch (jsonError) {
+            // JSONでないエラーレスポンスの場合
+            throw new Error(`パスワードの変更に失敗しました (${response.status})`);
+          }
         }
         
-        return await res.json();
+        // 成功レスポンスの処理
+        try {
+          return await response.json();
+        } catch (jsonError) {
+          // JSONでない成功レスポンスでも処理は成功と判断
+          return { success: true, message: "パスワードが更新されました" };
+        }
       } catch (error) {
         console.error("Error updating password:", error);
         throw error;
