@@ -40,6 +40,31 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
     const dateString = format(day, "yyyy-MM-dd");
     return bookings.filter(booking => booking.date === dateString);
   };
+  
+  // 授業の状態を確認する関数
+  const getLessonStatus = (booking: ExtendedBooking): 'upcoming' | 'completed-no-report' | 'completed-with-report' => {
+    // 授業終了時間を計算
+    const [startTime, endTime] = booking.timeSlot.split('-');
+    const lessonDate = new Date(`${booking.date}T${endTime}:00`);
+    
+    // キャンセルされた授業は含めない
+    if (booking.status === 'cancelled') {
+      return 'upcoming';
+    }
+    
+    // 現在時刻より未来のレッスンは「これから」
+    if (lessonDate > new Date()) {
+      return 'upcoming';
+    }
+    
+    // 過去のレッスンで、レポート完了状態なら「完了済み」
+    if (booking.reportStatus === 'completed') {
+      return 'completed-with-report';
+    }
+    
+    // 過去のレッスンで、レポート未完了なら「要報告」
+    return 'completed-no-report';
+  };
 
   // Format the month header with Japanese locale
   const formattedMonth = format(currentDate, "yyyy年M月");

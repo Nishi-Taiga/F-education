@@ -110,6 +110,8 @@ export const bookings = pgTable("bookings", {
   timeSlot: text("time_slot").notNull(), // format: "HH:MM-HH:MM"
   subject: text("subject").notNull(), // 科目（数学、英語など）
   status: text("status").default("confirmed"), // "confirmed", "cancelled"
+  reportStatus: text("report_status").default("pending"), // "pending", "completed"
+  reportContent: text("report_content"), // レポート内容（JSON文字列として保存）
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -192,6 +194,8 @@ export const insertBookingSchema = createInsertSchema(bookings).pick({
   timeSlot: true,
   subject: true,
   status: true,
+  reportStatus: true,
+  reportContent: true,
 });
 
 export const updateUserProfileSchema = z.object({
