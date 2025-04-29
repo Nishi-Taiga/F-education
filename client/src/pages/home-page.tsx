@@ -348,27 +348,27 @@ export default function HomePage() {
                 
                 <Button
                   variant="outline"
-                  className="h-auto py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                  className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
                   onClick={() => navigate("/booking")}
                 >
                   <div className="flex flex-col items-center justify-center">
-                    <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-2">
-                      <CalendarCheck className="h-5 w-5 text-primary" />
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                      <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                     </div>
-                    <span className="text-sm font-medium text-gray-900">授業予約</span>
+                    <span className="text-xs md:text-sm font-medium text-gray-900">授業予約</span>
                   </div>
                 </Button>
                 
                 <Button
                   variant="outline"
-                  className="h-auto py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                  className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
                   onClick={() => navigate("/settings")}
                 >
                   <div className="flex flex-col items-center justify-center">
-                    <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-2">
-                      <Settings className="h-5 w-5 text-primary" />
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                      <Settings className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                     </div>
-                    <span className="text-sm font-medium text-gray-900">設定</span>
+                    <span className="text-xs md:text-sm font-medium text-gray-900">設定</span>
                   </div>
                 </Button>
               </div>
