@@ -333,18 +333,21 @@ export default function HomePage() {
             ) : (
               // 生徒用メニュー
               <div className="grid grid-cols-3 gap-2 md:gap-3">
-                <Button
-                  variant="outline"
-                  className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-                  onClick={() => navigate("/tickets")}
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
-                      <Ticket className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                {/* 生徒アカウント(student)の場合は設定ページへのナビゲーションを表示しない */}
+                {user?.role !== 'student' && (
+                  <Button
+                    variant="outline"
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                    onClick={() => navigate("/tickets")}
+                  >
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                        <Ticket className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      </div>
+                      <span className="text-xs md:text-sm font-medium text-gray-900">チケット購入</span>
                     </div>
-                    <span className="text-xs md:text-sm font-medium text-gray-900">チケット購入</span>
-                  </div>
-                </Button>
+                  </Button>
+                )}
                 
                 <Button
                   variant="outline"
@@ -359,18 +362,21 @@ export default function HomePage() {
                   </div>
                 </Button>
                 
-                <Button
-                  variant="outline"
-                  className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-                  onClick={() => navigate("/settings")}
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
-                      <Settings className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                {/* 生徒アカウント(student)の場合は設定ページへのナビゲーションを表示しない */}
+                {user?.role !== 'student' && (
+                  <Button
+                    variant="outline"
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                    onClick={() => navigate("/settings")}
+                  >
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                        <Settings className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      </div>
+                      <span className="text-xs md:text-sm font-medium text-gray-900">設定</span>
                     </div>
-                    <span className="text-xs md:text-sm font-medium text-gray-900">設定</span>
-                  </div>
-                </Button>
+                  </Button>
+                )}
               </div>
             )}
           </div>

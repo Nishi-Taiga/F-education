@@ -33,7 +33,9 @@ export function ProtectedRoute({
 
   // プロフィールチェックをスキップするルート（プロフィール設定ページ自体など）以外で、
   // プロフィールが未設定の場合は、プロフィール設定ページにリダイレクト
-  if (!skipProfileCheck && !user.profileCompleted && path !== "/profile-setup" && user.role !== "tutor") {
+  // 生徒アカウント（student）はプロフィール設定をスキップします
+  if (!skipProfileCheck && !user.profileCompleted && path !== "/profile-setup" && 
+      user.role !== "tutor" && user.role !== "student") {
     return (
       <Route path={path}>
         <Redirect to="/profile-setup" />
