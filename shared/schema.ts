@@ -19,7 +19,9 @@ export const users = pgTable("users", {
   emailNotifications: boolean("email_notifications").default(true),
   smsNotifications: boolean("sms_notifications").default(false),
   ticketCount: integer("ticket_count").default(0).notNull(),
-  role: text("role").default("user"), // "user" or "tutor"
+  role: text("role").default("user"), // "user", "tutor", "student"
+  studentId: integer("student_id"), // 生徒アカウントの場合、関連する生徒ID
+  parentId: integer("parent_id"), // 生徒アカウントの場合、親のユーザーID
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -142,6 +144,9 @@ export const insertUserSchema = createInsertSchema(users).pick({
   profileCompleted: true,
   tutorProfileCompleted: true,
   role: true,
+  studentId: true,
+  parentId: true,
+  ticketCount: true,
 });
 
 export const insertStudentSchema = createInsertSchema(students).pick({

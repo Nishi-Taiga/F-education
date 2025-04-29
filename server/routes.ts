@@ -718,6 +718,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 生徒用アカウントの作成
+  app.post("/api/students/:id/create-account", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const studentId = parseInt(req.params.id);
+    const { username, password } = req.body;
+    
+    try {
+      // 生徒情報の取得
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      
+      // 権限チェック（親アカウントと生徒の紐付け確認）
+      if (student.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to create account for this student" });
+      }
+      
+      // ユーザー名の重複チェック
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      // 生徒アカウントの作成
+      const newUser = await storage.createUser({
+        username,
+        password,
+        role: "student",
+        studentId: studentId,
+        parentId: userId,
+        displayName: `${student.lastName} ${student.firstName}`,
+        email: req.user!.email || "",
+        emailNotifications: false,
+        smsNotifications: false,
+        ticketCount: 0 // 生徒アカウントにはチケットは不要
+      });
+      
+      // 生徒情報に関連アカウントIDを設定
+      await storage.updateStudent(studentId, { 
+        userId: newUser.id,
+        isActive: true
+      });
+      
+      res.status(201).json({ 
+        message: "Student account created successfully",
+        student: {
+          id: student.id,
+          name: `${student.lastName} ${student.firstName}`,
+          username: newUser.username
+        }
+      });
+    } catch (error) {
+      console.error("Failed to create student account:", error);
+      res.status(500).json({ message: "Failed to create student account", error });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
