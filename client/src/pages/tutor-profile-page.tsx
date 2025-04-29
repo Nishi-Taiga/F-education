@@ -32,7 +32,8 @@ const highSchoolCategories = {
 
 // 講師プロフィールのフォーム用スキーマ
 const tutorFormSchema = tutorProfileSchema.extend({
-  selectedSubjects: z.array(z.string()).min(1, "少なくとも1つの科目を選択してください")
+  selectedSubjects: z.array(z.string()).min(1, "少なくとも1つの科目を選択してください"),
+  subjects: z.string().optional() // サーバーAPIとの互換性のため追加
 });
 
 type FormValues = z.infer<typeof tutorFormSchema>;
@@ -154,6 +155,7 @@ export default function TutorProfilePage() {
       university: "",
       birthDate: "",
       selectedSubjects: [],
+      subjects: "", // 追加
       bio: ""
     }
   });
@@ -171,6 +173,7 @@ export default function TutorProfilePage() {
         university: tutorProfile.university || "",
         birthDate: tutorProfile.birthDate || "",
         selectedSubjects: subjects,
+        subjects: tutorProfile.subjects || "", // 追加
         bio: tutorProfile.bio || ""
       });
       
@@ -227,6 +230,9 @@ export default function TutorProfilePage() {
         return;
       }
       
+      // フォームのデータを更新（subjects フィールドを明示的に設定）
+      form.setValue("subjects", subjects);
+      
       // 保存中状態を設定
       setIsSaving(true);
       
@@ -238,7 +244,7 @@ export default function TutorProfilePage() {
         firstNameFurigana: data.firstNameFurigana,
         university: data.university,
         birthDate: data.birthDate,
-        subjects,
+        subjects, // 選択された科目の文字列
         bio: data.bio || "", // 自己紹介がある場合は送信、なければ空文字
         profileCompleted: true // プロフィール完了フラグを明示的に設定
       };
