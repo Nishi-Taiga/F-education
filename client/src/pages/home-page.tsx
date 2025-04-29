@@ -150,6 +150,33 @@ export default function HomePage() {
     }
     return undefined;
   };
+  
+  // 今日の授業を取得する関数
+  const getTodaysBookings = (): (Booking & { studentName?: string })[] => {
+    if (!bookings) return [];
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式
+    return bookings
+      .filter(booking => booking.date === today)
+      .map(booking => ({
+        ...booking,
+        studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+      }));
+  };
+  
+  // 生徒詳細を表示する関数
+  const handleStudentDetailClick = (booking: Booking & { studentName?: string }) => {
+    const student = students?.find(s => s.id === booking.studentId);
+    if (student) {
+      setSelectedStudent({
+        name: `${student.lastName} ${student.firstName}`,
+        time: booking.timeSlot,
+        subject: booking.subject,
+        grade: student.grade,
+        address: "授業行き先住所はユーザープロフィールを参照してください"
+      });
+      setShowStudentDetailDialog(true);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
@@ -278,33 +305,54 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
               <div className="bg-gray-50 p-3 rounded-lg">
                 <h4 className="text-xs font-medium text-gray-500 mb-1">今日の授業</h4>
-                <p className="text-lg font-bold">0</p>
+                <p className="text-lg font-bold">{getTodaysBookings().length}</p>
               </div>
               
               <div className="bg-gray-50 p-3 rounded-lg">
                 <h4 className="text-xs font-medium text-gray-500 mb-1">今週の授業</h4>
-                <p className="text-lg font-bold">0</p>
+                <p className="text-lg font-bold">{bookings?.length || 0}</p>
               </div>
               
               <div className="bg-gray-50 p-3 rounded-lg">
                 <h4 className="text-xs font-medium text-gray-500 mb-1">合計シフト</h4>
-                <p className="text-lg font-bold">0</p>
+                <p className="text-lg font-bold">{bookings?.length || 0}</p>
               </div>
             </div>
             
-            <div className="flex items-center justify-center py-4 bg-gray-50 rounded-lg">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-2">講師機能を使用するには、各ページでデータを設定してください</p>
-                <div className="flex space-x-4 mt-2">
-                  <Button variant="outline" size="sm" onClick={() => navigate("/tutor/profile")}>
-                    プロフィール設定
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => navigate("/tutor/schedule")}>
-                    シフト登録
-                  </Button>
+            {getTodaysBookings().length > 0 ? (
+              <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">今日の担当授業生徒一覧</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {getTodaysBookings().map((booking) => (
+                    <Button
+                      key={booking.id}
+                      variant="outline"
+                      className="text-left h-auto py-2 px-3 bg-white hover:bg-blue-50 border border-gray-200"
+                      onClick={() => handleStudentDetailClick(booking)}
+                    >
+                      <div>
+                        <div className="font-medium text-blue-700">{booking.studentName}</div>
+                        <div className="text-xs text-gray-500">{booking.timeSlot}</div>
+                      </div>
+                    </Button>
+                  ))}
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-center py-4 bg-gray-50 rounded-lg mb-4">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-2">今日の授業予定はありません</p>
+                  <div className="flex space-x-4 mt-2">
+                    <Button variant="outline" size="sm" onClick={() => navigate("/tutor/profile")}>
+                      プロフィール設定
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => navigate("/tutor/schedule")}>
+                      シフト登録
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </Card>
         )}
 
@@ -410,6 +458,51 @@ export default function HomePage() {
           isProcessing={cancelBookingMutation.isPending}
         />
       )}
+      
+      {/* 生徒詳細ダイアログ */}
+      <Dialog open={showStudentDetailDialog} onOpenChange={setShowStudentDetailDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>生徒情報</DialogTitle>
+            <DialogDescription>授業の詳細情報</DialogDescription>
+          </DialogHeader>
+          
+          {selectedStudent && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-gray-50 p-2 rounded-md">
+                  <p className="text-xs text-gray-500">生徒名</p>
+                  <p className="font-medium">{selectedStudent.name}</p>
+                </div>
+                <div className="bg-gray-50 p-2 rounded-md">
+                  <p className="text-xs text-gray-500">時間</p>
+                  <p className="font-medium">{selectedStudent.time}</p>
+                </div>
+                <div className="bg-gray-50 p-2 rounded-md">
+                  <p className="text-xs text-gray-500">学年</p>
+                  <p className="font-medium">{selectedStudent.grade}</p>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 p-2 rounded-md">
+                <p className="text-xs text-gray-500">教科</p>
+                <p className="font-medium">{selectedStudent.subject}</p>
+              </div>
+              
+              <div className="bg-gray-50 p-2 rounded-md">
+                <p className="text-xs text-gray-500">住所</p>
+                <p className="text-sm">{selectedStudent.address}</p>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex justify-end mt-4">
+            <DialogClose asChild>
+              <Button variant="outline">閉じる</Button>
+            </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
