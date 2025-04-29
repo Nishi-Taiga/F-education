@@ -464,6 +464,28 @@ export class MemStorage implements IStorage {
     const updatedStudent = { ...student, isActive: false };
     this.students.set(id, updatedStudent);
   }
+  
+  // ユーザー名の更新
+  async updateUsername(userId: number, username: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    const updatedUser = { ...user, username };
+    this.users.set(userId, updatedUser);
+  }
+  
+  // パスワードの更新
+  async updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    const updatedUser = { ...user, password: hashedPassword };
+    this.users.set(userId, updatedUser);
+  }
 
   // 講師関連のメソッド
   async getTutorByUserId(userId: number): Promise<Tutor | undefined> {
