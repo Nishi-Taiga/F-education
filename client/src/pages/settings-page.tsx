@@ -1572,31 +1572,17 @@ export default function SettingsPage() {
                       <p className="text-sm text-gray-500">パスワード</p>
                       <p className="font-medium">{studentAccountInfo.password}</p>
                     </div>
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          if (studentAccountInfo && studentAccountInfo.studentAccountId) {
-                            updateStudentPasswordDialog();
-                          }
-                        }}
-                      >
-                        変更
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          if (studentAccountInfo && studentAccountInfo.studentAccountId) {
-                            console.log("Resetting password for account:", studentAccountInfo.studentAccountId);
-                            resetStudentPasswordMutation.mutate(studentAccountInfo.studentAccountId);
-                          }
-                        }}
-                      >
-                        リセット
-                      </Button>
-                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (studentAccountInfo && studentAccountInfo.studentAccountId) {
+                          updateStudentPasswordDialog();
+                        }
+                      }}
+                    >
+                      変更
+                    </Button>
                   </div>
                 </div>
                 <p className="mt-4 text-sm text-gray-600">

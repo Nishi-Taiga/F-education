@@ -951,6 +951,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // 生徒アカウントのパスワード変更
   app.patch("/api/students/account/:accountId/password", async (req, res) => {
+    res.type('application/json'); // 明示的にContent-Typeを設定
+    
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
