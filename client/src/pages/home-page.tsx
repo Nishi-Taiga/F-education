@@ -220,14 +220,13 @@ export default function HomePage() {
     
     // 実際の予約がない場合はテスト用データを返す（講師アカウントの場合のみ）
     if (bookings.length === 0 && user?.role === 'tutor') {
-      // 日本時間での今日の日付
-      const today = getJapanDate();
-      
-      // 4/30固定のテストデータ
+      // テスト用の日付
+      const april29 = "2025-04-29";
       const april30 = "2025-04-30";
+      const may1 = "2025-05-01";
       
-      // テスト用の授業データ
-      if (date === april30) {
+      // 4/29のテストデータ
+      if (date === april29) {
         return [
           {
             id: 1001,
@@ -236,7 +235,7 @@ export default function HomePage() {
             tutorId: user.id,
             studentId: 1,
             tutorShiftId: 1,
-            date: april30,
+            date: april29,
             timeSlot: "16:00-17:30",
             subject: "数学",
             status: "confirmed",
@@ -251,7 +250,7 @@ export default function HomePage() {
             tutorId: user.id,
             studentId: 2,
             tutorShiftId: 2,
-            date: april30,
+            date: april29,
             timeSlot: "18:00-19:30",
             subject: "英語",
             status: "confirmed",
@@ -266,9 +265,66 @@ export default function HomePage() {
             tutorId: user.id,
             studentId: 3,
             tutorShiftId: 3,
-            date: april30,
+            date: april29,
             timeSlot: "20:00-21:30",
             subject: "理科",
+            status: "confirmed",
+            reportStatus: null,
+            reportContent: null,
+            studentName: "鈴木 一郎"
+          }
+        ];
+      }
+      
+      // 4/30（今日）のテストデータ
+      if (date === april30) {
+        return [
+          {
+            id: 2001,
+            createdAt: new Date(),
+            userId: user.id,
+            tutorId: user.id,
+            studentId: 1,
+            tutorShiftId: 4,
+            date: april30,
+            timeSlot: "16:00-17:30",
+            subject: "物理",
+            status: "confirmed",
+            reportStatus: null,
+            reportContent: null,
+            studentName: "山田 太郎"
+          },
+          {
+            id: 2002,
+            createdAt: new Date(),
+            userId: user.id,
+            tutorId: user.id,
+            studentId: 2,
+            tutorShiftId: 5,
+            date: april30,
+            timeSlot: "18:00-19:30",
+            subject: "化学",
+            status: "confirmed",
+            reportStatus: null,
+            reportContent: null,
+            studentName: "佐藤 花子"
+          }
+        ];
+      }
+      
+      // 5/1のテストデータ
+      if (date === may1) {
+        return [
+          {
+            id: 3001,
+            createdAt: new Date(),
+            userId: user.id,
+            tutorId: user.id,
+            studentId: 3,
+            tutorShiftId: 6,
+            date: may1,
+            timeSlot: "16:00-17:30",
+            subject: "社会",
             status: "confirmed",
             reportStatus: null,
             reportContent: null,
@@ -289,7 +345,8 @@ export default function HomePage() {
   
   // 今日の授業を取得する関数
   const getTodaysBookings = (): (Booking & { studentName?: string })[] => {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式
+    // テスト用に4/30を固定で「今日」として設定
+    const today = "2025-04-30"; // 本番では getJapanDate() を使用
     return getBookingsByDate(today);
   };
   
@@ -332,13 +389,14 @@ export default function HomePage() {
     const currentTime = now.getHours() * 60 + now.getMinutes();
     const today = getJapanDate();
     
-    // テスト用：4/30のテストデータを返す（講師アカウントの場合のみ）
+    // テスト用：4/29と4/30のデータを返す（講師アカウントの場合のみ）
     if (bookings.length === 0 && user?.role === 'tutor') {
-      // 4/30固定のテストデータ
+      const april29 = "2025-04-29";
       const april30 = "2025-04-30";
       
-      // 終了した授業のみ
+      // 終了した授業（4/29の3件と4/30の2件）
       return [
+        // 4/29の授業3件
         {
           id: 1001,
           createdAt: new Date(),
@@ -346,7 +404,7 @@ export default function HomePage() {
           tutorId: user.id,
           studentId: 1,
           tutorShiftId: 1,
-          date: april30,
+          date: april29,
           timeSlot: "16:00-17:30",
           subject: "数学",
           status: "confirmed",
@@ -361,9 +419,55 @@ export default function HomePage() {
           tutorId: user.id,
           studentId: 2,
           tutorShiftId: 2,
-          date: april30,
+          date: april29,
           timeSlot: "18:00-19:30",
           subject: "英語",
+          status: "confirmed",
+          reportStatus: null,
+          reportContent: null,
+          studentName: "佐藤 花子"
+        },
+        {
+          id: 1003,
+          createdAt: new Date(),
+          userId: user.id,
+          tutorId: user.id,
+          studentId: 3,
+          tutorShiftId: 3,
+          date: april29,
+          timeSlot: "20:00-21:30",
+          subject: "理科",
+          status: "confirmed",
+          reportStatus: null,
+          reportContent: null,
+          studentName: "鈴木 一郎"
+        },
+        // 4/30の授業2件
+        {
+          id: 2001,
+          createdAt: new Date(),
+          userId: user.id,
+          tutorId: user.id,
+          studentId: 1,
+          tutorShiftId: 4,
+          date: april30,
+          timeSlot: "16:00-17:30",
+          subject: "物理",
+          status: "confirmed",
+          reportStatus: null,
+          reportContent: null,
+          studentName: "山田 太郎"
+        },
+        {
+          id: 2002,
+          createdAt: new Date(),
+          userId: user.id,
+          tutorId: user.id,
+          studentId: 2,
+          tutorShiftId: 5,
+          date: april30,
+          timeSlot: "18:00-19:30",
+          subject: "化学",
           status: "confirmed",
           reportStatus: null,
           reportContent: null,
@@ -491,10 +595,101 @@ export default function HomePage() {
             ) : (
               <CalendarView 
                 bookings={user?.role === 'tutor' 
-                  ? [...(bookings || []), ...getTodaysBookings()].map(booking => ({
-                      ...booking,
-                      studentName: booking.studentName || (booking.studentId ? getStudentName(booking.studentId) : undefined)
-                    }))
+                  ? [
+                      // 4/29の予定
+                      {
+                        id: 1001,
+                        createdAt: new Date(),
+                        userId: user.id,
+                        tutorId: user.id,
+                        studentId: 1,
+                        tutorShiftId: 1,
+                        date: "2025-04-29",
+                        timeSlot: "16:00-17:30",
+                        subject: "数学",
+                        status: "confirmed",
+                        reportStatus: null,
+                        reportContent: null,
+                        studentName: "山田 太郎"
+                      },
+                      {
+                        id: 1002,
+                        createdAt: new Date(),
+                        userId: user.id,
+                        tutorId: user.id,
+                        studentId: 2,
+                        tutorShiftId: 2,
+                        date: "2025-04-29",
+                        timeSlot: "18:00-19:30",
+                        subject: "英語",
+                        status: "confirmed",
+                        reportStatus: null,
+                        reportContent: null,
+                        studentName: "佐藤 花子"
+                      },
+                      {
+                        id: 1003,
+                        createdAt: new Date(),
+                        userId: user.id,
+                        tutorId: user.id,
+                        studentId: 3,
+                        tutorShiftId: 3,
+                        date: "2025-04-29",
+                        timeSlot: "20:00-21:30",
+                        subject: "理科",
+                        status: "confirmed",
+                        reportStatus: null,
+                        reportContent: null,
+                        studentName: "鈴木 一郎"
+                      },
+                      // 4/30の予定
+                      {
+                        id: 2001,
+                        createdAt: new Date(),
+                        userId: user.id,
+                        tutorId: user.id,
+                        studentId: 1,
+                        tutorShiftId: 4,
+                        date: "2025-04-30",
+                        timeSlot: "16:00-17:30",
+                        subject: "物理",
+                        status: "confirmed",
+                        reportStatus: null,
+                        reportContent: null,
+                        studentName: "山田 太郎"
+                      },
+                      {
+                        id: 2002,
+                        createdAt: new Date(),
+                        userId: user.id,
+                        tutorId: user.id,
+                        studentId: 2,
+                        tutorShiftId: 5,
+                        date: "2025-04-30",
+                        timeSlot: "18:00-19:30",
+                        subject: "化学",
+                        status: "confirmed",
+                        reportStatus: null,
+                        reportContent: null,
+                        studentName: "佐藤 花子"
+                      },
+                      // 5/1の予定
+                      {
+                        id: 3001,
+                        createdAt: new Date(),
+                        userId: user.id,
+                        tutorId: user.id,
+                        studentId: 3,
+                        tutorShiftId: 6,
+                        date: "2025-05-01",
+                        timeSlot: "16:00-17:30",
+                        subject: "社会",
+                        status: "confirmed",
+                        reportStatus: null,
+                        reportContent: null,
+                        studentName: "鈴木 一郎"
+                      }
+                    ]
                   : (bookings || []).map(booking => ({
                       ...booking,
                       studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
