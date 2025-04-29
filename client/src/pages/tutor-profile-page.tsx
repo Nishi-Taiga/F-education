@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { toast } from "@/hooks/use-toast";
-import { PencilIcon, Home } from "lucide-react";
+import { PencilIcon, Home, Save, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -643,13 +643,15 @@ export default function TutorProfilePage() {
                         }
                       }}
                       disabled={isSaving || saveProfileMutation.isPending}
+                      className="flex items-center gap-2"
                     >
+                      <X className="h-4 w-4" />
                       キャンセル
                     </Button>
                     
                     <Button 
                       type="submit" 
-                      className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white"
+                      className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white flex items-center gap-2"
                       disabled={isSaving || saveProfileMutation.isPending}
                       onClick={() => {
                         // ボタンクリック時もフォームエラーをコンソールに表示（デバッグ用）
@@ -661,7 +663,12 @@ export default function TutorProfilePage() {
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-opacity-50 border-t-white"></span>
                           保存中...
                         </span>
-                      ) : "プロフィールを保存"}
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4" />
+                          プロフィールを保存
+                        </>
+                      )}
                     </Button>
                   </>
                 ) : null}
