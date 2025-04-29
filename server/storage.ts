@@ -1002,28 +1002,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bookings.id, id));
   }
   
-  // レポート状態と内容の更新
-  async updateBookingReport(id: number, reportStatus: string, reportContent: string): Promise<Booking> {
-    try {
-      const [updatedBooking] = await db
-        .update(bookings)
-        .set({ 
-          reportStatus, 
-          reportContent 
-        })
-        .where(eq(bookings.id, id))
-        .returning();
-      
-      if (!updatedBooking) {
-        throw new Error("Booking not found");
-      }
-      
-      return updatedBooking;
-    } catch (error) {
-      console.error("レポート更新エラー:", error);
-      throw new Error("Failed to update booking report");
-    }
-  }
+
   
   // ユーザー名の更新
   async updateUsername(userId: number, username: string): Promise<void> {

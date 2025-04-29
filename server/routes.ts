@@ -1039,8 +1039,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "予約が見つかりません" });
       }
       
+      // 講師情報を取得
+      const tutor = await storage.getTutorByUserId(userId);
+      if (!tutor) {
+        return res.status(403).json({ message: "講師情報が見つかりません" });
+      }
+      
       // 予約が講師のものか確認（講師のみがレポートを作成可能）
-      if (booking.tutorId !== userId) {
+      if (booking.tutorId !== tutor.id) {
         return res.status(403).json({ message: "この予約のレポートを作成する権限がありません" });
       }
       
