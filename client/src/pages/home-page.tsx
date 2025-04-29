@@ -174,8 +174,8 @@ export default function HomePage() {
           {user?.role !== 'tutor' && (
             <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-3 border border-gray-200">
               <div className="flex items-center">
-                <div className="mr-3 bg-primary bg-opacity-10 p-2 rounded-full">
-                  <Ticket className="text-primary h-5 w-5" />
+                <div className="mr-3 bg-green-50 p-2 rounded-full">
+                  <Ticket className="text-green-600 h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">チケット残数</p>
