@@ -21,11 +21,26 @@ export async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  const scryptPromise = promisify(scrypt);
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptPromise(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  try {
+    const scryptPromise = promisify(scrypt);
+    const [hashed, salt] = stored.split(".");
+    
+    if (!hashed || !salt) {
+      console.error("Invalid stored password format:", stored);
+      return false;
+    }
+    
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptPromise(supplied, salt, 64)) as Buffer;
+    
+    // デバッグ用ログ
+    console.log(`Comparing password for supplied=${supplied}`);
+    
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    console.error("Error comparing passwords:", error);
+    return false;
+  }
 }
 
 export function setupAuth(app: Express) {
