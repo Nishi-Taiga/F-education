@@ -92,7 +92,9 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
     const nowJapan = getJapanTime();
     
     // 現在時刻より未来のレッスンは「これから」（日本時間で比較）
-    if (lessonDate > nowJapan) {
+    // ここで日付を比較する前に、2025-04-30のような実際の日付と時間を比較 
+    const today = format(nowJapan, 'yyyy-MM-dd');
+    if (booking.date > today || (booking.date === today && lessonDate > nowJapan)) {
       return 'upcoming';
     }
     
@@ -116,7 +118,7 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
   };
 
   return (
-    <div className="overflow-visible">
+    <div className="overflow-hidden">
       <div className="flex flex-col md:flex-row justify-between items-center mb-3">
         <div className="flex items-center mb-2 md:mb-0">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
@@ -157,7 +159,7 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
       </div>
       
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1 text-xs">
+      <div className="grid grid-cols-7 gap-1 text-xs max-w-full overflow-hidden">
         {/* カレンダー日表示のみ（空セルは不要） */}
 
         {/* Days of current month */}
@@ -178,9 +180,9 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
           }
           
           return (
-            <div key={day.toString()} className="aspect-square p-0.5">
+            <div key={day.toString()} className="aspect-square p-0.5 min-w-0">
               <div 
-                className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} flex flex-col ${isPast ? 'opacity-60' : ''}`}
+                className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} flex flex-col ${isPast ? 'opacity-60' : ''} overflow-hidden`}
                 onClick={() => isSelectable && handleDayClick(day)}
               >
                 <div className="p-0.5 text-center">
@@ -203,14 +205,14 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
                   }
                   
                   return (
-                    <div key={index} className="mt-auto mb-0.5 mx-0.5">
+                    <div key={index} className="mt-auto mb-0.5 mx-0.5 min-w-0 w-full">
                       <div 
-                        className={`px-1 py-0.5 text-[10px] leading-tight rounded ${bgColorClass} text-white text-center relative group overflow-hidden`}
+                        className={`px-1 py-0.5 text-[10px] leading-tight rounded ${bgColorClass} text-white text-center relative group overflow-hidden max-w-full`}
                         title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
                       >
                         <span className="block truncate font-medium">{booking.timeSlot.split('-')[0]}</span>
                         {booking.studentName && (
-                          <span className="block truncate whitespace-nowrap text-[9px] bg-opacity-80 bg-primary-foreground text-primary rounded-sm font-medium">
+                          <span className="block truncate text-[9px] bg-white bg-opacity-80 text-primary-foreground rounded-sm font-medium">
                             {booking.studentName}
                           </span>
                         )}

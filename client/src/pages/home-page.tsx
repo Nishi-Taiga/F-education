@@ -954,7 +954,7 @@ export default function HomePage() {
                           <Button
                             key={booking.id}
                             variant={selectedReportBooking.id === booking.id ? "default" : "outline"}
-                            className={`w-full justify-start text-left h-auto py-2 px-3 mb-1 ${selectedReportBooking.id === booking.id ? 'bg-blue-600' : 'bg-white hover:bg-blue-50'} border border-gray-200`}
+                            className={`w-full justify-start text-left h-auto py-2 px-3 mb-1 ${selectedReportBooking.id === booking.id ? 'bg-blue-600' : 'bg-white hover:bg-blue-50'} border border-gray-200 overflow-hidden`}
                             onClick={() => setSelectedReportBooking(booking)}
                           >
                             <div className="flex items-center w-full">
