@@ -531,6 +531,14 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">
+        {/* 時刻表示テスト用 */}
+        <div className="mb-3 p-2 bg-gray-100 rounded text-xs">
+          <p><strong>現在時刻（UTC）:</strong> {new Date().toISOString()}</p>
+          <p><strong>日本時刻（UTC+9）:</strong> {new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString()}</p>
+          <p><strong>日本時刻（表示用）:</strong> {new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toLocaleString('ja-JP')}</p>
+          <p><strong>4/30 16:00終了時刻（テスト用）:</strong> {new Date(2025, 3, 30, 17, 30).toISOString()}</p>
+        </div>
+        
         <div className="md:flex md:items-start md:justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">マイページ</h2>
@@ -990,12 +998,10 @@ export default function HomePage() {
                                     // 授業終了時刻
                                     const lessonEndTime = new Date(year, month - 1, day, hours, minutes);
                                     
-                                    // 現在時刻（UTC）
-                                    const now = new Date();
+                                    // 2025年4月30日の8:45（日本時間）に固定（テスト用）
+                                    const nowJapan = new Date(2025, 3, 30, 8, 45);
                                     
-                                    // 日本時間に変換（+9時間）
-                                    const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
-                                    
+                                    // 授業終了時刻が現在時刻より前の場合は「未報告」
                                     if (lessonEndTime < nowJapan) {
                                       return (
                                         <div className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">

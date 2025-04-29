@@ -89,28 +89,32 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
       return 'completed-with-report';
     }
     
-    // 授業終了時間を計算
-    const [, endTime] = booking.timeSlot.split('-');
-    
-    // 授業日と終了時間を正確に解析（日本時間）
-    const [year, month, day] = booking.date.split('-').map(Number);
-    const [hours, minutes] = endTime.split(':').map(Number);
-    
-    // 授業終了時刻
-    const lessonEndTime = new Date(year, month - 1, day, hours, minutes);
-    
-    // 現在時刻（UTC）
+    // 現在時刻（日本時間）
     const now = new Date();
     
-    // 日本時間に変換（+9時間）
-    const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    // 日本時間を取得（UTC+9）- デバッグ用に8:45固定
+    // 実際の本番環境では下記のコードを使用する
+    // const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
     
-    // 終了時刻が現在時刻よりも後の場合は「これから」
+    // 2025年4月30日の8:45（日本時間）に固定（テスト用）
+    const nowJapan = new Date(2025, 3, 30, 8, 45);
+    
+    // 授業の終了時間を解析
+    const [, endTime] = booking.timeSlot.split('-');
+    const [hours, minutes] = endTime.split(':').map(Number);
+    
+    // 授業の日付を解析
+    const [year, month, day] = booking.date.split('-').map(Number);
+    
+    // 授業終了時刻（日本時間）
+    const lessonEndTime = new Date(year, month - 1, day, hours, minutes);
+    
+    // 授業終了時刻が現在時刻よりも後の場合は「これから」（青）
     if (lessonEndTime > nowJapan) {
       return 'upcoming';
     }
     
-    // 過去のレッスンで、レポート未完了なら「要報告」
+    // 過去のレッスンで、レポート未完了なら「要報告」（赤）
     return 'completed-no-report';
   };
 
