@@ -530,29 +530,26 @@ export default function SettingsPage() {
     onSuccess: async (data) => {
       console.log("Password updated successfully", data);
       
-      try {
-        // パスワード変更後に最新の生徒アカウント情報を再取得
-        const response = await fetch(`/api/students/account/${studentAccountInfo?.studentAccountId}`, {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json'
-          }
+      // 直接生徒アカウント情報を更新
+      if (studentAccountInfo) {
+        // 現在時刻を取得
+        const updateTime = new Date().toLocaleString('ja-JP');
+        
+        // 生徒アカウント情報を更新（パスワードの表示はマスクし、更新時刻を追加）
+        setStudentAccountInfo({
+          ...studentAccountInfo,
+          password: "••••••••",
+          passwordLastUpdated: updateTime
         });
         
-        if (response.ok) {
-          const updatedStudentAccount = await response.json();
-          console.log("Updated student account info:", updatedStudentAccount);
-          
-          // アカウント情報を更新
-          setStudentAccountInfo({
-            ...updatedStudentAccount,
-            studentAccountId: studentAccountInfo!.studentAccountId
-          });
-        } else {
-          console.error("Failed to refresh student account info after password update");
+        // 再取得も試行するが、表示は上記で更新済み
+        try {
+          // パスワード変更後に最新の生徒アカウント情報を再取得
+          await apiRequest("GET", `/api/students/account/${studentAccountInfo.studentAccountId}`, null, false);
+        } catch (error) {
+          console.error("Error refreshing student account info:", error);
+          // エラーがあっても既に表示は更新済みなので、このエラーは無視可能
         }
-      } catch (error) {
-        console.error("Error refreshing student account info:", error);
       }
       
       // ダイアログを閉じる
@@ -1617,6 +1614,11 @@ export default function SettingsPage() {
                     <div>
                       <p className="text-sm text-gray-500">パスワード</p>
                       <p className="font-medium">{studentAccountInfo.password}</p>
+                      {studentAccountInfo.passwordLastUpdated && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          最終更新: {studentAccountInfo.passwordLastUpdated}
+                        </p>
+                      )}
                     </div>
                     <Button 
                       variant="outline" 
