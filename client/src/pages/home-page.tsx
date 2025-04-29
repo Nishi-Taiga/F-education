@@ -305,17 +305,29 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
               <div className="bg-gray-50 p-3 rounded-lg">
                 <h4 className="text-xs font-medium text-gray-500 mb-1">今日の授業</h4>
-                <p className="text-lg font-bold">{getTodaysBookings().length}</p>
+                <div className="flex items-center">
+                  <p className="text-lg font-bold">{getTodaysBookings().length}</p>
+                  <span className="ml-1 text-xs text-gray-500">件</span>
+                </div>
+                <p className="text-xs text-gray-500">※テスト環境：テスト講師にはまだ予約がありません</p>
               </div>
               
               <div className="bg-gray-50 p-3 rounded-lg">
                 <h4 className="text-xs font-medium text-gray-500 mb-1">今週の授業</h4>
-                <p className="text-lg font-bold">{bookings?.length || 0}</p>
+                <div className="flex items-center">
+                  <p className="text-lg font-bold">{bookings?.length || 0}</p>
+                  <span className="ml-1 text-xs text-gray-500">件</span>
+                </div>
+                <p className="text-xs text-gray-500">※週の集計は日曜〜土曜で計算</p>
               </div>
               
               <div className="bg-gray-50 p-3 rounded-lg">
                 <h4 className="text-xs font-medium text-gray-500 mb-1">合計シフト</h4>
-                <p className="text-lg font-bold">{bookings?.length || 0}</p>
+                <div className="flex items-center">
+                  <p className="text-lg font-bold">{bookings?.length || 0}</p>
+                  <span className="ml-1 text-xs text-gray-500">件</span>
+                </div>
+                <p className="text-xs text-gray-500">※過去のシフトも含む</p>
               </div>
             </div>
             
