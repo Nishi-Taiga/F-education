@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Student, insertStudentSchema, updateUserProfileSchema } from "@shared/schema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 
 const settingsSchema = z.object({
@@ -63,6 +63,18 @@ export default function SettingsPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [currentTab, setCurrentTab] = useState("profile");
+  
+  // 生徒アカウントの場合は設定ページにアクセスできないよう親ページにリダイレクト
+  useEffect(() => {
+    if (user?.role === 'student') {
+      toast({
+        title: "アクセス制限",
+        description: "生徒アカウントでは設定ページにアクセスできません",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [user, navigate, toast]);
   const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -553,7 +565,7 @@ export default function SettingsPage() {
         // 再取得も試行するが、表示は上記で更新済み
         try {
           // パスワード変更後に最新の生徒アカウント情報を再取得
-          await apiRequest("GET", `/api/students/account/${studentAccountInfo.studentAccountId}`, null, false);
+          await apiRequest("GET", `/api/students/account/${studentAccountInfo.studentAccountId}`);
         } catch (error) {
           console.error("Error refreshing student account info:", error);
           // エラーがあっても既に表示は更新済みなので、このエラーは無視可能
