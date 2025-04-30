@@ -17,9 +17,10 @@ interface CalendarViewProps {
   bookings: ExtendedBooking[];
   onSelectDate?: (date: string) => void;
   interactive?: boolean;
+  showLegend?: boolean; // 凡例を表示するかどうか
 }
 
-export function CalendarView({ bookings, onSelectDate, interactive = false }: CalendarViewProps) {
+export function CalendarView({ bookings, onSelectDate, interactive = false, showLegend = false }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState<Date[]>([]);
 
@@ -133,21 +134,23 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
           </Button>
         </div>
         
-        {/* 色の凡例 */}
-        <div className="flex items-center gap-3 text-xs bg-gray-50 p-2 rounded-lg">
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-blue-500 mr-1 rounded-full"></div>
-            <span className="font-medium">予定</span>
+        {/* 色の凡例 - 講師用アカウントのみ表示 */}
+        {showLegend && (
+          <div className="flex items-center gap-3 text-xs bg-gray-50 p-2 rounded-lg">
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-blue-500 mr-1 rounded-full"></div>
+              <span className="font-medium">予定</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-red-500 mr-1 rounded-full"></div>
+              <span className="font-medium">未報告</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-green-500 mr-1 rounded-full"></div>
+              <span className="font-medium">報告済</span>
+            </div>
           </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-red-500 mr-1 rounded-full"></div>
-            <span className="font-medium">未報告</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 bg-green-500 mr-1 rounded-full"></div>
-            <span className="font-medium">報告済</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Day labels */}
