@@ -754,7 +754,7 @@ export default function HomePage() {
                           onClick={() => handleStudentDetailClick(booking)}
                         >
                           <div className="w-full">
-                            <div className="font-medium text-blue-700">{booking.studentName}</div>
+                            <div className={`font-medium ${getBookingTextColor(booking, false)}`}>{booking.studentName}</div>
                             <div className="flex justify-between items-center">
                               <div className="text-xs text-gray-500">{booking.timeSlot} - {booking.subject}</div>
                               <Button
