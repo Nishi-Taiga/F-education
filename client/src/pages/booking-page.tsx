@@ -415,8 +415,25 @@ export default function BookingPage() {
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
-                      生徒の学年情報が取得できませんでした
+                    <div className="space-y-2">
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-600">
+                        学年情報が取得できませんでした。中学生用の科目から選択できます。
+                      </div>
+                      <Select
+                        value={selectedSubject || ""}
+                        onValueChange={(value) => setSelectedSubject(value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="科目を選択してください" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subjectsBySchoolLevel["junior_high"].map((subject) => (
+                            <SelectItem key={subject} value={subject}>
+                              {subject}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )
                 ) : (
@@ -442,8 +459,25 @@ export default function BookingPage() {
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
-                      生徒の学年情報が取得できませんでした
+                    <div className="space-y-2">
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-600">
+                        学年情報が取得できませんでした。中学生用の科目から選択できます。
+                      </div>
+                      <Select
+                        value={selectedSubject || ""}
+                        onValueChange={(value) => setSelectedSubject(value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="科目を選択してください" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subjectsBySchoolLevel["junior_high"].map((subject) => (
+                            <SelectItem key={subject} value={subject}>
+                              {subject}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )
                 )}
