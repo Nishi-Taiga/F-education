@@ -82,6 +82,7 @@ export default function HomePage() {
   const [todaysBookingsForReport, setTodaysBookingsForReport] = useState<(Booking & { studentName?: string })[]>([]);
   const [reportContent, setReportContent] = useState('');
   const [reportSaving, setReportSaving] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(false); // 強制的に再描画を行うためのフラグ
   
   // アドレスをコピーする関数
   const copyAddressToClipboard = () => {
@@ -209,269 +210,17 @@ export default function HomePage() {
   };
   
   // レポート保存のミューテーション
-  const saveReportMutation = useMutation({
-    mutationFn: async ({ bookingId, content }: { bookingId: number, content: string }) => {
-      // ダミーIDのチェック (デモデータ)
-      if (bookingId === 1001 || bookingId === 1002 || bookingId === 1003 || 
-          bookingId === 2001 || bookingId === 2002) {
-        console.log("テスト用ダミーIDのためモックレスポンスを返します");
-        // テスト用ダミーIDの場合は実際のAPIを呼び出さずに成功レスポンスを返す
-        return {
-          message: "レポートが正常に保存されました(テスト用)",
-          booking: {
-            id: bookingId,
-            reportStatus: "completed",
-            reportContent: content
-          }
-        };
-      }
-      
-      // 実際のAPI呼び出し (ダミーID以外)
-      const res = await apiRequest("POST", `/api/bookings/${bookingId}/report`, { reportContent: content });
-      return await res.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "レポート保存完了",
-        description: "授業レポートが保存されました",
-      });
-      
-      // テスト用ダミーデータの場合は手動で状態を更新
-      if (selectedReportBooking && [1001, 1002, 1003, 2001, 2002].includes(selectedReportBooking.id)) {
-        // 日付に対応するテストデータを更新する
-        const updatedTodaysBookings = getTodaysBookings().map(booking => 
-          booking.id === selectedReportBooking.id 
-            ? { ...booking, reportStatus: "completed", reportContent: reportContent }
-            : booking
-        );
-        
-        // 過去の未報告授業リストも更新
-        const updatedUnreportedBookings = getUnreportedBookings().map(booking => 
-          booking.id === selectedReportBooking.id 
-            ? { ...booking, reportStatus: "completed", reportContent: reportContent }
-            : booking
-        );
-      }
-      
-      // データを再取得してUIを更新
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      
-      // ダイアログを閉じる前に少し遅延を入れる
-      setTimeout(() => {
-        setShowReportDialog(false);
-        setReportContent('');
-        setReportSaving(false);
-      }, 500);
-    },
-    onError: (error) => {
-      toast({
-        title: "レポート保存エラー",
-        description: error instanceof Error ? error.message : "レポートの保存に失敗しました",
-        variant: "destructive",
-      });
-    },
-  });
+  // テスト用データを保持するステート
+  const [testBookings, setTestBookings] = useState<(Booking & { studentName?: string })[]>([]);
   
-  // 生徒の名前を取得する関数
-  const getStudentName = (studentId: number | null): string | undefined => {
-    if (!studentId || !students) return undefined;
-    const student = students.find(s => s.id === studentId);
-    if (student) {
-      return `${student.lastName} ${student.firstName}`;
-    }
-    return undefined;
-  };
-  
-  // 日本時間で日付を取得するヘルパー関数
-  const getJapanDate = (): string => {
-    const now = new Date();
-    // 日本時間に調整（UTC+9）
-    const japanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
-    return japanTime.toISOString().split('T')[0]; // YYYY-MM-DD形式
-  };
-  
-  // 指定日の授業を取得する関数
-  const getBookingsByDate = (date: string): (Booking & { studentName?: string })[] => {
-    if (!bookings) return [];
-    
-    // 実際の予約がない場合はテスト用データを返す（講師アカウントの場合のみ）
-    if (bookings.length === 0 && user?.role === 'tutor') {
-      // テスト用の日付
-      const april29 = "2025-04-29";
-      const april30 = "2025-04-30";
-      const may1 = "2025-05-01";
-      
-      // 4/29のテストデータ
-      if (date === april29) {
-        return [
-          {
-            id: 1001,
-            createdAt: new Date(),
-            userId: user.id,
-            tutorId: user.id,
-            studentId: 1,
-            tutorShiftId: 1,
-            date: april29,
-            timeSlot: "16:00-17:30",
-            subject: "数学",
-            status: "confirmed",
-            reportStatus: null,
-            reportContent: null,
-            studentName: "山田 太郎"
-          },
-          {
-            id: 1002,
-            createdAt: new Date(),
-            userId: user.id,
-            tutorId: user.id,
-            studentId: 2,
-            tutorShiftId: 2,
-            date: april29,
-            timeSlot: "18:00-19:30",
-            subject: "英語",
-            status: "confirmed",
-            reportStatus: null,
-            reportContent: null,
-            studentName: "佐藤 花子"
-          },
-          {
-            id: 1003,
-            createdAt: new Date(),
-            userId: user.id,
-            tutorId: user.id,
-            studentId: 3,
-            tutorShiftId: 3,
-            date: april29,
-            timeSlot: "20:00-21:30",
-            subject: "理科",
-            status: "confirmed",
-            reportStatus: null,
-            reportContent: null,
-            studentName: "鈴木 一郎"
-          }
-        ];
-      }
-      
-      // 4/30（今日）のテストデータ
-      if (date === april30) {
-        return [
-          {
-            id: 2001,
-            createdAt: new Date(),
-            userId: user.id,
-            tutorId: user.id,
-            studentId: 1,
-            tutorShiftId: 4,
-            date: april30,
-            timeSlot: "16:00-17:30",
-            subject: "物理",
-            status: "confirmed",
-            reportStatus: null,
-            reportContent: null,
-            studentName: "山田 太郎"
-          },
-          {
-            id: 2002,
-            createdAt: new Date(),
-            userId: user.id,
-            tutorId: user.id,
-            studentId: 2,
-            tutorShiftId: 5,
-            date: april30,
-            timeSlot: "18:00-19:30",
-            subject: "化学",
-            status: "confirmed",
-            reportStatus: null,
-            reportContent: null,
-            studentName: "佐藤 花子"
-          }
-        ];
-      }
-      
-      // 5/1のテストデータ
-      if (date === may1) {
-        return [
-          {
-            id: 3001,
-            createdAt: new Date(),
-            userId: user.id,
-            tutorId: user.id,
-            studentId: 3,
-            tutorShiftId: 6,
-            date: may1,
-            timeSlot: "16:00-17:30",
-            subject: "社会",
-            status: "confirmed",
-            reportStatus: null,
-            reportContent: null,
-            studentName: "鈴木 一郎"
-          }
-        ];
-      }
-    }
-    
-    // 実際のデータをフィルタリング
-    return bookings
-      .filter(booking => booking.date === date)
-      .map(booking => ({
-        ...booking,
-        studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-      }));
-  };
-  
-  // 今日の授業を取得する関数
-  const getTodaysBookings = (): (Booking & { studentName?: string })[] => {
-    // テスト用に4/30を固定で「今日」として設定
-    const today = "2025-04-30"; // 本番では getJapanDate() を使用
-    return getBookingsByDate(today);
-  };
-  
-  // 生徒詳細を表示する関数
-  const handleStudentDetailClick = (booking: Booking & { studentName?: string }) => {
-    // テスト生徒データかどうかチェック (studentIdが1または2の場合はテストデータと判断)
-    if (booking.studentId === 1 || booking.studentId === 2) {
-      // テスト用データの場合
-      setSelectedStudent({
-        name: booking.studentName || "生徒名",
-        time: booking.timeSlot,
-        subject: booking.subject,
-        grade: booking.studentId === 1 ? "中学3年生" : "高校2年生",
-        address: "テスト用住所：東京都新宿区西新宿2-8-1"
-      });
-      setShowStudentDetailDialog(true);
-      return;
-    }
-    
-    // 実データの場合
-    const student = students?.find(s => s.id === booking.studentId);
-    if (student) {
-      setSelectedStudent({
-        name: `${student.lastName} ${student.firstName}`,
-        time: booking.timeSlot,
-        subject: booking.subject,
-        grade: student.grade,
-        address: "授業行き先住所はユーザープロフィールを参照してください"
-      });
-      setShowStudentDetailDialog(true);
-    }
-  };
-  
-  // レポート作成対象の授業を取得する関数
-  const getUnreportedBookings = (): (Booking & { studentName?: string })[] => {
-    if (!bookings) return [];
-    
-    // 現在の日時を取得（日本時間）
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-    const today = getJapanDate();
-    
-    // テスト用：4/29と4/30のデータを返す（講師アカウントの場合のみ）
-    if (bookings.length === 0 && user?.role === 'tutor') {
+  // コンポーネントマウント時にテストデータを初期化
+  useEffect(() => {
+    if (user?.role === 'tutor' && (!bookings || bookings.length === 0)) {
       const april29 = "2025-04-29";
       const april30 = "2025-04-30";
       
-      // 終了した授業（4/29の3件と4/30の2件）
-      return [
+      // 初期テストデータ
+      const initialTestData = [
         // 4/29の授業3件
         {
           id: 1001,
@@ -550,6 +299,178 @@ export default function HomePage() {
           studentName: "佐藤 花子"
         }
       ];
+      
+      setTestBookings(initialTestData);
+    }
+  }, [user, bookings]);
+  
+  // レポート保存のミューテーション
+  const saveReportMutation = useMutation({
+    mutationFn: async ({ bookingId, content }: { bookingId: number, content: string }) => {
+      // ダミーIDのチェック (デモデータ)
+      if (bookingId === 1001 || bookingId === 1002 || bookingId === 1003 || 
+          bookingId === 2001 || bookingId === 2002) {
+        console.log("テスト用ダミーIDのためモックレスポンスを返します");
+        // テスト用ダミーIDの場合は実際のAPIを呼び出さずに成功レスポンスを返す
+        return {
+          message: "レポートが正常に保存されました(テスト用)",
+          booking: {
+            id: bookingId,
+            reportStatus: "completed",
+            reportContent: content
+          }
+        };
+      }
+      
+      // 実際のAPI呼び出し (ダミーID以外)
+      const res = await apiRequest("POST", `/api/bookings/${bookingId}/report`, { reportContent: content });
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "レポート保存完了",
+        description: "授業レポートが保存されました",
+      });
+      
+      // テスト用ダミーデータの場合は手動で状態を更新
+      if (selectedReportBooking && [1001, 1002, 1003, 2001, 2002].includes(selectedReportBooking.id)) {
+        // テストデータを更新
+        const updatedTestBookings = testBookings.map(booking => 
+          booking.id === selectedReportBooking.id 
+            ? { ...booking, reportStatus: "completed", reportContent: reportContent }
+            : booking
+        );
+        setTestBookings(updatedTestBookings);
+        
+        // リロードしてカレンダー表示を更新
+        setTimeout(() => {
+          // 強制的に再描画
+          setForceUpdate(prev => !prev);
+        }, 100);
+      }
+      
+      // データを再取得してUIを更新
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      
+      // ダイアログを閉じる前に少し遅延を入れる
+      setTimeout(() => {
+        setShowReportDialog(false);
+        setReportContent('');
+        setReportSaving(false);
+      }, 500);
+    },
+    onError: (error) => {
+      toast({
+        title: "レポート保存エラー",
+        description: error instanceof Error ? error.message : "レポートの保存に失敗しました",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // 生徒の名前を取得する関数
+  const getStudentName = (studentId: number | null): string | undefined => {
+    if (!studentId || !students) return undefined;
+    const student = students.find(s => s.id === studentId);
+    if (student) {
+      return `${student.lastName} ${student.firstName}`;
+    }
+    return undefined;
+  };
+  
+  // 日本時間で日付を取得するヘルパー関数
+  const getJapanDate = (): string => {
+    const now = new Date();
+    // 日本時間に調整（UTC+9）
+    const japanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    return japanTime.toISOString().split('T')[0]; // YYYY-MM-DD形式
+  };
+  
+  // 指定日の授業を取得する関数
+  const getBookingsByDate = (date: string): (Booking & { studentName?: string })[] => {
+    if (!bookings) return [];
+    
+    // 実際の予約がない場合はテスト用データを返す（講師アカウントの場合のみ）
+    if (bookings.length === 0 && user?.role === 'tutor') {
+      // テスト用の日付
+      const april29 = "2025-04-29";
+      const april30 = "2025-04-30";
+      const may1 = "2025-05-01";
+      
+      // テストデータから該当する日付のデータをフィルタリング
+      return testBookings
+        .filter(booking => booking.date === date)
+        .map(booking => ({
+          ...booking,
+          studentName: booking.studentName || getStudentName(booking.studentId)
+        }));
+    }
+    
+    // 実際のデータをフィルタリング
+    return bookings
+      .filter(booking => booking.date === date)
+      .map(booking => ({
+        ...booking,
+        studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+      }));
+  };
+  
+  // 今日の授業を取得する関数
+  const getTodaysBookings = (): (Booking & { studentName?: string })[] => {
+    // テスト用に4/30を固定で「今日」として設定
+    const today = "2025-04-30"; // 本番では getJapanDate() を使用
+    return getBookingsByDate(today);
+  };
+  
+  // 生徒詳細を表示する関数
+  const handleStudentDetailClick = (booking: Booking & { studentName?: string }) => {
+    // テスト生徒データかどうかチェック (studentIdが1または2の場合はテストデータと判断)
+    if (booking.studentId === 1 || booking.studentId === 2) {
+      // テスト用データの場合
+      setSelectedStudent({
+        name: booking.studentName || "生徒名",
+        time: booking.timeSlot,
+        subject: booking.subject,
+        grade: booking.studentId === 1 ? "中学3年生" : "高校2年生",
+        address: "テスト用住所：東京都新宿区西新宿2-8-1"
+      });
+      setShowStudentDetailDialog(true);
+      return;
+    }
+    
+    // 実データの場合
+    const student = students?.find(s => s.id === booking.studentId);
+    if (student) {
+      setSelectedStudent({
+        name: `${student.lastName} ${student.firstName}`,
+        time: booking.timeSlot,
+        subject: booking.subject,
+        grade: student.grade,
+        address: "授業行き先住所はユーザープロフィールを参照してください"
+      });
+      setShowStudentDetailDialog(true);
+    }
+  };
+  
+  // レポート作成対象の授業を取得する関数
+  const getUnreportedBookings = (): (Booking & { studentName?: string })[] => {
+    if (!bookings) return [];
+    
+    // 現在の日時を取得（日本時間）
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const today = getJapanDate();
+    
+    // テスト用データを使用（講師アカウントの場合のみ）
+    if (bookings.length === 0 && user?.role === 'tutor') {
+      // テストデータからレポート未作成のデータをフィルタリング
+      return testBookings
+        .filter(booking => booking.reportStatus !== "completed")
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .map(booking => ({
+          ...booking,
+          studentName: booking.studentName || getStudentName(booking.studentId)
+        }));
     }
     
     // 未報告の授業をすべて取得（過去の未報告授業も含む）
@@ -659,8 +580,9 @@ export default function HomePage() {
               </div>
             ) : (
               <CalendarView 
+                key={forceUpdate ? "updated" : "initial"} // forceUpdateによる強制再描画のためのkey
                 bookings={user?.role === 'tutor' 
-                  ? [
+                  ? testBookings.length > 0 ? testBookings : [
                       // 4/29の予定
                       {
                         id: 1001,
