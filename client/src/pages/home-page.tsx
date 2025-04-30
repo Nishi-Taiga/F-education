@@ -235,20 +235,33 @@ export default function HomePage() {
         title: "レポート保存完了",
         description: "授業レポートが保存されました",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      setShowReportDialog(false);
-      setReportContent('');
       
       // テスト用ダミーデータの場合は手動で状態を更新
       if (selectedReportBooking && [1001, 1002, 1003, 2001, 2002].includes(selectedReportBooking.id)) {
-        // UI上で状態を更新
-        const updatedBookings = allBookings.map(b => 
-          b.id === selectedReportBooking.id 
-            ? { ...b, reportStatus: "completed", reportContent: reportContent }
-            : b
+        // 日付に対応するテストデータを更新する
+        const updatedTodaysBookings = getTodaysBookings().map(booking => 
+          booking.id === selectedReportBooking.id 
+            ? { ...booking, reportStatus: "completed", reportContent: reportContent }
+            : booking
         );
-        setAllBookings(updatedBookings);
+        
+        // 過去の未報告授業リストも更新
+        const updatedUnreportedBookings = getUnreportedBookings().map(booking => 
+          booking.id === selectedReportBooking.id 
+            ? { ...booking, reportStatus: "completed", reportContent: reportContent }
+            : booking
+        );
       }
+      
+      // データを再取得してUIを更新
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      
+      // ダイアログを閉じる前に少し遅延を入れる
+      setTimeout(() => {
+        setShowReportDialog(false);
+        setReportContent('');
+        setReportSaving(false);
+      }, 500);
     },
     onError: (error) => {
       toast({
@@ -1143,6 +1156,15 @@ export default function HomePage() {
                     rows={2}
                     className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
                     placeholder="出された宿題、次回までの課題など"
+                    onChange={(e) => {
+                      const homeworkContent = e.target.value;
+                      if (homeworkContent) {
+                        const formattedContent = `${reportContent.includes('【宿題・課題】') 
+                          ? reportContent.replace(/【宿題・課題】[\s\S]*?(【|$)/, `【宿題・課題】\n${homeworkContent}\n\n$1`) 
+                          : `${reportContent}\n\n【宿題・課題】\n${homeworkContent}`}`;
+                        setReportContent(formattedContent);
+                      }
+                    }}
                   />
                 </div>
                 
@@ -1155,6 +1177,15 @@ export default function HomePage() {
                     rows={3}
                     className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
                     placeholder="保護者向けのコメント、生徒の理解度、今後の学習方針など"
+                    onChange={(e) => {
+                      const commentsContent = e.target.value;
+                      if (commentsContent) {
+                        const formattedContent = `${reportContent.includes('【講師コメント】') 
+                          ? reportContent.replace(/【講師コメント】[\s\S]*?(【|$)/, `【講師コメント】\n${commentsContent}\n\n$1`) 
+                          : `${reportContent}\n\n【講師コメント】\n${commentsContent}`}`;
+                        setReportContent(formattedContent);
+                      }
+                    }}
                   />
                 </div>
               </div>
