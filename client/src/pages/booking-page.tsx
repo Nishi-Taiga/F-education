@@ -54,15 +54,38 @@ export default function BookingPage() {
   
   // 生徒アカウントの場合は初期設定
   useEffect(() => {
-    if (user?.role === 'student' && user?.studentId && students && students.length > 0) {
-      // 生徒IDを設定
-      setSelectedStudentId(user.studentId);
-      
-      // 生徒情報から学校レベルを取得して設定
-      const studentInfo = students.find(s => s.id === user.studentId);
-      if (studentInfo) {
-        const schoolLevel = getSchoolLevelFromGrade(studentInfo.grade);
-        setStudentSchoolLevel(schoolLevel);
+    // 生徒アカウントの場合
+    if (user?.role === 'student') {
+      // ユーザー情報に含まれるstudentIdが設定されている場合
+      if (user?.studentId) {
+        console.log("生徒ID設定:", user.studentId);
+        setSelectedStudentId(user.studentId);
+        
+        // 生徒情報から学校レベルを設定
+        if (students && students.length > 0) {
+          const studentInfo = students.find(s => s.id === user.studentId);
+          if (studentInfo) {
+            console.log("生徒情報:", studentInfo);
+            const grade = studentInfo.grade;
+            console.log("学年:", grade);
+            const schoolLevel = getSchoolLevelFromGrade(grade);
+            console.log("学校レベル:", schoolLevel);
+            setStudentSchoolLevel(schoolLevel);
+          } else {
+            console.log("生徒情報が見つかりません。fallbackを使用します");
+            // 学年情報が見つからない場合のフォールバック
+            // 生徒アカウントなので、学校レベルを直接指定することができる
+            setStudentSchoolLevel("junior_high"); // デフォルトは中学生
+          }
+        } else {
+          console.log("生徒情報がまだロード中または空です。フォールバックを使用します");
+          // 生徒情報がロード中またはない場合は、中学生と仮定
+          setStudentSchoolLevel("junior_high");
+        }
+      } else {
+        console.log("生徒IDがありません。フォールバックを使用します");
+        // 生徒アカウントだが、studentIdがない場合のフォールバック
+        setStudentSchoolLevel("junior_high");
       }
     }
   }, [user, students]);
