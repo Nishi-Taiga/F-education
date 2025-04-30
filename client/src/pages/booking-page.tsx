@@ -509,6 +509,7 @@ export default function BookingPage() {
                   bookings={existingBookings || []} 
                   onSelectDate={handleDateSelection}
                   interactive={true}
+                  showLegend={false} // 生徒・保護者の予約ページには凡例を表示しない
                 />
               )}
             </Card>
