@@ -1066,7 +1066,7 @@ export default function HomePage() {
                 </div>
                 
                 <div className="space-y-1 text-xs text-gray-500 mt-2">
-                  <p>※ 以下の項目はフォーマットされて授業内容に含まれます</p>
+                  <p>※ 以下の項目は別途保存されます（授業内容には含まれません）</p>
                 </div>
                 
                 <div className="space-y-1">
@@ -1078,15 +1078,6 @@ export default function HomePage() {
                     rows={2}
                     className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
                     placeholder="出された宿題、次回までの課題など"
-                    onChange={(e) => {
-                      const homeworkContent = e.target.value;
-                      if (homeworkContent) {
-                        const formattedContent = `${reportContent.includes('【宿題・課題】') 
-                          ? reportContent.replace(/【宿題・課題】[\s\S]*?(【|$)/, `【宿題・課題】\n${homeworkContent}\n\n$1`) 
-                          : `${reportContent}\n\n【宿題・課題】\n${homeworkContent}`}`;
-                        setReportContent(formattedContent);
-                      }
-                    }}
                   />
                 </div>
                 
@@ -1099,15 +1090,6 @@ export default function HomePage() {
                     rows={3}
                     className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
                     placeholder="保護者向けのコメント、生徒の理解度、今後の学習方針など"
-                    onChange={(e) => {
-                      const commentsContent = e.target.value;
-                      if (commentsContent) {
-                        const formattedContent = `${reportContent.includes('【講師コメント】') 
-                          ? reportContent.replace(/【講師コメント】[\s\S]*?(【|$)/, `【講師コメント】\n${commentsContent}\n\n$1`) 
-                          : `${reportContent}\n\n【講師コメント】\n${commentsContent}`}`;
-                        setReportContent(formattedContent);
-                      }
-                    }}
                   />
                 </div>
               </div>
