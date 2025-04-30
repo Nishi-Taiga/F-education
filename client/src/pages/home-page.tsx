@@ -20,6 +20,29 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { Booking, Student } from "@shared/schema";
 
+// 授業のステータスに応じたテキスト色を返すユーティリティ関数
+const getBookingTextColor = (booking: Booking & { studentName?: string }, isSelected: boolean): string => {
+  if (isSelected) {
+    return 'text-white';
+  }
+  
+  if (booking.reportStatus === 'completed') {
+    return 'text-green-700';
+  }
+  
+  // 授業終了時刻を判定して未報告の場合は赤色
+  const [, endTime] = booking.timeSlot.split('-');
+  const [hours, minutes] = endTime.split(':').map(Number);
+  const [year, month, day] = booking.date.split('-').map(Number);
+  const lessonEndTime = new Date(year, month - 1, day, hours, minutes);
+  
+  // 現在の日本時間
+  const now = new Date();
+  const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  
+  return lessonEndTime < nowJapan ? 'text-red-700' : 'text-blue-700';
+};
+
 export default function HomePage() {
   const { toast } = useToast();
   const { user, logoutMutation } = useAuth();
@@ -531,13 +554,6 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">
-        {/* 時刻表示テスト用 */}
-        <div className="mb-3 p-2 bg-gray-100 rounded text-xs">
-          <p><strong>現在時刻（UTC）:</strong> {new Date().toISOString()}</p>
-          <p><strong>日本時刻（UTC+9）:</strong> {new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString()}</p>
-          <p><strong>日本時刻（表示用）:</strong> {new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toLocaleString('ja-JP')}</p>
-          <p><strong>4/30 16:00終了時刻（テスト用）:</strong> {new Date(2025, 3, 30, 17, 30).toISOString()}</p>
-        </div>
         
         <div className="md:flex md:items-start md:justify-between mb-4">
           <div>
@@ -974,10 +990,10 @@ export default function HomePage() {
                                 )}
                               </div>
                               <div className="flex-1">
-                                <div className={`font-medium ${selectedReportBooking.id === booking.id ? 'text-white' : 'text-blue-700'}`}>
+                                <div className={`font-medium ${getBookingTextColor(booking, selectedReportBooking?.id === booking.id)}`}>
                                   {booking.studentName || "生徒不明"}
                                 </div>
-                                <div className={`text-xs ${selectedReportBooking.id === booking.id ? 'text-blue-100' : 'text-gray-500'}`}>
+                                <div className={`text-xs ${selectedReportBooking?.id === booking.id ? 'text-blue-100' : 'text-gray-500'}`}>
                                   {booking.date} {booking.timeSlot} - {booking.subject}
                                 </div>
                               </div>
@@ -998,8 +1014,9 @@ export default function HomePage() {
                                     // 授業終了時刻
                                     const lessonEndTime = new Date(year, month - 1, day, hours, minutes);
                                     
-                                    // 2025年4月30日の8:45（日本時間）に固定（テスト用）
-                                    const nowJapan = new Date(2025, 3, 30, 8, 45);
+                                    // 現在の日本時間を取得（UTC+9）
+                                    const now = new Date();
+                                    const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
                                     
                                     // 授業終了時刻が現在時刻より前の場合は「未報告」
                                     if (lessonEndTime < nowJapan) {
@@ -1036,19 +1053,19 @@ export default function HomePage() {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <p className="text-xs text-gray-500">生徒名</p>
-                    <p className="font-medium">{selectedReportBooking.studentName || "生徒不明"}</p>
+                    <p className="font-medium">{selectedReportBooking?.studentName || "生徒不明"}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">時間帯</p>
-                    <p className="font-medium">{selectedReportBooking.timeSlot}</p>
+                    <p className="font-medium">{selectedReportBooking?.timeSlot}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">日付</p>
-                    <p className="font-medium">{selectedReportBooking.date}</p>
+                    <p className="font-medium">{selectedReportBooking?.date}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">教科</p>
-                    <p className="font-medium">{selectedReportBooking.subject}</p>
+                    <p className="font-medium">{selectedReportBooking?.subject}</p>
                   </div>
                 </div>
               </div>

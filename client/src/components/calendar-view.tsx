@@ -89,15 +89,9 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
       return 'completed-with-report';
     }
     
-    // 現在時刻（日本時間）
+    // 現在の日本時間を取得（UTC+9）
     const now = new Date();
-    
-    // 日本時間を取得（UTC+9）- デバッグ用に8:45固定
-    // 実際の本番環境では下記のコードを使用する
-    // const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
-    
-    // 2025年4月30日の8:45（日本時間）に固定（テスト用）
-    const nowJapan = new Date(2025, 3, 30, 8, 45);
+    const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
     
     // 授業の終了時間を解析
     const [, endTime] = booking.timeSlot.split('-');
