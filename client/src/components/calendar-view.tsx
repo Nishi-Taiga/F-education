@@ -84,32 +84,30 @@ export function CalendarView({ bookings, onSelectDate, interactive = false }: Ca
       return 'upcoming';
     }
     
-    // 過去のレッスンで、レポート完了状態なら「完了済み」
+    // レポート完了状態なら「完了済み」（緑色）
     if (booking.reportStatus === 'completed') {
       return 'completed-with-report';
     }
     
     // 現在の日本時間を取得（UTC+9）
     const now = new Date();
-    const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    const japanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    const todayJapan = japanTime.toISOString().split('T')[0]; // YYYY-MM-DD形式
     
-    // 授業の終了時間を解析
-    const [, endTime] = booking.timeSlot.split('-');
-    const [hours, minutes] = endTime.split(':').map(Number);
+    // 授業の日付
+    const lessonDate = booking.date;
     
-    // 授業の日付を解析
-    const [year, month, day] = booking.date.split('-').map(Number);
-    
-    // 授業終了時刻（日本時間）
-    const lessonEndTime = new Date(year, month - 1, day, hours, minutes);
-    
-    // 授業終了時刻が現在時刻よりも後の場合は「これから」（青）
-    if (lessonEndTime > nowJapan) {
+    // 日付の比較（今日より前の日付なら「未報告」）
+    if (lessonDate < todayJapan) {
+      // 過去の未報告授業（赤色）
+      return 'completed-no-report';
+    } else if (lessonDate === todayJapan) {
+      // 当日の授業（青色）
+      return 'upcoming';
+    } else {
+      // 未来の授業（青色）
       return 'upcoming';
     }
-    
-    // 過去のレッスンで、レポート未完了なら「要報告」（赤）
-    return 'completed-no-report';
   };
 
   // Format the month header with Japanese locale
