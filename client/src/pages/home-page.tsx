@@ -27,6 +27,7 @@ const getBookingTextColor = (booking: Booking & { studentName?: string }, isSele
   }
   
   if (booking.reportStatus === 'completed') {
+    console.log(`授業 ${booking.date} ${booking.timeSlot} 報告済み: 緑色`);
     return 'text-green-700';
   }
   
@@ -40,7 +41,13 @@ const getBookingTextColor = (booking: Booking & { studentName?: string }, isSele
   const now = new Date();
   const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
   
-  return lessonEndTime < nowJapan ? 'text-red-700' : 'text-blue-700';
+  const isLessonEnded = lessonEndTime < nowJapan;
+  console.log(`授業 ${booking.date} ${booking.timeSlot}:`);
+  console.log(`- 授業終了時刻: ${lessonEndTime.toISOString()}`);
+  console.log(`- 現在日本時間: ${nowJapan.toISOString()}`);
+  console.log(`- 授業終了済み?: ${isLessonEnded ? 'はい（赤色）' : 'いいえ（青色）'}`);
+  
+  return isLessonEnded ? 'text-red-700' : 'text-blue-700';
 };
 
 export default function HomePage() {
