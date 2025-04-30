@@ -26,28 +26,34 @@ const getBookingTextColor = (booking: Booking & { studentName?: string }, isSele
     return 'text-white';
   }
   
+  // 報告済みの授業は緑色
   if (booking.reportStatus === 'completed') {
     console.log(`授業 ${booking.date} ${booking.timeSlot} 報告済み: 緑色`);
     return 'text-green-700';
   }
   
-  // 授業終了時刻を判定して未報告の場合は赤色
-  const [, endTime] = booking.timeSlot.split('-');
-  const [hours, minutes] = endTime.split(':').map(Number);
-  const [year, month, day] = booking.date.split('-').map(Number);
-  const lessonEndTime = new Date(year, month - 1, day, hours, minutes);
-  
-  // 現在の日本時間
+  // 日本時間の今日の日付を取得
   const now = new Date();
-  const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  const japanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  const todayJapan = japanTime.toISOString().split('T')[0]; // YYYY-MM-DD形式
   
-  const isLessonEnded = lessonEndTime < nowJapan;
-  console.log(`授業 ${booking.date} ${booking.timeSlot}:`);
-  console.log(`- 授業終了時刻: ${lessonEndTime.toISOString()}`);
-  console.log(`- 現在日本時間: ${nowJapan.toISOString()}`);
-  console.log(`- 授業終了済み?: ${isLessonEnded ? 'はい（赤色）' : 'いいえ（青色）'}`);
+  // 授業の日付
+  const lessonDate = booking.date;
   
-  return isLessonEnded ? 'text-red-700' : 'text-blue-700';
+  // 日付の比較
+  if (lessonDate < todayJapan) {
+    // 前日までの報告書未作成の授業は赤色
+    console.log(`授業 ${booking.date} ${booking.timeSlot}: 過去の未報告授業（赤色）`);
+    return 'text-red-700';
+  } else if (lessonDate === todayJapan) {
+    // 当日の授業は青色
+    console.log(`授業 ${booking.date} ${booking.timeSlot}: 当日の授業（青色）`);
+    return 'text-blue-700';
+  } else {
+    // 翌日以降の授業は青色（標準色）
+    console.log(`授業 ${booking.date} ${booking.timeSlot}: 未来の授業（青色）`);
+    return 'text-blue-700';
+  }
 };
 
 export default function HomePage() {
@@ -1010,34 +1016,38 @@ export default function HomePage() {
                                     報告済み
                                   </div>
                                 ) : (
-                                  // 授業が終了しているかどうかを判定
                                   (() => {
-                                    const [, endTime] = booking.timeSlot.split('-');
-                                    
-                                    // 授業日と終了時間を正確に解析（日本時間）
-                                    const [year, month, day] = booking.date.split('-').map(Number);
-                                    const [hours, minutes] = endTime.split(':').map(Number);
-                                    
-                                    // 授業終了時刻
-                                    const lessonEndTime = new Date(year, month - 1, day, hours, minutes);
-                                    
-                                    // 現在の日本時間を取得（UTC+9）
+                                    // 日本時間の今日の日付を取得
                                     const now = new Date();
-                                    const nowJapan = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+                                    const japanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+                                    const todayJapan = japanTime.toISOString().split('T')[0]; // YYYY-MM-DD形式
                                     
-                                    // 授業終了時刻が現在時刻より前の場合は「未報告」
-                                    if (lessonEndTime < nowJapan) {
+                                    // 授業の日付
+                                    const lessonDate = booking.date;
+                                    
+                                    // 日付の比較
+                                    if (lessonDate < todayJapan) {
+                                      // 前日までの報告書未作成の授業は赤色
                                       return (
                                         <div className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
                                           未報告
                                         </div>
                                       );
+                                    } else if (lessonDate === todayJapan) {
+                                      // 当日の授業は青色
+                                      return (
+                                        <div className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                          今日
+                                        </div>
+                                      );
+                                    } else {
+                                      // 翌日以降の授業
+                                      return (
+                                        <div className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                          予定
+                                        </div>
+                                      );
                                     }
-                                    return (
-                                      <div className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                                        予定
-                                      </div>
-                                    );
                                   })()
                                 )}
                               </div>
