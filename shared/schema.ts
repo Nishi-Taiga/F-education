@@ -134,6 +134,27 @@ export const bookingsRelations = relations(bookings, ({ one }) => ({
   }),
 }));
 
+// 生徒チケットテーブル
+export const studentTickets = pgTable("student_tickets", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull().references(() => students.id),
+  userId: integer("user_id").notNull().references(() => users.id), // 親ユーザーID
+  quantity: integer("quantity").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const studentTicketsRelations = relations(studentTickets, ({ one }) => ({
+  student: one(students, {
+    fields: [studentTickets.studentId],
+    references: [students.id],
+  }),
+  user: one(users, {
+    fields: [studentTickets.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,

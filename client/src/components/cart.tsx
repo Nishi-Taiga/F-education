@@ -23,6 +23,11 @@ export function Cart({ items, onRemove, onCheckout, isPending }: CartProps) {
             <div key={item.id} className="flex justify-between items-center p-2 bg-gray-100 rounded">
               <div>
                 <span className="font-medium">チケット {item.quantity}枚{item.discount}</span>
+                {item.studentName && (
+                  <div className="text-xs text-gray-500">
+                    {item.studentName}用
+                  </div>
+                )}
               </div>
               <div className="flex items-center">
                 <span className="mr-4">¥{item.price.toLocaleString()}</span>

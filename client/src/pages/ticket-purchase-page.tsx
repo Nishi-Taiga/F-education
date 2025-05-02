@@ -16,6 +16,8 @@ export type CartItem = {
   quantity: number;
   price: number;
   discount: string;
+  studentId?: number; // 生徒ID（特定の生徒用のチケットの場合）
+  studentName?: string; // 生徒名前（表示用）
 };
 
 // 生徒タイプ定義
@@ -84,12 +86,13 @@ export default function TicketPurchasePage() {
   }, [students]);
 
   const purchaseMutation = useMutation({
-    mutationFn: async (quantity: number) => {
-      const res = await apiRequest("POST", "/api/tickets/purchase", { quantity });
+    mutationFn: async (purchaseData: { items: { studentId: number, quantity: number }[] }) => {
+      const res = await apiRequest("POST", "/api/tickets/purchase", purchaseData);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
       setShowSuccessModal(true);
       setCartItems([]);
     },
@@ -97,7 +100,7 @@ export default function TicketPurchasePage() {
 
   // カートに追加する関数
   const addToCart = (quantity: number) => {
-    if (!selectedStudentType) return;
+    if (!selectedStudentType || !selectedStudent) return;
     
     // 選択された生徒タイプとチケット枚数に応じた価格を設定
     let studentType = selectedStudentType;
@@ -108,11 +111,14 @@ export default function TicketPurchasePage() {
     const priceInfo = ticketPrices[studentType][quantity as keyof typeof ticketPrices[typeof studentType]];
     if (!priceInfo) return;
     
+    // 生徒情報を含めてカートに追加
     setCartItems([...cartItems, {
       id: Date.now(),
       quantity,
       price: priceInfo.price,
-      discount: priceInfo.discount
+      discount: priceInfo.discount,
+      studentId: selectedStudent.id,
+      studentName: `${selectedStudent.lastName} ${selectedStudent.firstName}`
     }]);
   };
 
@@ -121,8 +127,17 @@ export default function TicketPurchasePage() {
   };
 
   const checkout = () => {
-    const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-    purchaseMutation.mutate(totalQuantity);
+    // 生徒ごとにチケットをグループ化
+    const purchaseItems = cartItems
+      .filter(item => item.studentId) // 念のため生徒IDがあるアイテムのみ
+      .map(item => ({
+        studentId: item.studentId!,
+        quantity: item.quantity
+      }));
+    
+    if (purchaseItems.length === 0) return;
+    
+    purchaseMutation.mutate({ items: purchaseItems });
   };
 
   return (
