@@ -1,18 +1,20 @@
 import { type Booking } from "@shared/schema";
 import { format, parse, addHours } from "date-fns";
 import { ja } from "date-fns/locale";
-import { BookOpen, User, X, AlertCircle } from "lucide-react";
+import { BookOpen, User, X, AlertCircle, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface BookingCardProps {
   booking: Booking & {
     studentName?: string;
   };
   onCancelClick?: (booking: Booking & { studentName?: string }) => void;
+  onViewReportClick?: (booking: Booking & { studentName?: string }) => void;
 }
 
-export function BookingCard({ booking, onCancelClick }: BookingCardProps) {
+export function BookingCard({ booking, onCancelClick, onViewReportClick }: BookingCardProps) {
   // Parse the date from string (YYYY-MM-DD) to a Date object
   const dateObj = parse(booking.date, "yyyy-MM-dd", new Date());
   
@@ -57,6 +59,27 @@ export function BookingCard({ booking, onCancelClick }: BookingCardProps) {
         )}
       </div>
       
+      {/* レポート表示ボタン - 過去の授業でレポートが存在する場合のみ表示 */}
+      {onViewReportClick && isInPast && booking.reportStatus === 'completed' && (
+        <Button 
+          variant="ghost" 
+          size="sm"
+          className="text-gray-500 hover:text-green-500 hover:bg-green-50 h-8 shrink-0 flex items-center gap-1 mr-1" 
+          onClick={() => onViewReportClick(booking)}
+        >
+          <ClipboardCheck className="h-3.5 w-3.5" />
+          <span className="text-xs">レポート</span>
+        </Button>
+      )}
+      
+      {/* レポートが存在する場合のバッジ */}
+      {isInPast && booking.reportStatus === 'completed' && !onViewReportClick && (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-200 mr-1">
+          レポート済
+        </Badge>
+      )}
+      
+      {/* キャンセルボタン */}
       {onCancelClick && !isInPast && (
         isPastCancelDeadline ? (
           <TooltipProvider>

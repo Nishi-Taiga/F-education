@@ -84,6 +84,10 @@ export default function HomePage() {
   const [reportSaving, setReportSaving] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false); // 強制的に再描画を行うためのフラグ
   
+  // レポート閲覧ダイアログ用の状態
+  const [showReportViewDialog, setShowReportViewDialog] = useState(false);
+  const [viewReportBooking, setViewReportBooking] = useState<(Booking & { studentName?: string }) | null>(null);
+  
   // アドレスをコピーする関数
   const copyAddressToClipboard = () => {
     if (selectedStudent?.address) {
@@ -495,6 +499,12 @@ export default function HomePage() {
     // 選択された授業を設定（指定がない場合は最初の授業か空に）
     setSelectedReportBooking(booking || (unreportedBookings.length > 0 ? unreportedBookings[0] : null));
     setShowReportDialog(true);
+  };
+  
+  // レポート閲覧ダイアログを開く関数
+  const handleViewReportClick = (booking: Booking & { studentName?: string }) => {
+    setViewReportBooking(booking);
+    setShowReportViewDialog(true);
   };
 
   return (
