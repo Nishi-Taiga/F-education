@@ -531,7 +531,9 @@ export default function HomePage() {
         
         <div className="md:flex md:items-start md:justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">マイページ</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              {user?.role === 'tutor' ? 'F education' : 'F education 予約システム'}
+            </h2>
             {user?.role !== 'tutor' && (
               <p className="mt-1 text-sm text-gray-600">予約状況とチケット残数の確認</p>
             )}
@@ -692,7 +694,7 @@ export default function HomePage() {
         {user?.role === 'tutor' && (
           <Card className="p-3 mb-4">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-base font-medium text-gray-900">講師ダッシュボード</h3>
+              <h3 className="text-base font-medium text-gray-900">F education ダッシュボード</h3>
             </div>
             
             <div className="grid grid-cols-1 gap-4 mb-4">

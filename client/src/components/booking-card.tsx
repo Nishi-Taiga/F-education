@@ -1,8 +1,9 @@
 import { type Booking } from "@shared/schema";
-import { format, parse } from "date-fns";
+import { format, parse, addHours } from "date-fns";
 import { ja } from "date-fns/locale";
-import { BookOpen, User, X } from "lucide-react";
+import { BookOpen, User, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface BookingCardProps {
   booking: Booking & {
@@ -18,12 +19,20 @@ export function BookingCard({ booking, onCancelClick }: BookingCardProps) {
   // Format the date with Japanese locale
   const formattedDate = format(dateObj, "M月d日 (E)", { locale: ja });
 
-  // 現在の日付と予約日を比較（過去の予約はキャンセル不可）
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const bookingDate = new Date(booking.date);
-  bookingDate.setHours(0, 0, 0, 0);
-  const isInPast = bookingDate < today;
+  // 現在の日時
+  const now = new Date();
+  
+  // 予約日時（時間も含める）
+  const [timeStart] = booking.timeSlot.split('-')[0].split(':').map(Number);
+  const bookingDateTime = new Date(booking.date);
+  bookingDateTime.setHours(timeStart, 0, 0, 0);
+  
+  // 24時間前の時点
+  const cancelDeadline = addHours(bookingDateTime, -24);
+  
+  // 過去の予約またはキャンセル期限を過ぎているかどうか
+  const isInPast = bookingDateTime < now;
+  const isPastCancelDeadline = now > cancelDeadline;
 
   return (
     <div className="flex items-center p-3 bg-gray-50 rounded-md">
@@ -49,16 +58,31 @@ export function BookingCard({ booking, onCancelClick }: BookingCardProps) {
       </div>
       
       {onCancelClick && !isInPast && (
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="text-gray-500 hover:text-red-500 hover:bg-red-50 h-8 shrink-0 flex items-center gap-1" 
-          onClick={() => onCancelClick(booking)}
-          title="この予約をキャンセル"
-        >
-          <X className="h-3.5 w-3.5" />
-          <span className="text-xs">キャンセル</span>
-        </Button>
+        isPastCancelDeadline ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center text-gray-400 text-xs">
+                  <AlertCircle className="h-3.5 w-3.5 mr-1" />
+                  <span>キャンセル不可</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>授業開始24時間前を過ぎているためキャンセルできません</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="text-gray-500 hover:text-red-500 hover:bg-red-50 h-8 shrink-0 flex items-center gap-1" 
+            onClick={() => onCancelClick(booking)}
+          >
+            <X className="h-3.5 w-3.5" />
+            <span className="text-xs">キャンセル</span>
+          </Button>
+        )
       )}
     </div>
   );
