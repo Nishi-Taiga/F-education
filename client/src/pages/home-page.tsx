@@ -1056,43 +1056,23 @@ export default function HomePage() {
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label htmlFor="lesson-content" className="block text-sm font-medium">
-                    授業内容
+                    レポート内容
                   </label>
+                  <div className="text-xs text-gray-500 mb-2">
+                    以下の項目を含めて記入してください：
+                    <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                      <li>単元</li>
+                      <li>伝言事項</li>
+                      <li>来週までの目標(課題)</li>
+                    </ul>
+                  </div>
                   <textarea
                     id="lesson-content"
-                    rows={3}
+                    rows={6}
                     className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
-                    placeholder="本日行った学習内容、進捗状況を記入してください"
+                    placeholder="単元、伝言事項、来週までの目標(課題)などを記入してください"
                     value={reportContent}
                     onChange={(e) => setReportContent(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-1 text-xs text-gray-500 mt-2">
-                  <p>※ 以下の項目は別途保存されます（授業内容には含まれません）</p>
-                </div>
-                
-                <div className="space-y-1">
-                  <label htmlFor="homework" className="block text-sm font-medium">
-                    宿題・課題
-                  </label>
-                  <textarea
-                    id="homework"
-                    rows={2}
-                    className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
-                    placeholder="出された宿題、次回までの課題など"
-                  />
-                </div>
-                
-                <div className="space-y-1">
-                  <label htmlFor="comments" className="block text-sm font-medium">
-                    講師コメント
-                  </label>
-                  <textarea
-                    id="comments"
-                    rows={3}
-                    className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
-                    placeholder="保護者向けのコメント、生徒の理解度、今後の学習方針など"
                   />
                 </div>
               </div>
@@ -1107,7 +1087,7 @@ export default function HomePage() {
                     if (!reportContent.trim()) {
                       toast({
                         title: "入力エラー",
-                        description: "授業内容を入力してください",
+                        description: "レポート内容を入力してください",
                         variant: "destructive",
                       });
                       return;
