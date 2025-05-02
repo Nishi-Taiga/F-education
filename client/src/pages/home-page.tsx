@@ -120,6 +120,16 @@ export default function HomePage() {
     queryKey: ["/api/students"],
   });
   
+  // 生徒ごとのチケット残数を取得
+  const { data: studentTickets = [], isLoading: isLoadingStudentTickets } = useQuery<Array<{
+    studentId: number;
+    name: string;
+    ticketCount: number;
+  }>>({
+    queryKey: ["/api/student-tickets"],
+    enabled: !!user && user.role !== 'tutor',
+  });
+  
   // 開発用：チケットを追加するミューテーション
   const addTicketsMutation = useMutation({
     mutationFn: async (quantity: number) => {
@@ -157,6 +167,7 @@ export default function HomePage() {
         description: `${data.message || "10枚のチケットが追加されました"}`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/student-tickets"] });
     },
     onError: (error) => {
       console.error("onErrorが呼び出されました:", error);
@@ -172,9 +183,48 @@ export default function HomePage() {
     },
   });
   
+  // 開発用：チケットをリセットするミューテーション
+  const resetTicketsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/tickets/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "チケットのリセットに失敗しました");
+      }
+      
+      const data = await res.json();
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "チケットリセット",
+        description: "すべてのチケットが0にリセットされました",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/student-tickets"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "リセットエラー",
+        description: error instanceof Error ? error.message : "チケットのリセットに失敗しました",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // 開発用：チケットを10枚追加する
   const handleAddTickets = () => {
     addTicketsMutation.mutate(10);
+  };
+  
+  // 開発用：チケットをリセット（0に）する
+  const handleResetTickets = () => {
+    resetTicketsMutation.mutate();
   };
   
   // 予約キャンセルのミューテーション
@@ -553,31 +603,67 @@ export default function HomePage() {
           </div>
           {user?.role !== 'tutor' && (
             <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-3 border border-gray-200">
-              <div className="flex items-center">
-                <div className="mr-3 bg-green-50 p-2 rounded-full">
-                  <Ticket className="text-green-600 h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">チケット残数</p>
-                  <div className="flex items-center">
-                    <p className="text-xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
-                    <Button 
-                      variant="outline"
-                      size="icon"
-                      className="ml-2 h-6 w-6 rounded-full border-dashed"
-                      onClick={handleAddTickets}
-                      disabled={addTicketsMutation.isPending}
-                    >
-                      {addTicketsMutation.isPending ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Plus className="h-3 w-3" />
-                      )}
-                    </Button>
+              <div className="flex justify-between items-start">
+                <div className="flex items-center">
+                  <div className="mr-3 bg-green-50 p-2 rounded-full">
+                    <Ticket className="text-green-600 h-5 w-5" />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">※開発用：チケット追加</p>
+                  <div>
+                    <p className="text-sm text-gray-600">チケット残数（合計）</p>
+                    <div className="flex items-center">
+                      <p className="text-xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="h-7 rounded-full border-dashed"
+                    onClick={handleAddTickets}
+                    disabled={addTicketsMutation.isPending}
+                  >
+                    {addTicketsMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Plus className="h-3 w-3 mr-1" />
+                    )}
+                    <span className="text-xs">追加</span>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="h-7 rounded-full border-dashed text-red-500 border-red-200 hover:bg-red-50"
+                    onClick={handleResetTickets}
+                    disabled={resetTicketsMutation.isPending}
+                  >
+                    {resetTicketsMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <span className="text-xs">リセット</span>
+                    )}
+                  </Button>
                 </div>
               </div>
+              
+              {/* 生徒ごとのチケット残数 */}
+              {studentTickets.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-500 mb-2">生徒別チケット残数</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {studentTickets.map(ticket => (
+                      <div key={ticket.studentId} className="flex justify-between items-center bg-gray-50 p-2 rounded-md">
+                        <span className="text-sm font-medium">{ticket.name}</span>
+                        <span className="text-sm font-semibold">{ticket.ticketCount}枚</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-xs text-gray-500 mt-2">※開発用：チケット追加・リセット</p>
             </div>
           )}
         </div>
