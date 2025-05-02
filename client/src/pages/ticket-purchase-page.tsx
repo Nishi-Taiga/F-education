@@ -149,7 +149,7 @@ export default function TicketPurchasePage() {
             <Button variant="ghost" size="icon" className="mr-2" onClick={() => navigate("/")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold text-primary">F education</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-gray-700">{user?.displayName || user?.username}</span>

@@ -141,7 +141,6 @@ export const studentTickets = pgTable("student_tickets", {
   userId: integer("user_id").notNull().references(() => users.id), // 親ユーザーID
   quantity: integer("quantity").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const studentTicketsRelations = relations(studentTickets, ({ one }) => ({

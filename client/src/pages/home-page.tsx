@@ -594,7 +594,7 @@ export default function HomePage() {
         
         <div className="md:flex md:items-start md:justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
               {user?.role === 'tutor' ? 'F education' : 'F education 予約システム'}
             </h2>
           </div>
