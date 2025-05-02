@@ -564,12 +564,12 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-primary">F education</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-700">{user?.displayName || user?.username}</span>
+            <span className="text-gray-700">{user?.displayName || user?.username}</span>
             <Button 
               variant="ghost" 
               size="sm"
@@ -594,8 +594,8 @@ export default function HomePage() {
         
         <div className="md:flex md:items-start md:justify-between mb-4">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
-              {user?.role === 'tutor' ? 'F education' : 'F education 予約システム'}
+            <h2 className="text-2xl font-bold text-gray-900">
+              {user?.role === 'tutor' ? 'ダッシュボード' : '予約システム'}
             </h2>
           </div>
           {user?.role !== 'tutor' && (

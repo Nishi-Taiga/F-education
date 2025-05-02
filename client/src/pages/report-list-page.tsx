@@ -109,32 +109,26 @@ export default function ReportListPage() {
   const displayBookings = filteredBookings.length > 0 ? filteredBookings : testReportedBookings;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-5xl mx-auto px-4 py-4">
-        <div className="mb-6 flex items-center justify-between">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="mr-2"
-              onClick={() => navigate("/")}
-            >
+            <Button variant="ghost" size="icon" className="mr-2" onClick={() => navigate("/")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">授業レポート一覧</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="text-xs"
-              onClick={() => navigate("/")}
-            >
-              <Calendar className="h-3.5 w-3.5 mr-1" />
-              カレンダーに戻る
-            </Button>
+          <div className="flex items-center space-x-4">
+            <span className="text-gray-700">{user?.displayName || user?.username}</span>
           </div>
+        </div>
+      </header>
+
+      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">授業レポート一覧</h2>
+          <p className="mt-1 text-sm text-gray-600">完了した授業のレポートを確認できます</p>
         </div>
         
         {/* 検索バー */}
