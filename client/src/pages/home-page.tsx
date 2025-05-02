@@ -601,17 +601,7 @@ export default function HomePage() {
           {user?.role !== 'tutor' && (
             <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-3 border border-gray-200">
               <div className="flex justify-between items-start">
-                <div className="flex items-center">
-                  <div className="mr-3 bg-green-50 p-2 rounded-full">
-                    <Ticket className="text-green-600 h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">チケット</p>
-                    <div className="flex items-center">
-                      <p className="text-xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
-                    </div>
-                  </div>
-                </div>
+      
                 
                 <div className="flex gap-2">
                   <Button 

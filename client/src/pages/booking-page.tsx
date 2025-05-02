@@ -317,10 +317,7 @@ export default function BookingPage() {
             <h1 className="text-xl font-bold text-primary">F education</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="bg-primary bg-opacity-10 px-2 py-1 rounded-full flex items-center">
-              <Ticket className="text-primary h-4 w-4 mr-1" />
-              <span className="text-gray-700 text-sm font-medium">{user?.ticketCount || 0}</span>
-            </div>
+
             <span className="text-gray-700 text-sm">{user?.displayName || user?.username}</span>
           </div>
         </div>
