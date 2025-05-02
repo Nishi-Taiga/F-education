@@ -1215,6 +1215,96 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Failed to update booking report");
     }
   }
+  
+  // 科目、日付、時間帯に基づいて利用可能な講師を取得
+  async getAvailableTutorsBySubject(subject: string, date: string, timeSlot: string): Promise<any[]> {
+    try {
+      console.log(`[API] 利用可能な講師検索: 科目=${subject}, 日付=${date}, 時間=${timeSlot}`);
+      
+      // 1. 講師シフトを取得 (指定した日時にONになっているシフトで、予約可能なもの)
+      const availableShifts = await db
+        .select({
+          shift_id: tutorShifts.id,
+          tutor_id: tutorShifts.tutorId,
+          shift_subject: tutorShifts.subject
+        })
+        .from(tutorShifts)
+        .where(
+          and(
+            eq(tutorShifts.date, date),
+            eq(tutorShifts.timeSlot, timeSlot),
+            eq(tutorShifts.isAvailable, true)
+          )
+        );
+      
+      console.log(`[API] 対象時間帯のシフト: ${availableShifts.length}件`);
+      
+      if (availableShifts.length === 0) {
+        return [];
+      }
+      
+      // 2. 既に予約済みのシフトIDを抽出
+      const bookedShifts = await db
+        .select({ shiftId: bookings.tutorShiftId })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.date, date),
+            eq(bookings.timeSlot, timeSlot)
+          )
+        );
+      
+      const bookedShiftIds = new Set(bookedShifts.map(b => b.shiftId));
+      console.log(`[API] 予約済みシフト: ${bookedShiftIds.size}件`);
+      
+      // 3. 予約済みのシフトを除外
+      const availableShiftIds = availableShifts
+        .filter(shift => !bookedShiftIds.has(shift.shift_id))
+        .map(shift => shift.shift_id);
+      
+      console.log(`[API] 予約可能なシフト: ${availableShiftIds.length}件`);
+      
+      if (availableShiftIds.length === 0) {
+        return [];
+      }
+      
+      // 4. 利用可能な講師情報をシフトのIDとともに取得
+      const results = await db
+        .select({
+          shift_id: tutorShifts.id,
+          shift_subject: tutorShifts.subject,
+          tutor_id: tutors.id,
+          last_name: tutors.lastName,
+          first_name: tutors.firstName,
+          university: tutors.university
+        })
+        .from(tutorShifts)
+        .innerJoin(tutors, eq(tutorShifts.tutorId, tutors.id))
+        .where(
+          and(
+            inArray(tutorShifts.id, availableShiftIds),
+            eq(tutors.isActive, true)
+          )
+        );
+      
+      console.log(`[API] 利用可能な講師: ${results.length}件`);
+      
+      // 5. 科目でフィルタリング
+      const filteredResults = subject 
+        ? results.filter(r => {
+            const tutorSubjects = r.shift_subject || "";
+            return tutorSubjects.includes(subject);
+          })
+        : results;
+      
+      console.log(`[API] 科目フィルタ適用後の講師: ${filteredResults.length}件`);
+      
+      return filteredResults;
+    } catch (error) {
+      console.error("利用可能な講師検索エラー:", error);
+      return [];
+    }
+  }
 }
 
 // MemStorageからDatabaseStorageに変更
