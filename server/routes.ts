@@ -427,9 +427,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         students = await storage.getStudentsByUserId(userId);
       }
       
-      res.json(students);
+      // 生徒ごとのチケット残数を取得して追加
+      const studentsWithTickets = await Promise.all(
+        students.map(async (student) => {
+          const ticketCount = await storage.getStudentTickets(student.id);
+          return {
+            ...student,
+            ticketCount
+          };
+        })
+      );
+      
+      res.json(studentsWithTickets);
     } catch (error) {
       res.status(400).json({ message: "Failed to get students", error });
+    }
+  });
+  
+  // 生徒のチケット残数取得
+  app.get("/api/students/:id/tickets", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const studentId = parseInt(req.params.id);
+    
+    try {
+      // 生徒の存在チェック
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      
+      // 権限チェック（生徒が自分の子供か、または自分自身の情報かどうか）
+      if (student.userId !== userId && !(req.user!.role === 'student' && req.user!.studentId === studentId)) {
+        return res.status(403).json({ message: "Not authorized to view this student's tickets" });
+      }
+      
+      // チケット残数を取得
+      const ticketCount = await storage.getStudentTickets(studentId);
+      
+      res.json({ 
+        studentId, 
+        ticketCount,
+        studentName: `${student.lastName} ${student.firstName}`
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get student tickets", error });
     }
   });
   

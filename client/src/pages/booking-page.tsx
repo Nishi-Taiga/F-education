@@ -377,7 +377,14 @@ export default function BookingPage() {
                       <SelectContent>
                         {students.map((student) => (
                           <SelectItem key={student.id} value={student.id.toString()}>
-                            {student.lastName} {student.firstName}
+                            <div className="flex justify-between items-center w-full">
+                              <span>{student.lastName} {student.firstName}</span>
+                              {'ticketCount' in student && (
+                                <span className="text-xs font-medium text-primary ml-2">
+                                  残り {(student as any).ticketCount} 枚
+                                </span>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>

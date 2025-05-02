@@ -203,8 +203,15 @@ export default function TicketPurchasePage() {
                         setIsExamCourse(false); // リセット
                       }}
                     >
-                      <div className="font-medium">{student.lastName} {student.firstName}</div>
-                      <div className="text-sm text-gray-600">{student.grade} ({student.school})</div>
+                      <div className="flex justify-between items-center">
+                        <div className="font-medium">{student.lastName} {student.firstName}</div>
+                        {'ticketCount' in student && (
+                          <div className="bg-primary bg-opacity-10 px-2 py-1 rounded text-primary text-xs font-medium">
+                            残り {(student as any).ticketCount} 枚
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">{student.grade} ({student.school})</div>
                     </div>
                   ))}
                 </div>
