@@ -704,30 +704,63 @@ export default function BookingPage() {
                 )}
               </div>
               
-              {user && user.ticketCount < selectedBookings.length ? (
-                <Button 
-                  className="w-full" 
-                  variant="destructive"
-                  disabled={true}
-                >
-                  チケットが不足しています（{selectedBookings.length}枚必要）
-                </Button>
-              ) : (
-                <Button 
-                  className="w-full" 
-                  disabled={selectedBookings.length === 0 || bookingMutation.isPending}
-                  onClick={confirmBooking}
-                >
-                  {bookingMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      処理中...
-                    </>
-                  ) : (
-                    "予約を確認する"
-                  )}
-                </Button>
-              )}
+              {(() => {
+                // チケット数チェック
+                let hasEnoughTickets = true;
+                let ticketErrorMessage = "";
+                
+                // 生徒が選択されていて、その生徒のチケット情報がある場合
+                if (selectedStudentId && students) {
+                  const selectedStudent = students.find(s => s.id === selectedStudentId);
+                  if (selectedStudent && 'ticketCount' in selectedStudent) {
+                    const studentTicketCount = (selectedStudent as any).ticketCount;
+                    // 生徒のチケットが予約数より少ない場合
+                    if (studentTicketCount < selectedBookings.length) {
+                      hasEnoughTickets = false;
+                      ticketErrorMessage = `${selectedStudent.lastName} ${selectedStudent.firstName}のチケットが不足しています（残り${studentTicketCount}枚、必要${selectedBookings.length}枚）`;
+                    }
+                  }
+                } 
+                // 生徒が選択されていない場合や生徒のチケット情報がない場合は従来通りユーザー全体のチケット数をチェック
+                else if (user && user.ticketCount < selectedBookings.length) {
+                  hasEnoughTickets = false;
+                  ticketErrorMessage = `チケットが不足しています（残り${user.ticketCount}枚、必要${selectedBookings.length}枚）`;
+                }
+                
+                if (!hasEnoughTickets) {
+                  return (
+                    <div>
+                      <Button 
+                        className="w-full mb-2" 
+                        variant="destructive"
+                        disabled={true}
+                      >
+                        {ticketErrorMessage}
+                      </Button>
+                      <div className="text-center">
+                        <a href="/tickets" className="text-sm text-primary hover:underline">チケットを購入する</a>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <Button 
+                    className="w-full" 
+                    disabled={selectedBookings.length === 0 || bookingMutation.isPending}
+                    onClick={confirmBooking}
+                  >
+                    {bookingMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        処理中...
+                      </>
+                    ) : (
+                      "予約を確認する"
+                    )}
+                  </Button>
+                );
+              })()}
             </Card>
           </div>
         </div>
