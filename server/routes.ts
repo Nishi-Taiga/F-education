@@ -142,7 +142,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create booking and deduct one ticket
       const booking = await storage.createBooking(bookingData);
-      await storage.updateTicketCount(userId, user.ticketCount - 1);
+      
+      // 生徒ごとのチケット管理を使用する場合
+      if (bookingData.studentId) {
+        // 生徒からチケットを1枚使用
+        const success = await storage.useStudentTicket(bookingData.studentId);
+        if (!success) {
+          // チケット使用に失敗した場合は、ユーザー全体のチケットから使用（過去との互換性のため）
+          await storage.updateTicketCount(userId, user.ticketCount - 1);
+        } else {
+          // 全体のチケット数も更新（全生徒の合計を計算して設定）
+          const totalTickets = await storage.calculateUserTotalTickets(userId);
+          await storage.updateTicketCount(userId, totalTickets);
+        }
+      } else {
+        // 生徒IDが指定されていない場合は、従来通りユーザー全体のチケットから使用
+        await storage.updateTicketCount(userId, user.ticketCount - 1);
+      }
       
       res.status(201).json(booking);
     } catch (error) {
@@ -183,8 +199,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 予約の削除
       await storage.deleteBooking(bookingId);
       
-      // チケットの返却（1枚）
-      const updatedUser = await storage.updateTicketCount(userId, user.ticketCount + 1);
+      // チケットの返却処理
+      if (booking.studentId) {
+        // 生徒ごとのチケット管理を使用している場合
+        // 生徒にチケットを1枚追加
+        await storage.addStudentTickets(booking.studentId, userId, 1);
+        
+        // 全体のチケット数も更新（全生徒の合計を計算して設定）
+        const totalTickets = await storage.calculateUserTotalTickets(userId);
+        await storage.updateTicketCount(userId, totalTickets);
+      } else {
+        // 従来の方式（ユーザー全体のチケットに返却）
+        await storage.updateTicketCount(userId, user.ticketCount + 1);
+      }
+      
+      // 最新のユーザー情報を取得
+      const updatedUser = await storage.getUser(userId);
       
       res.json({ 
         message: "Booking cancelled successfully", 
