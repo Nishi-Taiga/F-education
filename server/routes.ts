@@ -316,20 +316,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log("[API] 現在のチケット数:", user.ticketCount);
-      const newTicketCount = user.ticketCount + quantity;
-      console.log("[API] 新しいチケット数:", newTicketCount);
       
-      await storage.updateTicketCount(userId, newTicketCount);
+      // 生徒一覧を取得
+      const students = await storage.getStudentsByUserId(userId);
+      console.log(`[API] ${students.length}人の生徒にチケットを追加します`);
+      
+      // 生徒ごとにチケットを追加
+      if (students.length > 0) {
+        for (const student of students) {
+          console.log(`[API] 生徒ID: ${student.id} (${student.lastName} ${student.firstName})にチケットを追加`);
+          await storage.addStudentTickets(student.id, userId, quantity);
+        }
+        
+        // ユーザーの全体チケット数を計算して更新
+        const totalTickets = await storage.calculateUserTotalTickets(userId);
+        console.log(`[API] 計算された総チケット数: ${totalTickets}`);
+        await storage.updateTicketCount(userId, totalTickets);
+        
+        const response = { 
+          ticketCount: totalTickets,
+          message: `${quantity} チケットを各生徒に追加しました`
+        };
+        console.log("[API] レスポンス:", response);
+        res.json(response);
+      } else {
+        // 生徒がいない場合は従来通りユーザーに直接チケットを追加
+        const newTicketCount = user.ticketCount + quantity;
+        console.log("[API] 新しいチケット数:", newTicketCount);
+        await storage.updateTicketCount(userId, newTicketCount);
+        
+        const response = { 
+          ticketCount: newTicketCount,
+          message: `${quantity} チケットを追加しました`
+        };
+        console.log("[API] レスポンス:", response);
+        res.json(response);
+      }
+    } catch (error) {
+      console.error("[API] チケット追加エラー:", error);
+      res.status(500).json({ message: "Internal server error", error: String(error) });
+    }
+  });
+  
+  // 開発用：テストチケットをリセット（0にする）するエンドポイント
+  app.post("/api/tickets/reset", async (req, res) => {
+    try {
+      console.log("[API] /api/tickets/reset リクエスト受信");
+      
+      if (!req.isAuthenticated()) {
+        console.log("[API] 認証エラー: 未ログイン");
+        return res.status(401).json({ message: "認証が必要です" });
+      }
+      
+      const userId = req.user!.id;
+      console.log("[API] ユーザーID:", userId);
+      
+      // ユーザーの全生徒を取得
+      const students = await storage.getStudentsByUserId(userId);
+      console.log(`[API] ${students.length}人の生徒のチケットをリセットします`);
+      
+      // 各生徒のチケットを0にリセット
+      for (const student of students) {
+        // 現在のチケット数を取得
+        const currentTickets = await storage.getStudentTickets(student.id);
+        console.log(`[API] 生徒ID: ${student.id} の現在のチケット数: ${currentTickets}`);
+        
+        if (currentTickets > 0) {
+          // 減らすチケット数（負の値）
+          const ticketsToRemove = -currentTickets;
+          console.log(`[API] ${Math.abs(ticketsToRemove)}枚のチケットを削除します`);
+          await storage.addStudentTickets(student.id, userId, ticketsToRemove);
+        }
+      }
+      
+      // ユーザーの全体チケット数も0にリセット
+      console.log(`[API] ユーザーID: ${userId} のチケット数を0にリセットします`);
+      await storage.updateTicketCount(userId, 0);
       
       const response = { 
-        ticketCount: newTicketCount,
-        message: `${quantity} tickets added successfully`
+        ticketCount: 0,
+        message: "すべてのチケットを0にリセットしました"
       };
       console.log("[API] レスポンス:", response);
       
       res.json(response);
     } catch (error) {
-      console.error("[API] チケット追加エラー:", error);
+      console.error("[API] チケットリセットエラー:", error);
       res.status(500).json({ message: "Internal server error", error: String(error) });
     }
   });
