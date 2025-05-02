@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { CalendarView } from "@/components/calendar-view";
 import { BookingCard } from "@/components/booking-card";
 import { BookingCancellationModal } from "@/components/booking-cancellation-modal";
+import { ReportViewModal } from "@/components/report-view-modal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Ticket, CalendarCheck, Settings, Plus, UserCircle, ClipboardList, UserCog, Clock, BookOpen, Scroll, MapPin, GraduationCap, Copy, Check, FileText } from "lucide-react";
