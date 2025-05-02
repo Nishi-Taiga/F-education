@@ -314,7 +314,7 @@ export default function BookingPage() {
             <Button variant="ghost" size="icon" className="mr-2" onClick={() => navigate("/")}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-xl font-bold text-primary">家庭教師サービス</h1>
+            <h1 className="text-xl font-bold text-primary">F education</h1>
           </div>
           <div className="flex items-center space-x-4">
             <div className="bg-primary bg-opacity-10 px-2 py-1 rounded-full flex items-center">

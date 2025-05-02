@@ -620,7 +620,7 @@ export default function SettingsPage() {
             <Button variant="ghost" size="icon" className="mr-2" onClick={() => navigate("/")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold text-primary">家庭教師サービス</h1>
+            <h1 className="text-2xl font-bold text-primary">F education</h1>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-gray-700">{user?.displayName || user?.username}</span>

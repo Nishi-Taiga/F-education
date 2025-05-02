@@ -566,7 +566,7 @@ export default function HomePage() {
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex justify-between items-center">
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-primary">家庭教師サービス</h1>
+            <h1 className="text-xl font-bold text-primary">F education</h1>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-700">{user?.displayName || user?.username}</span>
@@ -597,9 +597,6 @@ export default function HomePage() {
             <h2 className="text-xl font-bold text-gray-900">
               {user?.role === 'tutor' ? 'F education' : 'F education 予約システム'}
             </h2>
-            {user?.role !== 'tutor' && (
-              <p className="mt-1 text-sm text-gray-600">予約状況とチケット残数の確認</p>
-            )}
           </div>
           {user?.role !== 'tutor' && (
             <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-3 border border-gray-200">
@@ -609,7 +606,7 @@ export default function HomePage() {
                     <Ticket className="text-green-600 h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">チケット残数（合計）</p>
+                    <p className="text-sm text-gray-600">チケット</p>
                     <div className="flex items-center">
                       <p className="text-xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
                     </div>
