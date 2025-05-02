@@ -935,19 +935,15 @@ export default function HomePage() {
                 <Button
                   variant="outline"
                   className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
-                  onClick={() => {
-                    // 報告済みの授業を検索
-                    const reportsAvailable = (bookings || []).some(b => b.reportStatus === 'completed');
-                    
-                    if (reportsAvailable) {
-                      // レポートがある場合は予約一覧までスクロール
-                      const bookingListElement = document.getElementById('booking-list');
-                      if (bookingListElement) {
-                        bookingListElement.scrollIntoView({ behavior: 'smooth' });
-                      }
-                      toast({
-                        title: 'レポート確認',
-                        description: '予約一覧からレポートを確認できます',
+                  onClick={() => navigate("/reports")}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                      <FileText className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
+                    </div>
+                    <span className="text-xs md:text-sm font-medium text-gray-900">レポート確認</span>
+                  </div>
+                </Button>
                         variant: 'default'
                       });
                     } else {

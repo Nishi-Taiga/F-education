@@ -13,7 +13,7 @@ import { format, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 
 export default function ReportListPage() {
-  const [navigate] = useLocation();
+  const [_, navigate] = useLocation();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -22,13 +22,13 @@ export default function ReportListPage() {
   const [viewReportBooking, setViewReportBooking] = useState<(Booking & { studentName?: string }) | null>(null);
 
   // 予約データの取得
-  const { data: bookings, isLoading: isLoadingBookings } = useQuery({
+  const { data: bookings = [], isLoading: isLoadingBookings } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
     enabled: !!user,
   });
 
   // 生徒データの取得
-  const { data: students, isLoading: isLoadingStudents } = useQuery({
+  const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
     queryKey: ["/api/students"],
     enabled: !!user,
   });
@@ -58,7 +58,7 @@ export default function ReportListPage() {
     : [];
 
   // 検索フィルタリング
-  const filteredBookings = reportedBookings.filter(booking => {
+  const filteredBookings = reportedBookings.filter((booking: Booking & { studentName?: string }) => {
     if (!searchTerm) return true;
     
     const lowerSearchTerm = searchTerm.toLowerCase();
