@@ -207,6 +207,12 @@ export default function HomePage() {
     setShowCancellationModal(true);
   };
 
+  // レポート閲覧ボタンのハンドラ
+  const handleViewReportClick = (booking: Booking & { studentName?: string }) => {
+    setViewReportBooking(booking);
+    setShowReportViewDialog(true);
+  };
+
   // キャンセルの確認
   const confirmCancellation = () => {
     if (selectedBooking) {
@@ -502,11 +508,7 @@ export default function HomePage() {
     setShowReportDialog(true);
   };
   
-  // レポート閲覧ダイアログを開く関数
-  const handleViewReportClick = (booking: Booking & { studentName?: string }) => {
-    setViewReportBooking(booking);
-    setShowReportViewDialog(true);
-  };
+  // レポート関連の関数はすでに定義済み
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
@@ -701,6 +703,83 @@ export default function HomePage() {
           </div>
         </Card>
         
+        {/* 保護者/生徒向け予約リスト */}
+        {user?.role !== 'tutor' && (
+          <Card className="p-3 mb-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-base font-medium text-gray-900">予約一覧</h3>
+            </div>
+            
+            <div className="space-y-2">
+              {isLoadingBookings ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : bookings && bookings.length > 0 ? (
+                <div className="space-y-2">
+                  {bookings
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                    .map(booking => ({
+                      ...booking,
+                      studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+                    }))
+                    .map(booking => (
+                      <BookingCard 
+                        key={booking.id} 
+                        booking={booking}
+                        onCancelClick={handleCancelClick}
+                        onViewReportClick={booking.reportStatus === 'completed' ? handleViewReportClick : undefined}
+                      />
+                    ))
+                  }
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* テスト用のデータ */}
+                  <BookingCard 
+                    key="test-past-with-report" 
+                    booking={{
+                      id: 9001,
+                      createdAt: new Date(),
+                      userId: user ? user.id : 0,
+                      tutorId: 1,
+                      studentId: 4,
+                      tutorShiftId: 1,
+                      date: "2025-04-15",
+                      timeSlot: "16:00-17:30",
+                      subject: "数学",
+                      status: "confirmed",
+                      reportStatus: "completed",
+                      reportContent: "中学1年の方程式\n授業中は集中して取り組めていました。解説を聞いて理解しようとする姿勢が素晴らしいです。\n次回までに教科書p.45-46の問題を解いてきてください。",
+                      studentName: "テスト 太郎"
+                    }}
+                    onViewReportClick={handleViewReportClick}
+                  />
+                  <BookingCard 
+                    key="test-today"
+                    booking={{
+                      id: 9002,
+                      createdAt: new Date(),
+                      userId: user ? user.id : 0,
+                      tutorId: 1,
+                      studentId: 4,
+                      tutorShiftId: 2,
+                      date: "2025-04-30",
+                      timeSlot: "18:00-19:30",
+                      subject: "英語",
+                      status: "confirmed",
+                      reportStatus: null,
+                      reportContent: null,
+                      studentName: "テスト 太郎"
+                    }}
+                    onCancelClick={handleCancelClick}
+                  />
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+        
         {/* 講師向けダッシュボード要約 */}
         {user?.role === 'tutor' && (
           <Card className="p-3 mb-4">
@@ -880,6 +959,15 @@ export default function HomePage() {
           onCancel={() => setShowCancellationModal(false)}
           onConfirm={confirmCancellation}
           isProcessing={cancelBookingMutation.isPending}
+        />
+      )}
+      
+      {/* レポート閲覧モーダル */}
+      {viewReportBooking && (
+        <ReportViewModal
+          isOpen={showReportViewDialog}
+          booking={viewReportBooking}
+          onClose={() => setShowReportViewDialog(false)}
         />
       )}
       
