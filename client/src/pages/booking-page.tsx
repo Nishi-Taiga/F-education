@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Ticket, Calendar, Loader2, User, BookOpen, GraduationCap } from "lucide-react";
+import { ArrowLeft, Ticket, Calendar, Loader2, User, BookOpen, GraduationCap, Info, AlertCircle } from "lucide-react";
 import { CalendarView } from "@/components/calendar-view";
 import { BookingConfirmationModal } from "@/components/booking-confirmation-modal";
 import { format, parse } from "date-fns";
@@ -645,6 +645,11 @@ export default function BookingPage() {
             
             <Card className="p-3">
               <h3 className="text-base font-medium text-gray-900 mb-3">選択済み授業</h3>
+              
+              <div className="flex items-center mt-1 mb-3 p-2 bg-amber-50 text-amber-700 rounded-md text-xs">
+                <Info className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span>授業開始の24時間前を過ぎると、予約のキャンセルができなくなります。</span>
+              </div>
               
               <div className="space-y-2 mb-4 card-container">
                 {selectedBookings.length === 0 ? (

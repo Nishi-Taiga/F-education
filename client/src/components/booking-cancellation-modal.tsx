@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle } from "lucide-react";
-import { format, parse } from "date-fns";
+import { Loader2, AlertCircle, Info } from "lucide-react";
+import { format, parse, addHours } from "date-fns";
 import { ja } from "date-fns/locale";
 import { type Booking } from "@shared/schema";
 
@@ -36,6 +36,10 @@ export function BookingCancellationModal({
           </DialogTitle>
           <DialogDescription className="text-gray-600 mt-2">
             以下の授業予約をキャンセルします。キャンセルすると、チケットが1枚返却されます。
+            <div className="flex items-center mt-2 p-2 bg-amber-50 text-amber-700 rounded-md text-xs">
+              <Info className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span>授業開始の24時間前を過ぎるとキャンセルできなくなります。</span>
+            </div>
           </DialogDescription>
         </DialogHeader>
         
