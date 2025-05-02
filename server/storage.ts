@@ -1289,11 +1289,48 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`[API] 利用可能な講師: ${results.length}件`);
       
+      // シフト科目が未設定の場合は、講師情報から科目対応を取得
+      // 講師のプロフィール情報を事前に取得
+      const tutorInfoMap = new Map();
+      for (const result of results) {
+        if (!result.shift_subject || result.shift_subject === "") {
+          const [tutorInfo] = await db
+            .select({ id: tutors.id, subjects: tutors.subjects })
+            .from(tutors)
+            .where(eq(tutors.id, result.tutor_id));
+          
+          if (tutorInfo) {
+            tutorInfoMap.set(result.tutor_id, tutorInfo.subjects);
+          }
+        }
+      }
+      
       // 5. 科目でフィルタリング
       const filteredResults = subject 
         ? results.filter(r => {
-            const tutorSubjects = r.shift_subject || "";
-            return tutorSubjects.includes(subject);
+            // 講師のシフトに設定された科目を取得
+            const shiftSubject = r.shift_subject || "";
+            
+            // シフトに科目が設定されていれば、それを優先的に使用
+            console.log(`[API] 講師ID ${r.tutor_id} のシフト科目: ${shiftSubject}, 検索科目: ${subject}`);
+            
+            // シフト科目が未設定またはemptyの場合は、講師情報から取得した科目でチェック
+            if (!shiftSubject || shiftSubject === "") {
+              const tutorSubjects = tutorInfoMap.get(r.tutor_id) || "";
+              console.log(`[API] シフト科目が未設定のため、講師の担当科目で確認: ${tutorSubjects}`);
+              
+              // 講師の担当科目も未設定の場合は、すべての科目に対応可能と見なす
+              if (!tutorSubjects || tutorSubjects === "") {
+                console.log(`[API] 講師の担当科目も未設定のため、すべての科目対応として扱います`);
+                return true;
+              }
+              
+              // 講師の担当科目と一致するかチェック
+              return tutorSubjects.includes(subject);
+            }
+            
+            // シフト科目が設定されている場合は、指定された科目と一致するかチェック
+            return shiftSubject.includes(subject);
           })
         : results;
       
