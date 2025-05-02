@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Ticket } from "lucide-react";
+import { ArrowLeft, Ticket, Loader2 } from "lucide-react";
 import { TicketCard } from "@/components/ticket-card";
 import { Cart } from "@/components/cart";
 import { PaymentSuccessModal } from "@/components/payment-success-modal";
+import { Student } from "@shared/schema";
 
 export type CartItem = {
   id: number;
@@ -17,11 +18,70 @@ export type CartItem = {
   discount: string;
 };
 
+// 生徒タイプ定義
+type StudentType = "elementary" | "elementary_exam" | "junior_high" | "high_school";
+
+// 各タイプと学年の対応
+const getStudentType = (grade: string): StudentType => {
+  if (grade.includes("小学")) {
+    // 受験コースかどうかは別途判定が必要 (今回はUIで選択させる)
+    return "elementary";
+  } else if (grade.includes("中学")) {
+    return "junior_high";
+  } else if (grade.includes("高校")) {
+    return "high_school";
+  }
+  // デフォルト
+  return "elementary";
+};
+
+// チケット価格定義
+const ticketPrices = {
+  elementary: {
+    4: { price: 17600, discount: "お得な4回セット" },
+    8: { price: 34200, discount: "お得な8回セット" },
+    12: { price: 48600, discount: "お得な12回セット" }
+  },
+  elementary_exam: {
+    4: { price: 19600, discount: "お得な4回セット" },
+    8: { price: 38000, discount: "お得な8回セット" },
+    12: { price: 54000, discount: "お得な12回セット" }
+  },
+  junior_high: {
+    4: { price: 19600, discount: "お得な4回セット" },
+    8: { price: 38000, discount: "お得な8回セット" },
+    12: { price: 54000, discount: "お得な12回セット" }
+  },
+  high_school: {
+    4: { price: 21600, discount: "お得な4回セット" },
+    8: { price: 41800, discount: "お得な8回セット" },
+    12: { price: 59400, discount: "お得な12回セット" }
+  }
+};
+
 export default function TicketPurchasePage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [selectedStudentType, setSelectedStudentType] = useState<StudentType | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isExamCourse, setIsExamCourse] = useState(false);
+
+  // 生徒一覧を取得
+  const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
+    queryKey: ["/api/students"],
+  });
+
+  // 生徒が1人しかいない場合は自動選択
+  useEffect(() => {
+    if (students && students.length === 1) {
+      setSelectedStudent(students[0]);
+      // 学年から生徒タイプを判定
+      let studentType = getStudentType(students[0].grade);
+      setSelectedStudentType(studentType);
+    }
+  }, [students]);
 
   const purchaseMutation = useMutation({
     mutationFn: async (quantity: number) => {
@@ -35,31 +95,24 @@ export default function TicketPurchasePage() {
     },
   });
 
+  // カートに追加する関数
   const addToCart = (quantity: number) => {
-    let price;
-    let discount = "";
+    if (!selectedStudentType) return;
     
-    switch(quantity) {
-      case 1:
-        price = 3000;
-        break;
-      case 4:
-        price = 11000;
-        discount = " (8%割引)";
-        break;
-      case 8:
-        price = 20000;
-        discount = " (17%割引)";
-        break;
-      default:
-        price = quantity * 3000;
+    // 選択された生徒タイプとチケット枚数に応じた価格を設定
+    let studentType = selectedStudentType;
+    if (studentType === "elementary" && isExamCourse) {
+      studentType = "elementary_exam";
     }
+    
+    const priceInfo = ticketPrices[studentType][quantity as keyof typeof ticketPrices[typeof studentType]];
+    if (!priceInfo) return;
     
     setCartItems([...cartItems, {
       id: Date.now(),
       quantity,
-      price,
-      discount
+      price: priceInfo.price,
+      discount: priceInfo.discount
     }]);
   };
 
@@ -109,30 +162,98 @@ export default function TicketPurchasePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <TicketCard 
-              title="1枚"
-              price={3000}
-              description="1回分の授業チケット"
-              onAddToCart={() => addToCart(1)}
-            />
+          {/* 生徒選択セクション */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold mb-4">生徒選択</h3>
+            
+            {isLoadingStudents ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : students && students.length > 0 ? (
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  {students.map((student) => (
+                    <div 
+                      key={student.id}
+                      className={`
+                        p-4 border rounded-lg cursor-pointer transition-all
+                        ${selectedStudent?.id === student.id 
+                          ? 'border-primary bg-primary bg-opacity-5' 
+                          : 'border-gray-200 hover:border-primary hover:bg-gray-50'}
+                      `}
+                      onClick={() => {
+                        setSelectedStudent(student);
+                        setSelectedStudentType(getStudentType(student.grade));
+                        setIsExamCourse(false); // リセット
+                      }}
+                    >
+                      <div className="font-medium">{student.lastName} {student.firstName}</div>
+                      <div className="text-sm text-gray-600">{student.grade} ({student.school})</div>
+                    </div>
+                  ))}
+                </div>
 
-            <TicketCard 
-              title="4枚"
-              price={11000}
-              description="4回分の授業チケット"
-              discount="8%割引"
-              onAddToCart={() => addToCart(4)}
-            />
-
-            <TicketCard 
-              title="8枚"
-              price={20000}
-              description="8回分の授業チケット"
-              discount="17%割引"
-              onAddToCart={() => addToCart(8)}
-            />
+                {/* 小学生の場合、受験コースかどうかを選択 */}
+                {selectedStudent && selectedStudentType === "elementary" && (
+                  <div className="mt-4 mb-6">
+                    <h4 className="text-sm font-medium mb-2">コース選択</h4>
+                    <div className="flex gap-4">
+                      <Button
+                        type="button"
+                        variant={!isExamCourse ? "default" : "outline"}
+                        onClick={() => setIsExamCourse(false)}
+                        className="flex-1"
+                      >
+                        通常コース
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={isExamCourse ? "default" : "outline"}
+                        onClick={() => setIsExamCourse(true)}
+                        className="flex-1"
+                      >
+                        中学受験コース
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                生徒が登録されていません。まずは生徒を登録してください。
+              </div>
+            )}
           </div>
+
+          {selectedStudentType && (
+            <>
+              <h3 className="text-lg font-semibold mb-4">利用可能なチケット</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                {/* チケットの価格と種類は生徒タイプによって変わる */}
+                {(() => {
+                  // 表示すべきチケット価格テーブルを決定
+                  let priceTable = ticketPrices[selectedStudentType];
+                  if (selectedStudentType === "elementary" && isExamCourse) {
+                    priceTable = ticketPrices.elementary_exam;
+                  }
+                  
+                  // タイプに応じたチケットを表示
+                  return Object.entries(priceTable).map(([quantity, details]) => (
+                    <TicketCard 
+                      key={quantity}
+                      title={`${quantity}枚`}
+                      price={details.price}
+                      description={`${quantity}回分の授業チケット`}
+                      discount={details.discount}
+                      onAddToCart={() => addToCart(Number(quantity))}
+                    />
+                  ));
+                })()}
+              </div>
+            </>
+          )}
 
           {/* Cart */}
           <Cart 
