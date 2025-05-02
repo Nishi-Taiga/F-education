@@ -13,6 +13,7 @@ import ProfileSetupPage from "@/pages/profile-setup-page";
 import TutorProfilePage from "@/pages/tutor-profile-page";
 import TutorSchedulePage from "@/pages/tutor-schedule-page";
 import TutorBookingsPage from "@/pages/tutor-bookings-page";
+import ReportListPage from "@/pages/report-list-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { useEffect } from "react";
@@ -24,6 +25,7 @@ function Router() {
       <ProtectedRoute path="/tickets" component={TicketPurchasePage} />
       <ProtectedRoute path="/booking" component={BookingPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
+      <ProtectedRoute path="/reports" component={ReportListPage} />
       <ProtectedRoute path="/profile-setup" component={ProfileSetupPage} skipProfileCheck={true} />
       {/* 講師関連のルート */}
       <ProtectedRoute path="/tutor/profile" component={TutorProfilePage} />

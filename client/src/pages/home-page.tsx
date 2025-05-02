@@ -597,7 +597,8 @@ export default function HomePage() {
               <CalendarView 
                 key={forceUpdate ? "updated" : "initial"} // forceUpdateによる強制再描画のためのkey
                 showLegend={user?.role === 'tutor'} // 講師用のみ凡例を表示
-                bookings={user?.role === 'tutor' 
+                interactive={user?.role === 'tutor'} // 講師の場合のみインタラクティブに
+                bookings={user?.role === 'tutor'
                   ? testBookings.length > 0 ? testBookings : [
                       // 4/29の予定
                       {
