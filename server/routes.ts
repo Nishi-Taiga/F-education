@@ -548,6 +548,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 全生徒のチケット残数一覧取得
+  app.get("/api/student-tickets", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    
+    try {
+      // ユーザーの全生徒を取得
+      const students = await storage.getStudentsByUserId(userId);
+      
+      // 各生徒のチケット残数を取得
+      const studentTickets = await Promise.all(
+        students.map(async (student) => {
+          const ticketCount = await storage.getStudentTickets(student.id);
+          return {
+            studentId: student.id,
+            name: `${student.lastName} ${student.firstName}`,
+            ticketCount
+          };
+        })
+      );
+      
+      res.json(studentTickets);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get student tickets", error });
+    }
+  });
+  
   // 生徒情報の登録
   app.post("/api/students", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

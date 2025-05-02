@@ -61,6 +61,13 @@ const ticketPrices = {
   }
 };
 
+// 生徒別のチケット情報の型定義
+type StudentTicket = {
+  studentId: number;
+  name: string;
+  ticketCount: number;
+};
+
 export default function TicketPurchasePage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -73,6 +80,11 @@ export default function TicketPurchasePage() {
   // 生徒一覧を取得
   const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
     queryKey: ["/api/students"],
+  });
+  
+  // 生徒別チケット数を取得
+  const { data: studentTickets = [] } = useQuery<StudentTicket[]>({
+    queryKey: ["/api/student-tickets"],
   });
 
   // 生徒が1人しかいない場合は自動選択
@@ -93,6 +105,7 @@ export default function TicketPurchasePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/student-tickets"] });
       setShowSuccessModal(true);
       setCartItems([]);
     },
