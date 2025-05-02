@@ -1,5 +1,5 @@
 import { 
-  users, bookings, students, tutors, tutorShifts,
+  users, bookings, students, tutors, tutorShifts, studentTickets,
   type User, type InsertUser, type Booking, type InsertBooking, 
   type Student, type InsertStudent, type Tutor, type InsertTutor,
   type TutorShift, type InsertTutorShift
@@ -39,6 +39,12 @@ export interface IStorage {
   updateStudent(id: number, student: Partial<Student>): Promise<Student>;
   deleteStudent(id: number): Promise<void>;
   
+  // 生徒チケット関連
+  getStudentTickets(studentId: number): Promise<number>; // 特定の生徒のチケット数取得
+  addStudentTickets(studentId: number, userId: number, quantity: number): Promise<void>; // 生徒にチケットを追加
+  useStudentTicket(studentId: number): Promise<boolean>; // 生徒のチケットを1枚使用
+  calculateUserTotalTickets(userId: number): Promise<number>; // ユーザーの全生徒のチケット合計を計算
+  
   // 講師関連
   getTutorByUserId(userId: number): Promise<Tutor | undefined>;
   getTutor(id: number): Promise<Tutor | undefined>;
@@ -72,12 +78,14 @@ export class MemStorage implements IStorage {
   private students: Map<number, Student>;
   private tutors: Map<number, Tutor>;
   private tutorShifts: Map<number, TutorShift>;
+  private studentTicketRecords: Map<number, { studentId: number, userId: number, quantity: number, date: Date }>;
   sessionStore: any; // session.SessionStore型を回避するためにany型を使用
   currentUserId: number;
   currentBookingId: number;
   currentStudentId: number;
   currentTutorId: number;
   currentTutorShiftId: number;
+  currentTicketRecordId: number;
   
   // 科目、日付、時間帯に基づいて利用可能な講師を取得
   async getAvailableTutorsBySubject(subject: string, date: string, timeSlot: string): Promise<any[]> {
@@ -140,6 +148,7 @@ export class MemStorage implements IStorage {
     this.students = new Map();
     this.tutors = new Map();
     this.tutorShifts = new Map();
+    this.studentTicketRecords = new Map();
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
@@ -148,9 +157,70 @@ export class MemStorage implements IStorage {
     this.currentStudentId = 1;
     this.currentTutorId = 1;
     this.currentTutorShiftId = 1;
+    this.currentTicketRecordId = 1;
     
     // テストユーザーを自動作成
     this.createInitialTestData();
+  }
+  
+  // 生徒チケット関連のメソッド
+  async getStudentTickets(studentId: number): Promise<number> {
+    // 生徒のチケット記録を取得して合計を計算
+    let total = 0;
+    for (const record of this.studentTicketRecords.values()) {
+      if (record.studentId === studentId) {
+        total += record.quantity;
+      }
+    }
+    return total;
+  }
+  
+  async addStudentTickets(studentId: number, userId: number, quantity: number): Promise<void> {
+    // 新しいチケット追加記録を作成
+    const id = this.currentTicketRecordId++;
+    this.studentTicketRecords.set(id, {
+      studentId,
+      userId,
+      quantity,
+      date: new Date()
+    });
+  }
+  
+  async useStudentTicket(studentId: number): Promise<boolean> {
+    // 現在のチケット数を確認
+    const currentTickets = await this.getStudentTickets(studentId);
+    
+    if (currentTickets <= 0) {
+      return false; // チケットが不足
+    }
+    
+    // 生徒に関連するユーザーIDを取得
+    const student = await this.getStudent(studentId);
+    if (!student) {
+      return false;
+    }
+    
+    // 負のチケットとして記録（使用）
+    const id = this.currentTicketRecordId++;
+    this.studentTicketRecords.set(id, {
+      studentId,
+      userId: student.userId,
+      quantity: -1,
+      date: new Date()
+    });
+    
+    return true;
+  }
+  
+  async calculateUserTotalTickets(userId: number): Promise<number> {
+    // ユーザーの全生徒のチケット合計を計算
+    let total = 0;
+    for (const record of this.studentTicketRecords.values()) {
+      if (record.userId === userId) {
+        total += record.quantity;
+      }
+    }
+    return total;
   }
   
   // テストデータを作成
@@ -617,6 +687,74 @@ export class DatabaseStorage implements IStorage {
       pool, 
       createTableIfMissing: true 
     });
+  }
+  
+  // 生徒チケット関連のメソッド
+  async getStudentTickets(studentId: number): Promise<number> {
+    try {
+      // 特定の生徒のチケット数を取得
+      const [result] = await db
+        .select({ quantity: sql`COALESCE(SUM(quantity), 0)` })
+        .from(studentTickets)
+        .where(eq(studentTickets.studentId, studentId));
+      
+      return parseInt(result.quantity.toString() || "0", 10);
+    } catch (error) {
+      console.error("Error getting student tickets:", error);
+      return 0;
+    }
+  }
+  
+  async addStudentTickets(studentId: number, userId: number, quantity: number): Promise<void> {
+    try {
+      // 生徒にチケットを追加
+      await db.insert(studentTickets).values({
+        studentId,
+        userId,
+        quantity
+      });
+    } catch (error) {
+      console.error("Error adding student tickets:", error);
+      throw new Error("Failed to add tickets to student");
+    }
+  }
+  
+  async useStudentTicket(studentId: number): Promise<boolean> {
+    try {
+      // 現在のチケット数を確認
+      const currentTickets = await this.getStudentTickets(studentId);
+      
+      if (currentTickets <= 0) {
+        return false; // チケットが不足
+      }
+      
+      // 負のチケットとして記録（使用）
+      await db.insert(studentTickets).values({
+        studentId,
+        userId: (await db.select().from(students).where(eq(students.id, studentId)))[0].userId,
+        quantity: -1
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Error using student ticket:", error);
+      return false;
+    }
+  }
+  
+  async calculateUserTotalTickets(userId: number): Promise<number> {
+    try {
+      // ユーザーの全生徒のチケット合計を計算
+      const [result] = await db
+        .select({ total: sql`COALESCE(SUM(quantity), 0)` })
+        .from(studentTickets)
+        .where(eq(studentTickets.userId, userId));
+      
+      return parseInt(result.total.toString() || "0", 10);
+    } catch (error) {
+      console.error("Error calculating total tickets:", error);
+      return 0;
+    }
   }
   
   // 科目、日付、時間帯に基づいて利用可能な講師を取得

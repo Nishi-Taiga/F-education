@@ -200,24 +200,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     const userId = req.user!.id;
-    const { quantity } = req.body;
+    const { items, quantity } = req.body;
     
-    if (!quantity || typeof quantity !== 'number' || quantity <= 0) {
-      return res.status(400).json({ message: "Invalid ticket quantity" });
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // 新しいフォーマット: items: [{studentId: number, quantity: number}]
+      if (items && Array.isArray(items) && items.length > 0) {
+        // 各生徒のチケットを更新
+        for (const item of items) {
+          const { studentId, quantity: itemQuantity } = item;
+          
+          if (!studentId || typeof studentId !== 'number' || !itemQuantity || typeof itemQuantity !== 'number' || itemQuantity <= 0) {
+            return res.status(400).json({ message: "Invalid item format. Expected studentId and quantity." });
+          }
+          
+          // 生徒が存在し、このユーザーに属していることを確認
+          const student = await storage.getStudent(studentId);
+          if (!student || student.userId !== userId) {
+            return res.status(404).json({ message: `Student with ID ${studentId} not found or does not belong to this user.` });
+          }
+          
+          // student_ticketsテーブルを使って生徒ごとのチケットを管理
+          await storage.addStudentTickets(studentId, userId, itemQuantity);
+        }
+        
+        // 古いシステムとの互換性のため、ユーザーの合計チケット数も更新
+        // 生徒ごとの合計を計算してユーザーに設定
+        const totalTickets = await storage.calculateUserTotalTickets(userId);
+        await storage.updateTicketCount(userId, totalTickets);
+      }
+      // 旧式の購入方法サポート（下位互換性のため）
+      else if (quantity && typeof quantity === 'number' && quantity > 0) {
+        const newTicketCount = user.ticketCount + quantity;
+        await storage.updateTicketCount(userId, newTicketCount);
+      } 
+      else {
+        return res.status(400).json({ message: "Invalid request format. Expected items array or quantity." });
+      }
+      
+      // 新しいチケット数で応答
+      const updatedUser = await storage.getUser(userId);
+      
+      res.json({ 
+        ticketCount: updatedUser!.ticketCount,
+        message: "Tickets purchased successfully" 
+      });
+    } catch (error) {
+      console.error("Error purchasing tickets:", error);
+      res.status(500).json({ 
+        message: "Failed to purchase tickets", 
+        error: (error as Error).message 
+      });
     }
-    
-    const user = await storage.getUser(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    
-    const newTicketCount = user.ticketCount + quantity;
-    await storage.updateTicketCount(userId, newTicketCount);
-    
-    res.json({ 
-      ticketCount: newTicketCount,
-      message: "Tickets purchased successfully" 
-    });
   });
   
   // Add tickets directly to a user (for testing purposes)
