@@ -705,7 +705,7 @@ export default function HomePage() {
         
         {/* 保護者/生徒向け予約リスト */}
         {user?.role !== 'tutor' && (
-          <Card className="p-3 mb-4">
+          <Card className="p-3 mb-4" id="booking-list">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-base font-medium text-gray-900">予約一覧</h3>
             </div>
@@ -927,6 +927,42 @@ export default function HomePage() {
                       <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
                     </div>
                     <span className="text-xs md:text-sm font-medium text-gray-900">授業予約</span>
+                  </div>
+                </Button>
+                
+                {/* レポート確認ボタン */}
+                <Button
+                  variant="outline"
+                  className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm"
+                  onClick={() => {
+                    // 報告済みの授業を検索
+                    const reportsAvailable = (bookings || []).some(b => b.reportStatus === 'completed');
+                    
+                    if (reportsAvailable) {
+                      // レポートがある場合は予約一覧までスクロール
+                      const bookingListElement = document.getElementById('booking-list');
+                      if (bookingListElement) {
+                        bookingListElement.scrollIntoView({ behavior: 'smooth' });
+                      }
+                      toast({
+                        title: 'レポート確認',
+                        description: '予約一覧からレポートを確認できます',
+                        variant: 'default'
+                      });
+                    } else {
+                      toast({
+                        title: 'レポートはありません',
+                        description: '現在確認できるレポートはありません',
+                        variant: 'default'
+                      });
+                    }
+                  }}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-teal-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
+                      <FileText className="h-4 w-4 md:h-5 md:w-5 text-teal-600" />
+                    </div>
+                    <span className="text-xs md:text-sm font-medium text-gray-900">レポート確認</span>
                   </div>
                 </Button>
                 
