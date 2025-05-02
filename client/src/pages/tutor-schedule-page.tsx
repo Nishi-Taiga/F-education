@@ -458,7 +458,6 @@ export default function TutorSchedulePage() {
               <p>※ 変更は「変更を保存」ボタンを押すまで反映されません</p>
               <p>※ 黄色でハイライトされている項目は未保存の変更です</p>
               <p>※ 既に予約が入っている時間帯は、予約をキャンセルしない限りシフトを変更できません</p>
-              <p className="font-medium text-amber-600">※ シフト設定期限：各月分のシフトは<span className="underline">前月20日まで</span>に設定してください</p>
             </div>
           </div>
         </CardContent>
