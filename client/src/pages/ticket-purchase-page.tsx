@@ -165,16 +165,33 @@ export default function TicketPurchasePage() {
         </div>
 
         <Card className="p-6 mb-8">
-          <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-200">
-            <div className="flex items-center">
-              <div className="mr-4 bg-primary bg-opacity-10 p-3 rounded-full">
-                <Ticket className="text-primary h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">現在のチケット残数</p>
-                <p className="text-2xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
+          <div className="flex flex-col mb-6 pb-6 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <div className="mr-4 bg-primary bg-opacity-10 p-3 rounded-full">
+                  <Ticket className="text-primary h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">現在のチケット残数（合計）</p>
+                  <p className="text-2xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
+                </div>
               </div>
             </div>
+            
+            {/* 生徒別チケット残数 */}
+            {studentTickets.length > 0 && (
+              <div className="mt-2 bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500 mb-2">生徒別チケット残数</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {studentTickets.map(ticket => (
+                    <div key={ticket.studentId} className="flex justify-between items-center px-3 py-2 bg-white rounded-md border border-gray-100">
+                      <span className="text-sm font-medium">{ticket.name}</span>
+                      <span className="text-sm font-semibold text-primary">{ticket.ticketCount}枚</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 生徒選択セクション */}
