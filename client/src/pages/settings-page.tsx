@@ -116,10 +116,18 @@ export default function SettingsPage() {
   };
 
   // 生徒情報のクエリ
-  const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
+  const { data: students = [], isLoading: isLoadingStudents, refetch: refetchStudents } = useQuery<Student[]>({
     queryKey: ["/api/students"],
     enabled: !!user,
   });
+  
+  // ユーザーがログインしたらデータを再取得
+  useEffect(() => {
+    if (user) {
+      console.log("ユーザーログイン検出 - 生徒データを再取得します");
+      refetchStudents();
+    }
+  }, [user, refetchStudents]);
 
   // 生徒の名前を結合する関数
   const getFullName = (student: Student) => {
