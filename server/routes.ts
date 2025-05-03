@@ -1231,21 +1231,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userId = req.user!.id;
       const bookingId = parseInt(req.params.id);
-      const { unit, message, goal } = req.body;
+      
+      // 新しいフォーマット（unit, message, goal）をサポート
+      // 旧式形式（reportContent）との互換性も維持
+      const { unit, message, goal, reportContent: oldFormatContent } = req.body;
       
       if (isNaN(bookingId)) {
         return res.status(400).json({ message: "予約IDが無効です" });
       }
       
-      // 最低でも1つのフィールドに内容があるか確認
-      if ((!unit || unit.trim() === '') && 
-          (!message || message.trim() === '') && 
-          (!goal || goal.trim() === '')) {
-        return res.status(400).json({ message: "少なくとも1つのフィールドに内容を入力してください" });
-      }
+      let reportContent = '';
       
-      // フォーマットされたレポート内容を作成
-      const reportContent = `【単元】\n${unit || ''}\n\n【伝言事項】\n${message || ''}\n\n【来週までの目標(課題)】\n${goal || ''}`;
+      // 新しいフォーマットの場合
+      if (unit !== undefined || message !== undefined || goal !== undefined) {
+        // 最低でも1つのフィールドに内容があるか確認
+        if ((!unit || unit.trim() === '') && 
+            (!message || message.trim() === '') && 
+            (!goal || goal.trim() === '')) {
+          return res.status(400).json({ message: "少なくとも1つのフィールドに内容を入力してください" });
+        }
+        
+        // フォーマットされたレポート内容を作成
+        reportContent = `【単元】\n${unit || ''}\n\n【伝言事項】\n${message || ''}\n\n【来週までの目標(課題)】\n${goal || ''}`;
+      } 
+      // 旧式形式の場合
+      else if (oldFormatContent) {
+        reportContent = oldFormatContent;
+      }
+      else {
+        return res.status(400).json({ message: "レポート内容が必要です" });
+      }
       
       // 予約情報を取得
       const booking = await storage.getBookingById(bookingId);
