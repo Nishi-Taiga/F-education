@@ -224,7 +224,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                       >
                         <span className="block truncate font-medium">{booking.timeSlot.split('-')[0]}</span>
                         {booking.studentName && (
-                          <span className="block truncate text-[9px] bg-white bg-opacity-90 text-gray-900 rounded px-0.5 py-px mt-0.5 font-semibold">
+                          <span className="block truncate text-[10px] bg-white bg-opacity-50 text-black rounded px-0.5 py-px mt-0.5 font-semibold">
                             {booking.studentName}
                           </span>
                         )}
