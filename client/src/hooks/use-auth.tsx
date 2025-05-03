@@ -38,6 +38,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
+      
+      // ログイン成功時に必要なデータを事前に取得
+      if (user.role === 'parent') {
+        // 保護者アカウントの場合は、生徒情報を先に取得
+        console.log("ユーザーログイン検出 - 生徒データを再取得します");
+        queryClient.prefetchQuery({
+          queryKey: ["/api/students"],
+          staleTime: 10 * 60 * 1000, // 10分間キャッシュを保持
+        });
+        
+        // チケット情報も取得
+        queryClient.prefetchQuery({
+          queryKey: ["/api/student-tickets"],
+          staleTime: 10 * 60 * 1000,
+        });
+      } else if (user.role === 'tutor') {
+        // 講師アカウントの場合は、講師プロフィールと予約情報を先に取得
+        queryClient.prefetchQuery({
+          queryKey: ["/api/tutor/profile"],
+          staleTime: 10 * 60 * 1000,
+        });
+        
+        queryClient.prefetchQuery({
+          queryKey: ["/api/tutor/bookings"],
+          staleTime: 5 * 60 * 1000, // 5分間キャッシュを保持
+        });
+      }
+      
+      // すべてのユーザータイプで予約データを取得
+      queryClient.prefetchQuery({
+        queryKey: ["/api/bookings"],
+        staleTime: 5 * 60 * 1000,
+      });
+      
       toast({
         title: "ログイン成功",
         description: `こんにちは、${user.displayName || user.username}さん`,
