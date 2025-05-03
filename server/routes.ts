@@ -8,11 +8,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
   
-  // 科目、日付、時間帯に基づいて利用可能な講師を取得するAPIエンドポイント
+  // 科目、日付、時間帯、学校区分に基づいて利用可能な講師を取得するAPIエンドポイント
   app.get("/api/tutors/available", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const { subject, date, timeSlot } = req.query;
+    const { subject, date, timeSlot, schoolLevel } = req.query;
     
     if (!subject || !date || !timeSlot) {
       return res.status(400).json({ 
@@ -28,8 +28,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tutors = await storage.getAvailableTutorsBySubject(
         subject as string, 
         date as string, 
-        timeSlot as string
+        timeSlot as string,
+        schoolLevel as string | undefined
       );
+      
+      console.log(`[API] 検索結果: ${tutors.length}件の講師が見つかりました`);
       
       // レスポンスを整形
       const formattedTutors = tutors.map(tutor => ({
@@ -37,7 +40,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: `${tutor.last_name} ${tutor.first_name}`,
         university: tutor.university,
         shiftId: tutor.shift_id,
-        subject: tutor.shift_subject
+        subject: tutor.shift_subject,
+        schoolLevel: tutor.shift_school_level
       }));
       
       res.json(formattedTutors);
