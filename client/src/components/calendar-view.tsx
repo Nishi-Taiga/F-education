@@ -190,7 +190,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
             <div key={day.toString()} className="aspect-square p-0.5 min-w-0">
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} flex flex-col ${isPast ? 'opacity-60' : ''} overflow-hidden`}
-                style={{ height: '80px', maxHeight: '80px' }}
+                style={{ height: '85px', maxHeight: '85px' }}
                 onClick={() => isSelectable && handleDayClick(day)}
               >
                 <div className="p-0.5 text-center">
@@ -221,14 +221,16 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                           e.stopPropagation(); // 日付クリックイベントが発火するのを防ぐ
                           onBookingClick?.(booking);
                         }}
-                        style={{ minHeight: '22px', maxWidth: '100%', maxHeight: '22px' }}
+                        style={{ height: 'auto', maxWidth: '100%', minHeight: '22px' }}
                       >
-                        <span className="block truncate text-[8px] font-medium">{booking.timeSlot.split('-')[0]}</span>
-                        {booking.studentName && (
-                          <span className="block truncate text-[8px] bg-white bg-opacity-50 text-black rounded px-0.5 mt-0.5 font-semibold">
-                            {booking.studentName}
-                          </span>
-                        )}
+                        <div className="flex flex-col">
+                          <span className="truncate text-[9px] font-medium">{booking.timeSlot.split('-')[0]}</span>
+                          {booking.studentName && (
+                            <span className="truncate text-[10px] bg-white bg-opacity-50 text-black rounded px-1 py-0.5 font-semibold leading-tight">
+                              {booking.studentName}
+                            </span>
+                          )}
+                        </div>
                         {/* 学生情報のツールチップ */}
                         <div className="absolute left-0 bottom-full mb-1 w-max z-10 hidden group-hover:block">
                           <div className="bg-gray-800 text-white text-xs rounded py-2 px-3 shadow-lg">
