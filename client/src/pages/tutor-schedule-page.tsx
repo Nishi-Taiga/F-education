@@ -497,7 +497,7 @@ export default function TutorSchedulePage() {
                             isPending ? "bg-yellow-50" : ""
                           }`}
                         >
-                          <div className="flex justify-center">
+                          <div className="flex flex-col items-center">
                             <Switch
                               checked={
                                 // 保留中の変更があればそれを表示
@@ -521,13 +521,40 @@ export default function TutorSchedulePage() {
                               }
                               disabled={isPast || updateShiftMutation.isPending}
                             />
-                          </div>
-                          <div className={`text-xs mt-1 ${isPending ? "font-medium text-yellow-600" : "text-muted-foreground"}`}>
-                            {pendingShifts.find(
+                            
+                            <div className={`text-xs mt-1 ${isPending ? "font-medium text-yellow-600" : "text-muted-foreground"}`}>
+                              {pendingShifts.find(
+                                shift => shift.date === day.date && shift.timeSlot === timeSlot
+                              )?.isAvailable ?? 
+                              (shiftInfo?.isAvailable ?? false) ? "可能" : "不可"}
+                              {isPending && " (未保存)"}
+                            </div>
+                            
+                            {/* ONの場合のみ詳細設定ボタンと科目情報を表示 */}
+                            {((pendingShifts.find(
                               shift => shift.date === day.date && shift.timeSlot === timeSlot
-                            )?.isAvailable ?? 
-                            (shiftInfo?.isAvailable ?? false) ? "可能" : "不可"}
-                            {isPending && " (未保存)"}
+                            )?.isAvailable ?? shiftInfo?.isAvailable) === true) && (
+                              <>
+                                {/* 設定されている科目と学校区分を表示 */}
+                                {(shiftInfo?.subject || shiftInfo?.schoolLevel) && (
+                                  <div className="text-xs mt-1 text-blue-600 font-medium">
+                                    {shiftInfo?.schoolLevel === "elementary" && "小学"}
+                                    {shiftInfo?.schoolLevel === "junior_high" && "中学"}
+                                    {shiftInfo?.schoolLevel === "high_school" && "高校"}
+                                    {shiftInfo?.subject && ` / ${shiftInfo.subject}`}
+                                  </div>
+                                )}
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-xs mt-1 h-auto py-1 px-2"
+                                  onClick={() => handleShiftClick(day.date, timeSlot)}
+                                  disabled={isPast || updateShiftMutation.isPending}
+                                >
+                                  詳細設定
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </td>
                       );
@@ -561,6 +588,66 @@ export default function TutorSchedulePage() {
           </div>
         </CardContent>
       </Card>
+      {/* シフト詳細設定モーダル */}
+      <Dialog open={shiftModalOpen} onOpenChange={setShiftModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>シフト詳細設定</DialogTitle>
+            <DialogDescription>
+              {activeShiftDetails && (
+                <span>
+                  {format(parseISO(activeShiftDetails.date), "yyyy年MM月dd日", { locale: ja })} {activeShiftDetails.timeSlot}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="schoolLevel">学校区分</Label>
+              <Select
+                value={selectedSchoolLevel}
+                onValueChange={(value) => setSelectedSchoolLevel(value as SchoolLevel)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="学校区分を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="elementary">小学生</SelectItem>
+                  <SelectItem value="junior_high">中学生</SelectItem>
+                  <SelectItem value="high_school">高校生</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="subject">教科</Label>
+              <Select
+                value={selectedSubject}
+                onValueChange={setSelectedSubject}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="教科を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedSchoolLevel && subjectsBySchoolLevel[selectedSchoolLevel].map((subject) => (
+                    <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShiftModalOpen(false)}>
+              キャンセル
+            </Button>
+            <Button onClick={saveShiftDetails} disabled={updateShiftMutation.isPending}>
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
