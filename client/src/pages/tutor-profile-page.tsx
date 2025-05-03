@@ -629,7 +629,7 @@ export default function TutorProfilePage() {
                             university: tutorProfile.university || "",
                             birthDate: tutorProfile.birthDate || "",
                             selectedSubjects: subjects,
-                            bio: tutorProfile.bio || ""
+                            // bio field removed as requested
                           });
                           
                           // キャンセルメッセージ

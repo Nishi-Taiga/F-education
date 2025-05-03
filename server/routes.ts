@@ -784,7 +784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           university,
           birthDate,
           subjects,
-          bio: bio || tutor.bio,
+          // bio field removed as requested
           profileCompleted: true
         });
       } else {
@@ -798,7 +798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           university,
           birthDate,
           subjects,
-          bio: bio || null
+          // bio field removed as requested
         });
       }
       
@@ -876,7 +876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tutorId: tutor.id,
           date,
           timeSlot,
-          subject: "", // subjectは使用しない
+          subject: "available", // デフォルト値として "available" を設定
           isAvailable: isAvailable ?? false
         });
       }
