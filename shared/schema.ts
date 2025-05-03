@@ -86,8 +86,7 @@ export const tutorShifts = pgTable("tutor_shifts", {
   tutorId: integer("tutor_id").notNull().references(() => tutors.id),
   date: text("date").notNull(), // in YYYY-MM-DD format
   timeSlot: text("time_slot").notNull(), // format: "HH:MM-HH:MM"
-  subject: text("subject").notNull(), // どの科目の授業が可能か（例: 国語、数学など）
-  schoolLevel: text("school_level"), // 学校区分（例: elementary、junior_high、high_school）
+  subject: text("subject").default("available").notNull(), // デフォルト値を "available" に設定
   isAvailable: boolean("is_available").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -201,7 +200,6 @@ export const insertTutorShiftSchema = createInsertSchema(tutorShifts).pick({
   date: true,
   timeSlot: true,
   subject: true,
-  schoolLevel: true,
   isAvailable: true,
 });
 
