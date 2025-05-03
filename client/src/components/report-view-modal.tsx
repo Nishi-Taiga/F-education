@@ -17,9 +17,18 @@ export function ReportViewModal({
   booking,
   onClose,
 }: ReportViewModalProps) {
-  // 日付をフォーマット
-  const dateObj = parse(booking.date, "yyyy-MM-dd", new Date());
-  const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
+  // 日付をフォーマット（無効な日付値のエラー処理を追加）
+  let formattedDate = "日付不明";
+  try {
+    if (booking.date && booking.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const dateObj = parse(booking.date, "yyyy-MM-dd", new Date());
+      if (!isNaN(dateObj.getTime())) {
+        formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
+      }
+    }
+  } catch (error) {
+    console.error("Invalid date format:", booking.date);
+  }
   
   // レポート作成日時を取得（新フォーマット: "completed:2023-05-03T12:34:56.789Z"）
   let reportDate: Date | null = null;
@@ -31,14 +40,20 @@ export function ReportViewModal({
       const timestamp = booking.reportStatus.split('completed:')[1];
       reportDate = new Date(timestamp);
       
-      // 何日前かを表示
-      reportDateStr = formatDistanceToNow(reportDate, { locale: ja, addSuffix: true });
-      
-      // 日本時間に変換してフォーマット
-      const japanTime = new Date(reportDate.getTime() + (9 * 60 * 60 * 1000));
-      const fullDateStr = format(japanTime, "yyyy年M月d日 H:mm", { locale: ja });
-      reportDateStr = `${reportDateStr} (${fullDateStr})`;
+      // 有効な日付かチェック
+      if (!isNaN(reportDate.getTime())) {
+        // 何日前かを表示
+        reportDateStr = formatDistanceToNow(reportDate, { locale: ja, addSuffix: true });
+        
+        // 日本時間に変換してフォーマット
+        const japanTime = new Date(reportDate.getTime() + (9 * 60 * 60 * 1000));
+        const fullDateStr = format(japanTime, "yyyy年M月d日 H:mm", { locale: ja });
+        reportDateStr = `${reportDateStr} (${fullDateStr})`;
+      } else {
+        reportDateStr = "日時不明";
+      }
     } catch (e) {
+      console.error("Invalid report date format:", booking.reportStatus);
       reportDateStr = "日時不明";
     }
   }
