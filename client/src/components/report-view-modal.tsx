@@ -98,14 +98,30 @@ export function ReportViewModal({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          {/* 基本情報 */}
+          {/* 基本情報 - 順序: 1.日時 2.生徒名 3.科目 */}
           <div className="space-y-2">
+            {/* 1. 日時 */}
+            <div className="flex items-center">
+              <CalendarDays className="h-4 w-4 text-primary mr-2" />
+              <span className="text-sm font-medium">日時:</span>
+              <span className="text-sm ml-2">{formattedDate} {booking.timeSlot}</span>
+            </div>
+            
+            {/* 2. 生徒名 */}
             <div className="flex items-center">
               <User className="h-4 w-4 text-primary mr-2" />
               <span className="text-sm font-medium">生徒:</span>
               <span className="text-sm ml-2">{booking.studentName || `生徒ID: ${booking.studentId}`}</span>
             </div>
             
+            {/* 3. 科目 */}
+            <div className="flex items-center">
+              <BookOpen className="h-4 w-4 text-primary mr-2" />
+              <span className="text-sm font-medium">科目:</span>
+              <span className="text-sm ml-2">{booking.subject}</span>
+            </div>
+            
+            {/* 講師情報 */}
             {booking.tutorName && (
               <div className="flex items-center">
                 <User className="h-4 w-4 text-primary mr-2" />
@@ -113,18 +129,6 @@ export function ReportViewModal({
                 <span className="text-sm ml-2">{booking.tutorName}</span>
               </div>
             )}
-            
-            <div className="flex items-center">
-              <CalendarDays className="h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-medium">日時:</span>
-              <span className="text-sm ml-2">{formattedDate} {booking.timeSlot}</span>
-            </div>
-            
-            <div className="flex items-center">
-              <BookOpen className="h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-medium">科目:</span>
-              <span className="text-sm ml-2">{booking.subject}</span>
-            </div>
           </div>
           
           <Separator />

@@ -190,7 +190,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
             <div key={day.toString()} className="aspect-square p-0.5 min-w-0">
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} flex flex-col ${isPast ? 'opacity-60' : ''} overflow-hidden`}
-                style={{ height: '85px', maxHeight: '85px' }}
+                style={{ height: '90px', maxHeight: '90px' }}
                 onClick={() => isSelectable && handleDayClick(day)}
               >
                 <div className="p-0.5 text-center">
@@ -213,24 +213,27 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   }
                   
                   return (
-                    <div key={index} className="mt-0.5 mb-0.5 mx-0.5 min-w-0 w-auto">
+                    <div key={index} className="mt-0.5 mb-0.5 min-w-0 w-full">
                       <div 
-                        className={`px-1 py-1 text-[9px] leading-tight rounded ${bgColorClass} text-white text-center relative group w-full cursor-pointer`}
+                        className={`px-1 py-0.5 rounded ${bgColorClass} text-white relative group cursor-pointer flex flex-col`}
                         title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
                         onClick={(e) => {
                           e.stopPropagation(); // 日付クリックイベントが発火するのを防ぐ
                           onBookingClick?.(booking);
                         }}
-                        style={{ height: 'auto', maxWidth: '100%', minHeight: '26px', overflow: 'visible' }}
                       >
-                        <div className="flex flex-col space-y-1">
-                          <span className="truncate text-[10px] font-medium">{booking.timeSlot.split('-')[0]}</span>
-                          {booking.studentName && (
-                            <span className="truncate text-[10px] bg-white bg-opacity-50 text-black rounded-sm px-1 py-0.5 font-semibold leading-tight">
-                              {booking.studentName}
-                            </span>
-                          )}
+                        {/* 時間 */}
+                        <div className="text-center text-[11px] font-medium">
+                          {booking.timeSlot.split('-')[0]}
                         </div>
+                        
+                        {/* 生徒名 */}
+                        {booking.studentName && (
+                          <div className="bg-white bg-opacity-50 text-black rounded-sm text-center px-0.5 py-0.5 text-[10px] font-medium mt-0.5 overflow-hidden text-ellipsis">
+                            {booking.studentName.length > 8 ? `${booking.studentName.substring(0, 7)}…` : booking.studentName}
+                          </div>
+                        )}
+                        
                         {/* 学生情報のツールチップ */}
                         <div className="absolute left-0 bottom-full mb-1 w-max z-10 hidden group-hover:block">
                           <div className="bg-gray-800 text-white text-xs rounded py-2 px-3 shadow-lg">
