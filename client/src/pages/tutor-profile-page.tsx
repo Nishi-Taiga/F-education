@@ -34,7 +34,8 @@ const highSchoolCategories = {
 // 講師プロフィールのフォーム用スキーマ
 const tutorFormSchema = tutorProfileSchema.extend({
   selectedSubjects: z.array(z.string()).min(1, "少なくとも1つの科目を選択してください"),
-  subjects: z.string().optional() // サーバーAPIとの互換性のため追加
+  subjects: z.string().optional(), // サーバーAPIとの互換性のため追加
+  email: z.string().email("有効なメールアドレスを入力してください").min(1, "メールアドレスは必須です")
 });
 
 type FormValues = z.infer<typeof tutorFormSchema>;
@@ -157,7 +158,8 @@ export default function TutorProfilePage() {
       birthDate: "",
       selectedSubjects: [],
       subjects: "", // 追加
-      bio: ""
+      bio: "",
+      email: user?.email || ""
     }
   });
   
@@ -175,7 +177,8 @@ export default function TutorProfilePage() {
         birthDate: tutorProfile.birthDate || "",
         selectedSubjects: subjects,
         subjects: tutorProfile.subjects || "", // 追加
-        bio: tutorProfile.bio || ""
+        bio: tutorProfile.bio || "",
+        email: user?.email || ""
       });
       
       // 新規プロフィール作成時は編集モードにする
@@ -247,6 +250,7 @@ export default function TutorProfilePage() {
         birthDate: data.birthDate,
         subjects, // 選択された科目の文字列
         bio: data.bio || "", // 自己紹介がある場合は送信、なければ空文字
+        email: data.email, // メールアドレス（予約通知用）
         profileCompleted: true // プロフィール完了フラグを明示的に設定
       };
       
@@ -444,6 +448,28 @@ export default function TutorProfilePage() {
                       </FormControl>
                       <FormDescription>
                         講師は18歳以上の方のみ登録可能です。
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>メールアドレス（予約通知用）</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="email" 
+                          placeholder="例：yamada@example.com"
+                          {...field} 
+                          disabled={!isEditing}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        このメールアドレスに予約と取り消しの通知が送信されます。
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
