@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
 import { insertBookingSchema, timeSlots, type Student } from "@shared/schema";
+import { emailService } from "./email-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
@@ -258,6 +259,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateTicketCount(userId, user.ticketCount - 1);
       }
       
+      // 予約完了後にメール送信
+      try {
+        if (bookingData.studentId) {
+          // 生徒情報を取得
+          const student = await storage.getStudent(bookingData.studentId);
+          // 講師情報を取得
+          const tutor = bookingData.tutorId ? await storage.getTutor(bookingData.tutorId) : undefined;
+          // 保護者のメールアドレスを取得
+          const parentUser = await storage.getUser(userId);
+          const parentEmail = parentUser?.email || null;
+          
+          if (student) {
+            // メール送信
+            await emailService.sendBookingConfirmation(booking, student, tutor, parentEmail);
+            console.log("予約完了メール送信に成功しました");
+          }
+        }
+      } catch (emailError) {
+        // メール送信に失敗しても予約自体は成功として扱う
+        console.error("メール送信エラー:", emailError);
+      }
+      
       res.status(201).json(booking);
     } catch (error) {
       res.status(400).json({ message: "Invalid booking data", error });
@@ -313,6 +336,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 最新のユーザー情報を取得
       const updatedUser = await storage.getUser(userId);
+      
+      // キャンセル完了後にメール送信
+      try {
+        if (booking.studentId) {
+          // 生徒情報を取得
+          const student = await storage.getStudent(booking.studentId);
+          // 講師情報を取得
+          const tutor = booking.tutorId ? await storage.getTutor(booking.tutorId) : undefined;
+          // 保護者のメールアドレスを取得
+          const parentUser = await storage.getUser(userId);
+          const parentEmail = parentUser?.email || null;
+          
+          if (student) {
+            // メール送信
+            await emailService.sendBookingCancellation(booking, student, tutor, parentEmail);
+            console.log("キャンセル完了メール送信に成功しました");
+          }
+        }
+      } catch (emailError) {
+        // メール送信に失敗してもキャンセル自体は成功として扱う
+        console.error("メール送信エラー:", emailError);
+      }
       
       res.json({ 
         message: "Booking cancelled successfully", 
