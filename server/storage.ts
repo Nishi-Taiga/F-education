@@ -777,10 +777,12 @@ export class DatabaseStorage implements IStorage {
   
   // 科目、日付、時間帯に基づいて利用可能な講師を取得
   async getAvailableTutorsBySubject(subject: string, date: string, timeSlot: string): Promise<any[]> {
-    // 1. 指定した科目を教えられる講師を探す
+    // 1. 指定した科目を教えられる講師を探す（講師のsubjectsフィールドで検索）
     // 2. その講師の中から、指定した日時に利用可能なシフトを持つ講師を探す
     
     try {
+      console.log(`[API] 対象時間帯のシフト検索: 日付=${date}, 時間枠=${timeSlot}, 検索キーワード=${subject}`);
+      
       // SQLクエリを実行
       const query = sql`
         SELECT 
@@ -794,7 +796,6 @@ export class DatabaseStorage implements IStorage {
           ts.id AS shift_id,
           ts.date,
           ts.time_slot,
-          ts.subject AS shift_subject,
           ts.is_available
         FROM tutor_shifts ts
         JOIN tutors t ON ts.tutor_id = t.id
@@ -803,12 +804,12 @@ export class DatabaseStorage implements IStorage {
           ts.date = ${date} AND
           ts.time_slot = ${timeSlot} AND
           ts.is_available = true AND
-          ts.subject = ${subject} AND
           t.is_active = true AND
           t.subjects LIKE ${`%${subject}%`}
       `;
       
       const result = await db.execute(query);
+      console.log(`[API] 対象時間帯のシフト: ${result.rows?.length || 0}件`);
       return result.rows || [];
     } catch (error) {
       console.error("講師検索エラー:", error);

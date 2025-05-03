@@ -25,11 +25,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
+      // 学校区分と科目を組み合わせた検索用文字列を作成（例：「小学算数」）
+      let combinedSubject = "";
+      if (schoolLevel === "elementary") {
+        combinedSubject = `小学${subject}`;
+      } else if (schoolLevel === "junior_high") {
+        combinedSubject = `中学${subject}`;
+      } else if (schoolLevel === "high_school") {
+        combinedSubject = `高校${subject}`;
+      } else {
+        combinedSubject = subject as string;
+      }
+      
+      console.log(`[API] 利用可能な講師検索: 科目=${subject}, 日付=${date}, 時間=${timeSlot}, 学校区分=${schoolLevel}, 検索キーワード=${combinedSubject}`);
+      
+      // 利用可能な講師を検索（講師のsubjects列から検索）
       const tutors = await storage.getAvailableTutorsBySubject(
-        subject as string, 
+        combinedSubject, 
         date as string, 
-        timeSlot as string,
-        schoolLevel as string | undefined
+        timeSlot as string
       );
       
       console.log(`[API] 検索結果: ${tutors.length}件の講師が見つかりました`);
@@ -40,8 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: `${tutor.last_name} ${tutor.first_name}`,
         university: tutor.university,
         shiftId: tutor.shift_id,
-        subject: tutor.shift_subject,
-        schoolLevel: tutor.shift_school_level
+        subject: combinedSubject
       }));
       
       res.json(formattedTutors);
