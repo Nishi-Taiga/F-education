@@ -6,14 +6,16 @@ import { ja } from "date-fns/locale";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { timeSlots } from "@shared/schema";
+import { timeSlots, subjectsBySchoolLevel, SchoolLevel } from "@shared/schema";
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, Home, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 // シフト情報の型定義
 type Shift = {
@@ -36,6 +38,8 @@ type DayShift = {
       exists: boolean;
       isAvailable: boolean;
       id?: number;
+      subject?: string;
+      schoolLevel?: string;
     };
   };
 };
@@ -49,7 +53,23 @@ export default function TutorSchedulePage() {
     date: string;
     timeSlot: string;
     isAvailable: boolean;
+    subject?: string;
+    schoolLevel?: string;
   }>>([]);
+  
+  // 選択された学校区分と科目
+  const [selectedSchoolLevel, setSelectedSchoolLevel] = useState<SchoolLevel>("elementary");
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [shiftModalOpen, setShiftModalOpen] = useState(false);
+  const [activeShiftDetails, setActiveShiftDetails] = useState<{
+    date: string;
+    timeSlot: string;
+    exists: boolean;
+    isAvailable: boolean;
+    id?: number;
+    subject?: string;
+    schoolLevel?: string;
+  } | null>(null);
   
   // 現在の週の開始日（日曜日）
   const [weekStart, setWeekStart] = useState(() => {
@@ -97,7 +117,13 @@ export default function TutorSchedulePage() {
   
   // シフト更新のミューテーション
   const updateShiftMutation = useMutation({
-    mutationFn: async (data: { date: string; timeSlot: string; isAvailable: boolean }) => {
+    mutationFn: async (data: { 
+      date: string; 
+      timeSlot: string; 
+      isAvailable: boolean;
+      subject?: string;
+      schoolLevel?: string;
+    }) => {
       const res = await apiRequest("POST", "/api/tutor/shifts", data);
       return await res.json();
     },
@@ -143,7 +169,9 @@ export default function TutorSchedulePage() {
       dayShifts.shifts[timeSlot] = {
         exists: !!existingShift,
         isAvailable: existingShift ? existingShift.isAvailable : false, // デフォルトでOFF（不可）に設定
-        id: existingShift?.id
+        id: existingShift?.id,
+        subject: existingShift?.subject,
+        schoolLevel: existingShift?.schoolLevel
       };
     });
     
@@ -193,6 +221,75 @@ export default function TutorSchedulePage() {
           isAvailable: newIsAvailable
         }
       ]);
+    }
+  };
+  
+  // シフト詳細を編集するための処理
+  const handleShiftClick = (date: string, timeSlot: string) => {
+    const shiftInfo = weekShifts
+      .find(day => day.date === date)
+      ?.shifts[timeSlot];
+    
+    if (!shiftInfo) return;
+    
+    // デフォルト値を設定
+    setSelectedSchoolLevel((shiftInfo.schoolLevel as SchoolLevel) || "elementary");
+    setSelectedSubject(shiftInfo.subject || "国語");
+    
+    // 現在のシフト詳細をモーダル用に保存
+    setActiveShiftDetails({
+      date,
+      timeSlot,
+      exists: shiftInfo.exists,
+      isAvailable: shiftInfo.isAvailable,
+      id: shiftInfo.id,
+      subject: shiftInfo.subject,
+      schoolLevel: shiftInfo.schoolLevel
+    });
+    
+    // モーダルを表示
+    setShiftModalOpen(true);
+  };
+  
+  // シフト詳細を保存
+  const saveShiftDetails = async () => {
+    if (!activeShiftDetails) return;
+    
+    // 既存の変更を探す
+    const existingIndex = pendingShifts.findIndex(
+      shift => shift.date === activeShiftDetails.date && shift.timeSlot === activeShiftDetails.timeSlot
+    );
+    
+    const shiftUpdate = {
+      date: activeShiftDetails.date,
+      timeSlot: activeShiftDetails.timeSlot,
+      isAvailable: activeShiftDetails.isAvailable,
+      subject: selectedSubject,
+      schoolLevel: selectedSchoolLevel
+    };
+    
+    try {
+      // 直接APIで更新
+      await updateShiftMutation.mutateAsync(shiftUpdate);
+      
+      // 保留中のリストから削除（存在する場合）
+      if (existingIndex >= 0) {
+        const newPendingShifts = [...pendingShifts];
+        newPendingShifts.splice(existingIndex, 1);
+        setPendingShifts(newPendingShifts);
+      }
+      
+      // モーダルを閉じる
+      setShiftModalOpen(false);
+      setActiveShiftDetails(null);
+      
+    } catch (error) {
+      console.error("シフト詳細の更新エラー:", error);
+      toast({
+        title: "エラーが発生しました",
+        description: "シフト詳細の更新に失敗しました。",
+        variant: "destructive",
+      });
     }
   };
   
