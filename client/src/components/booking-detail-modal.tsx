@@ -140,49 +140,53 @@ export function BookingDetailModal({
             </div>
           )}
           
-          {/* 4. 前回授業のレポート */}
-          <div className="flex items-start">
-            <History className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-            <div>
-              <p className="font-medium text-gray-900">前回の授業レポート</p>
-              {booking.previousReport ? (
-                <div className="text-sm text-gray-600">
-                  <p className="text-xs text-gray-500">{booking.previousReport.date}</p>
-                  <div className="bg-gray-50 p-3 rounded-md mt-1 border border-gray-200 max-h-40 overflow-y-auto">
-                    <div className="text-sm text-gray-600 whitespace-pre-line">
-                      {booking.previousReport.content}
+          {/* 前回授業のレポート - 授業前は常に表示、授業後で今回のレポートが無い場合も表示 */}
+          {(!isPastLesson() || (isPastLesson() && !isCompletedWithReport)) && (
+            <div className="flex items-start">
+              <History className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+              <div>
+                <p className="font-medium text-gray-900">前回の授業レポート</p>
+                {booking.previousReport ? (
+                  <div className="text-sm text-gray-600">
+                    <p className="text-xs text-gray-500">{booking.previousReport.date}</p>
+                    <div className="bg-gray-50 p-3 rounded-md mt-1 border border-gray-200 max-h-40 overflow-y-auto">
+                      <div className="text-sm text-gray-600 whitespace-pre-line">
+                        {booking.previousReport.content}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">前回のレポートはありません。</p>
-              )}
-            </div>
-          </div>
-          
-          {/* レポート状態 */}
-          <div className="flex items-start">
-            <FileText className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-            <div>
-              <p className="font-medium text-gray-900">今回の授業レポート</p>
-              {isCompletedWithReport ? (
-                <p className="text-sm text-green-600 font-medium">作成済み</p>
-              ) : isPastLesson() ? (
-                <p className="text-sm text-red-500 font-medium">未作成</p>
-              ) : (
-                <p className="text-sm text-gray-500">授業前</p>
-              )}
-            </div>
-          </div>
-          
-          {/* 今回のレポート内容があれば表示 */}
-          {isCompletedWithReport && booking.reportContent && (
-            <div className="bg-gray-50 p-3 rounded-md mt-2 border border-gray-200">
-              <p className="text-sm font-medium text-gray-900 mb-1">レポート内容</p>
-              <div className="text-sm text-gray-600 whitespace-pre-line max-h-40 overflow-y-auto">
-                {booking.reportContent}
+                ) : (
+                  <p className="text-sm text-gray-500">前回のレポートはありません。</p>
+                )}
               </div>
             </div>
+          )}
+          
+          {/* レポート状態と内容 - 授業後のみ表示 */}
+          {isPastLesson() && (
+            <>
+              <div className="flex items-start">
+                <FileText className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+                <div>
+                  <p className="font-medium text-gray-900">今回の授業レポート</p>
+                  {isCompletedWithReport ? (
+                    <p className="text-sm text-green-600 font-medium">作成済み</p>
+                  ) : (
+                    <p className="text-sm text-red-500 font-medium">未作成</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* 今回のレポート内容があれば表示 */}
+              {isCompletedWithReport && booking.reportContent && (
+                <div className="bg-gray-50 p-3 rounded-md mt-2 border border-gray-200">
+                  <p className="text-sm font-medium text-gray-900 mb-1">レポート内容</p>
+                  <div className="text-sm text-gray-600 whitespace-pre-line max-h-40 overflow-y-auto">
+                    {booking.reportContent}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
         
