@@ -91,7 +91,7 @@ export function BookingCard({ booking, onCancelClick, onViewReportClick }: Booki
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>授業開始24時間前を過ぎているためキャンセルできません</p>
+                <p>授業開始24時間前を過ぎているためキャンセルできません（葬儀等の緊急時はLINEにてご連絡ください）</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
