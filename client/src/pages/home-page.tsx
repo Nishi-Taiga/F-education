@@ -86,6 +86,7 @@ export default function HomePage() {
   const [unitContent, setUnitContent] = useState(''); // 単元
   const [messageContent, setMessageContent] = useState(''); // 伝言事項
   const [goalContent, setGoalContent] = useState(''); // 来週までの目標(課題)
+  const [reportContent, setReportContent] = useState(''); // 後方互換性のため残す
   
   const [reportSaving, setReportSaving] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false); // 強制的に再描画を行うためのフラグ
@@ -372,7 +373,20 @@ export default function HomePage() {
   
   // レポート保存のミューテーション
   const saveReportMutation = useMutation({
-    mutationFn: async ({ bookingId, content }: { bookingId: number, content: string }) => {
+    mutationFn: async ({ 
+      bookingId, 
+      unit, 
+      message, 
+      goal 
+    }: { 
+      bookingId: number, 
+      unit: string, 
+      message: string, 
+      goal: string 
+    }) => {
+      // 3つのフィールドを結合してレポート本文を作成
+      const content = `【単元】\n${unit}\n\n【伝言事項】\n${message}\n\n【来週までの目標(課題)】\n${goal}`;
+      
       // ダミーIDのチェック (デモデータ)
       if (bookingId === 1001 || bookingId === 1002 || bookingId === 1003 || 
           bookingId === 2001 || bookingId === 2002) {
@@ -398,12 +412,15 @@ export default function HomePage() {
         description: "授業レポートが保存されました",
       });
       
+      // 3つのフィールドから生成したレポート内容を使用
+      const content = `【単元】\n${unitContent}\n\n【伝言事項】\n${messageContent}\n\n【来週までの目標(課題)】\n${goalContent}`;
+      
       // テスト用ダミーデータの場合は手動で状態を更新
       if (selectedReportBooking && [1001, 1002, 1003, 2001, 2002].includes(selectedReportBooking.id)) {
         // テストデータを更新
         const updatedTestBookings = testBookings.map(booking => 
           booking.id === selectedReportBooking.id 
-            ? { ...booking, reportStatus: "completed", reportContent: reportContent }
+            ? { ...booking, reportStatus: "completed", reportContent: content }
             : booking
         );
         setTestBookings(updatedTestBookings);
@@ -421,7 +438,10 @@ export default function HomePage() {
       // ダイアログを閉じる前に少し遅延を入れる
       setTimeout(() => {
         setShowReportDialog(false);
-        setReportContent('');
+        // 各フィールドの内容をクリア
+        setUnitContent('');
+        setMessageContent('');
+        setGoalContent('');
         setReportSaving(false);
       }, 500);
     },
@@ -1247,27 +1267,50 @@ export default function HomePage() {
                 </div>
               </div>
               
-              {/* 報告書フォーム */}
-              <div className="space-y-3">
+              {/* 報告書フォーム - 分割フィールド */}
+              <div className="space-y-4">
+                {/* 単元フィールド */}
                 <div className="space-y-1">
-                  <label htmlFor="lesson-content" className="block text-sm font-medium">
-                    レポート内容
+                  <label htmlFor="unit-content" className="block text-sm font-medium">
+                    単元
                   </label>
-                  <div className="text-xs text-gray-500 mb-2">
-                    以下の項目を含めて記入してください：
-                    <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                      <li>単元</li>
-                      <li>伝言事項</li>
-                      <li>来週までの目標(課題)</li>
-                    </ul>
-                  </div>
                   <textarea
-                    id="lesson-content"
-                    rows={6}
+                    id="unit-content"
+                    rows={2}
                     className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
-                    placeholder="単元、伝言事項、来週までの目標(課題)などを記入してください"
-                    value={reportContent}
-                    onChange={(e) => setReportContent(e.target.value)}
+                    placeholder="授業で行った単元内容を記入してください"
+                    value={unitContent}
+                    onChange={(e) => setUnitContent(e.target.value)}
+                  />
+                </div>
+                
+                {/* 伝言事項フィールド */}
+                <div className="space-y-1">
+                  <label htmlFor="message-content" className="block text-sm font-medium">
+                    伝言事項
+                  </label>
+                  <textarea
+                    id="message-content"
+                    rows={2}
+                    className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
+                    placeholder="保護者への伝言事項があれば記入してください"
+                    value={messageContent}
+                    onChange={(e) => setMessageContent(e.target.value)}
+                  />
+                </div>
+                
+                {/* 来週までの目標フィールド */}
+                <div className="space-y-1">
+                  <label htmlFor="goal-content" className="block text-sm font-medium">
+                    来週までの目標(課題)
+                  </label>
+                  <textarea
+                    id="goal-content"
+                    rows={2}
+                    className="block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
+                    placeholder="次回授業までに行ってほしい課題等を記入してください"
+                    value={goalContent}
+                    onChange={(e) => setGoalContent(e.target.value)}
                   />
                 </div>
               </div>
@@ -1279,10 +1322,11 @@ export default function HomePage() {
                 <Button 
                   type="button"
                   onClick={() => {
-                    if (!reportContent.trim()) {
+                    // 少なくとも1つのフィールドに入力があるか確認
+                    if (!unitContent.trim() && !messageContent.trim() && !goalContent.trim()) {
                       toast({
                         title: "入力エラー",
-                        description: "レポート内容を入力してください",
+                        description: "少なくとも1つのフィールドに入力してください",
                         variant: "destructive",
                       });
                       return;
@@ -1292,11 +1336,14 @@ export default function HomePage() {
                       setReportSaving(true);
                       saveReportMutation.mutate({
                         bookingId: selectedReportBooking.id,
-                        content: reportContent
+                        unit: unitContent,
+                        message: messageContent,
+                        goal: goalContent
                       });
                     }
                   }}
-                  disabled={saveReportMutation.isPending || reportSaving || !reportContent.trim()}
+                  disabled={saveReportMutation.isPending || reportSaving || 
+                    (!unitContent.trim() && !messageContent.trim() && !goalContent.trim())}
                 >
                   {saveReportMutation.isPending || reportSaving ? (
                     <>
