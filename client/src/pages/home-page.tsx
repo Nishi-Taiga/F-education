@@ -895,7 +895,7 @@ export default function HomePage() {
         {user?.role === 'tutor' && (
           <Card className="p-3 mb-4">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-base font-medium text-gray-900">F education ダッシュボード</h3>
+              <h3 className="text-base font-medium text-gray-900"></h3>
             </div>
             
             <div className="grid grid-cols-1 gap-4 mb-4">
