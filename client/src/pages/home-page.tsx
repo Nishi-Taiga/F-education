@@ -81,7 +81,12 @@ export default function HomePage() {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [selectedReportBooking, setSelectedReportBooking] = useState<(Booking & { studentName?: string }) | null>(null);
   const [todaysBookingsForReport, setTodaysBookingsForReport] = useState<(Booking & { studentName?: string })[]>([]);
-  const [reportContent, setReportContent] = useState('');
+  
+  // レポートの各フィールド用のステート
+  const [unitContent, setUnitContent] = useState(''); // 単元
+  const [messageContent, setMessageContent] = useState(''); // 伝言事項
+  const [goalContent, setGoalContent] = useState(''); // 来週までの目標(課題)
+  
   const [reportSaving, setReportSaving] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false); // 強制的に再描画を行うためのフラグ
   

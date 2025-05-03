@@ -210,6 +210,15 @@ export default function TutorSchedulePage() {
       return;
     }
     
+    // 保存開始の通知
+    toast({
+      title: "シフト設定を保存中...",
+      description: `${pendingShifts.length}件のシフト変更を保存しています。`,
+    });
+    
+    // 保存の失敗回数をカウント
+    let failCount = 0;
+    
     // シフト変更を一括保存
     for (const shift of pendingShifts) {
       try {
@@ -217,16 +226,28 @@ export default function TutorSchedulePage() {
       } catch (error) {
         // エラーが発生してもすべてのシフトを保存するために続行
         console.error("シフト保存エラー:", error);
+        failCount++;
       }
     }
     
     // 保存完了後に保留中のシフトをクリア
+    const totalChanges = pendingShifts.length;
     setPendingShifts([]);
     
-    toast({
-      title: "シフトの変更を保存しました",
-      description: `${pendingShifts.length}件のシフト変更が保存されました。`,
-    });
+    // 結果に応じた通知を表示
+    if (failCount === 0) {
+      toast({
+        title: "シフト設定の保存完了",
+        description: `${totalChanges}件のシフト変更がすべて正常に保存されました。`,
+        variant: "default",
+      });
+    } else {
+      toast({
+        title: "シフト設定の保存完了（一部エラー）",
+        description: `${totalChanges}件中${totalChanges - failCount}件が保存され、${failCount}件が失敗しました。`,
+        variant: "destructive",
+      });
+    }
   };
   
   // 講師でない場合はリダイレクト
