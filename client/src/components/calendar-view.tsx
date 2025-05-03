@@ -215,18 +215,18 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   return (
                     <div key={index} className="mt-0.5 mb-0.5 mx-0.5 min-w-0 w-auto">
                       <div 
-                        className={`px-1 py-0.5 text-[9px] leading-tight rounded ${bgColorClass} text-white text-center relative group overflow-hidden w-full cursor-pointer`}
+                        className={`px-1 py-1 text-[9px] leading-tight rounded ${bgColorClass} text-white text-center relative group w-full cursor-pointer`}
                         title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
                         onClick={(e) => {
                           e.stopPropagation(); // 日付クリックイベントが発火するのを防ぐ
                           onBookingClick?.(booking);
                         }}
-                        style={{ height: 'auto', maxWidth: '100%', minHeight: '22px' }}
+                        style={{ height: 'auto', maxWidth: '100%', minHeight: '26px', overflow: 'visible' }}
                       >
-                        <div className="flex flex-col">
-                          <span className="truncate text-[9px] font-medium">{booking.timeSlot.split('-')[0]}</span>
+                        <div className="flex flex-col space-y-1">
+                          <span className="truncate text-[10px] font-medium">{booking.timeSlot.split('-')[0]}</span>
                           {booking.studentName && (
-                            <span className="truncate text-[10px] bg-white bg-opacity-50 text-black rounded px-1 py-0.5 font-semibold leading-tight">
+                            <span className="truncate text-[10px] bg-white bg-opacity-50 text-black rounded-sm px-1 py-0.5 font-semibold leading-tight">
                               {booking.studentName}
                             </span>
                           )}

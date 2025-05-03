@@ -69,7 +69,7 @@ export function BookingDetailModal({
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          {/* 日付と時間 */}
+          {/* 1. 日付と時間 */}
           <div className="flex items-start">
             <Calendar className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
             <div>
@@ -78,16 +78,7 @@ export function BookingDetailModal({
             </div>
           </div>
           
-          {/* 科目 */}
-          <div className="flex items-start">
-            <BookOpen className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-            <div>
-              <p className="font-medium text-gray-900">科目</p>
-              <p className="text-sm text-gray-600">{booking.subject}</p>
-            </div>
-          </div>
-          
-          {/* 生徒情報 */}
+          {/* 2. 生徒情報 */}
           {booking.studentName && (
             <div className="flex items-start">
               <User className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
@@ -102,6 +93,15 @@ export function BookingDetailModal({
               </div>
             </div>
           )}
+          
+          {/* 3. 科目 */}
+          <div className="flex items-start">
+            <BookOpen className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+            <div>
+              <p className="font-medium text-gray-900">科目</p>
+              <p className="text-sm text-gray-600">{booking.subject}</p>
+            </div>
+          </div>
           
           {/* 講師情報 */}
           {booking.tutorName && (
@@ -136,7 +136,7 @@ export function BookingDetailModal({
             </div>
           )}
           
-          {/* レポート状態 */}
+          {/* 4. 前回授業のレポート */}
           <div className="flex items-start">
             <FileText className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
             <div>
@@ -150,6 +150,16 @@ export function BookingDetailModal({
               )}
             </div>
           </div>
+          
+          {/* レポート内容があれば表示 */}
+          {isCompletedWithReport && booking.reportContent && (
+            <div className="bg-gray-50 p-3 rounded-md mt-2 border border-gray-200">
+              <p className="text-sm font-medium text-gray-900 mb-1">レポート内容</p>
+              <div className="text-sm text-gray-600 whitespace-pre-line">
+                {booking.reportContent}
+              </div>
+            </div>
+          )}
         </div>
         
         <DialogFooter className="flex-col sm:flex-row gap-2">
