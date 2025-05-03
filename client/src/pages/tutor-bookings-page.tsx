@@ -3,14 +3,15 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isBefore, isToday } from "date-fns";
 import { ja } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
+import { BookingDetailModal } from "@/components/booking-detail-modal";
+import { CalendarView } from "@/components/calendar-view";
 
 // 予約情報の型定義
 type Booking = {
@@ -29,6 +30,9 @@ export default function TutorBookingsPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedBooking, setSelectedBooking] = useState<Booking & { studentName?: string }>();
+  const [showBookingDetailModal, setShowBookingDetailModal] = useState(false);
+  const [studentDetails, setStudentDetails] = useState<any>(null);
   
   // 講師プロフィールの取得
   const { data: tutorProfile, isLoading: isLoadingProfile } = useQuery({
