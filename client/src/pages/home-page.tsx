@@ -603,7 +603,9 @@ export default function HomePage() {
             <h1 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-gray-700">{user?.displayName || user?.username}</span>
+            <span className="text-gray-700">
+              {user?.displayName || user?.username}
+            </span>
             <Button 
               variant="ghost" 
               size="sm"
@@ -708,110 +710,10 @@ export default function HomePage() {
                 key={forceUpdate ? "updated" : "initial"} // forceUpdateによる強制再描画のためのkey
                 showLegend={user?.role === 'tutor'} // 講師用のみ凡例を表示
                 interactive={user?.role === 'tutor'} // 講師の場合のみインタラクティブに
-                bookings={user?.role === 'tutor'
-                  ? (bookings && bookings.length > 0) ? bookings.map(booking => ({
-                      ...booking,
-                      studentName: getStudentName(booking.studentId)
-                    })) : [
-                      // 4/29の予定
-                      {
-                        id: 1001,
-                        createdAt: new Date(),
-                        userId: user.id,
-                        tutorId: user.id,
-                        studentId: 1,
-                        tutorShiftId: 1,
-                        date: "2025-04-29",
-                        timeSlot: "16:00-17:30",
-                        subject: "数学",
-                        status: "confirmed",
-                        reportStatus: null,
-                        reportContent: null,
-                        studentName: "山田 太郎"
-                      },
-                      {
-                        id: 1002,
-                        createdAt: new Date(),
-                        userId: user.id,
-                        tutorId: user.id,
-                        studentId: 2,
-                        tutorShiftId: 2,
-                        date: "2025-04-29",
-                        timeSlot: "18:00-19:30",
-                        subject: "英語",
-                        status: "confirmed",
-                        reportStatus: null,
-                        reportContent: null,
-                        studentName: "佐藤 花子"
-                      },
-                      {
-                        id: 1003,
-                        createdAt: new Date(),
-                        userId: user.id,
-                        tutorId: user.id,
-                        studentId: 3,
-                        tutorShiftId: 3,
-                        date: "2025-04-29",
-                        timeSlot: "20:00-21:30",
-                        subject: "理科",
-                        status: "confirmed",
-                        reportStatus: null,
-                        reportContent: null,
-                        studentName: "鈴木 一郎"
-                      },
-                      // 4/30の予定
-                      {
-                        id: 2001,
-                        createdAt: new Date(),
-                        userId: user.id,
-                        tutorId: user.id,
-                        studentId: 1,
-                        tutorShiftId: 4,
-                        date: "2025-04-30",
-                        timeSlot: "16:00-17:30",
-                        subject: "物理",
-                        status: "confirmed",
-                        reportStatus: null,
-                        reportContent: null,
-                        studentName: "山田 太郎"
-                      },
-                      {
-                        id: 2002,
-                        createdAt: new Date(),
-                        userId: user.id,
-                        tutorId: user.id,
-                        studentId: 2,
-                        tutorShiftId: 5,
-                        date: "2025-04-30",
-                        timeSlot: "18:00-19:30",
-                        subject: "化学",
-                        status: "confirmed",
-                        reportStatus: null,
-                        reportContent: null,
-                        studentName: "佐藤 花子"
-                      },
-                      // 5/1の予定
-                      {
-                        id: 3001,
-                        createdAt: new Date(),
-                        userId: user.id,
-                        tutorId: user.id,
-                        studentId: 3,
-                        tutorShiftId: 6,
-                        date: "2025-05-01",
-                        timeSlot: "16:00-17:30",
-                        subject: "社会",
-                        status: "confirmed",
-                        reportStatus: null,
-                        reportContent: null,
-                        studentName: "鈴木 一郎"
-                      }
-                    ]
-                  : (bookings || []).map(booking => ({
-                      ...booking,
-                      studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-                    }))
-                } 
+                bookings={(bookings || []).map(booking => ({
+                    ...booking,
+                    studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+                }))}
               />
             )}
           </div>
