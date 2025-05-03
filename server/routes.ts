@@ -868,7 +868,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingShift) {
         // 既存のシフトを更新
         shift = await storage.updateTutorShift(existingShift.id, {
-          isAvailable: isAvailable ?? existingShift.isAvailable
+          isAvailable: isAvailable ?? existingShift.isAvailable,
+          subject: "available" // シフト更新時にsubjectも強制的に上書き
         });
       } else {
         // 新しいシフトを作成
