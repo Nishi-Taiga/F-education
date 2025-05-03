@@ -72,6 +72,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const bookings = await storage.getBookingsByUserId(userId);
     res.json(bookings);
   });
+  
+  // 授業の詳細情報取得
+  app.get("/api/bookings/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const role = req.user!.role;
+    const bookingId = parseInt(req.params.id);
+    
+    try {
+      const booking = await storage.getBookingById(bookingId);
+      
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
+      // 生徒または保護者アカウントは自分の予約のみ確認可能
+      if (role === 'student' || role === 'parent') {
+        // studentIdを持つ生徒アカウントの場合は、自分の予約のみアクセス可能
+        if (role === 'student' && req.user!.studentId) {
+          if (booking.studentId !== req.user!.studentId) {
+            return res.status(403).json({ message: "Not authorized to view this booking" });
+          }
+        } 
+        // 保護者アカウントの場合は、子供の予約のみアクセス可能
+        else if (booking.userId !== userId) {
+          return res.status(403).json({ message: "Not authorized to view this booking" });
+        }
+      }
+      // 講師アカウントは自分の担当授業のみ確認可能
+      else if (role === 'tutor') {
+        const tutorProfile = await storage.getTutorByUserId(userId);
+        if (!tutorProfile || booking.tutorId !== tutorProfile.id) {
+          return res.status(403).json({ message: "Not authorized to view this booking" });
+        }
+      }
+      
+      // 生徒情報を取得してレスポンスに追加
+      let studentName = undefined;
+      let tutorName = undefined;
+      let studentDetails = null;
+      let previousReport = null;
+      
+      if (booking.studentId) {
+        const student = await storage.getStudent(booking.studentId);
+        if (student) {
+          studentName = `${student.lastName} ${student.firstName}`;
+          
+          // 前回の授業レポートを取得
+          previousReport = await getPreviousReport(booking.studentId, booking.date, booking.tutorId);
+          
+          // 講師の場合は生徒の詳細情報も提供
+          if (role === 'tutor') {
+            studentDetails = {
+              lastName: student.lastName,
+              firstName: student.firstName,
+              school: student.school,
+              grade: student.grade,
+              address: student.userId ? await getParentAddress(student.userId) : null,
+              phone: student.userId ? await getParentPhone(student.userId) : null
+            };
+          }
+        }
+      }
+      
+      // 講師情報を取得
+      if (booking.tutorId) {
+        const tutor = await storage.getTutor(booking.tutorId);
+        if (tutor) {
+          tutorName = `${tutor.lastName} ${tutor.firstName}`;
+        }
+      }
+      
+      res.json({
+        ...booking,
+        studentName,
+        tutorName,
+        studentDetails,
+        previousReport
+      });
+    } catch (error) {
+      res.status(400).json({ message: "Failed to get booking details", error });
+    }
+  });
 
   // Create a new booking
   app.post("/api/bookings", async (req, res) => {

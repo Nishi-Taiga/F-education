@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Booking } from "@shared/schema";
-import { FileText, User, Calendar, Clock, BookOpen, MapPin, Phone } from "lucide-react";
+import { FileText, User, Calendar, Clock, BookOpen, MapPin, Phone, History } from "lucide-react";
 import { format } from "date-fns";
 
 interface BookingDetailModalProps {
@@ -15,6 +15,10 @@ interface BookingDetailModalProps {
   booking: Booking & { 
     studentName?: string;
     tutorName?: string;
+    previousReport?: {
+      date: string;
+      content: string;
+    } | null;
   };
   onClose: () => void;
   onCreateReport?: () => void;
@@ -138,9 +142,29 @@ export function BookingDetailModal({
           
           {/* 4. 前回授業のレポート */}
           <div className="flex items-start">
+            <History className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+            <div>
+              <p className="font-medium text-gray-900">前回の授業レポート</p>
+              {booking.previousReport ? (
+                <div className="text-sm text-gray-600">
+                  <p className="text-xs text-gray-500">{booking.previousReport.date}</p>
+                  <div className="bg-gray-50 p-3 rounded-md mt-1 border border-gray-200 max-h-40 overflow-y-auto">
+                    <div className="text-sm text-gray-600 whitespace-pre-line">
+                      {booking.previousReport.content}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">前回のレポートはありません。</p>
+              )}
+            </div>
+          </div>
+          
+          {/* レポート状態 */}
+          <div className="flex items-start">
             <FileText className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
             <div>
-              <p className="font-medium text-gray-900">レポート状態</p>
+              <p className="font-medium text-gray-900">今回の授業レポート</p>
               {isCompletedWithReport ? (
                 <p className="text-sm text-green-600 font-medium">作成済み</p>
               ) : isPastLesson() ? (
@@ -151,11 +175,11 @@ export function BookingDetailModal({
             </div>
           </div>
           
-          {/* レポート内容があれば表示 */}
+          {/* 今回のレポート内容があれば表示 */}
           {isCompletedWithReport && booking.reportContent && (
             <div className="bg-gray-50 p-3 rounded-md mt-2 border border-gray-200">
               <p className="text-sm font-medium text-gray-900 mb-1">レポート内容</p>
-              <div className="text-sm text-gray-600 whitespace-pre-line">
+              <div className="text-sm text-gray-600 whitespace-pre-line max-h-40 overflow-y-auto">
                 {booking.reportContent}
               </div>
             </div>

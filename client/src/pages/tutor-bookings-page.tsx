@@ -140,24 +140,40 @@ export default function TutorBookingsPage() {
   
   // 予約カードがクリックされたときの処理
   const handleBookingClick = async (booking: Booking & { studentName?: string }) => {
-    // クリックされた予約を選択
-    setSelectedBooking(booking);
-    
-    // 生徒情報を取得
-    if (booking.studentId) {
-      try {
-        const response = await fetch(`/api/students/${booking.studentId}`);
-        if (response.ok) {
-          const studentDetails = await response.json();
-          setStudentDetails(studentDetails);
+    try {
+      // 予約の詳細情報を取得 (生徒情報や前回のレポートも含む)
+      const response = await fetch(`/api/bookings/${booking.id}`);
+      if (response.ok) {
+        const bookingDetails = await response.json();
+        setSelectedBooking(bookingDetails);
+        
+        // 生徒詳細情報を設定
+        setStudentDetails(bookingDetails.studentDetails || null);
+      } else {
+        // 詳細が取得できない場合は、元の予約情報を使用
+        setSelectedBooking(booking);
+        
+        // 生徒情報を個別に取得
+        if (booking.studentId) {
+          try {
+            const studentResponse = await fetch(`/api/students/${booking.studentId}`);
+            if (studentResponse.ok) {
+              const studentDetails = await studentResponse.json();
+              setStudentDetails(studentDetails);
+            } else {
+              setStudentDetails(null);
+            }
+          } catch (error) {
+            console.error("生徒情報の取得に失敗しました", error);
+            setStudentDetails(null);
+          }
         } else {
           setStudentDetails(null);
         }
-      } catch (error) {
-        console.error("生徒情報の取得に失敗しました", error);
-        setStudentDetails(null);
       }
-    } else {
+    } catch (error) {
+      console.error("予約詳細の取得に失敗しました", error);
+      setSelectedBooking(booking);
       setStudentDetails(null);
     }
     
