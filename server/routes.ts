@@ -508,6 +508,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (student) {
           students = [student];
         }
+      } else if (role === 'tutor') {
+        // 講師の場合は予約に関連する生徒情報を取得
+        const tutorProfile = await storage.getTutorByUserId(userId);
+        if (tutorProfile) {
+          const bookings = await storage.getBookingsByTutorId(tutorProfile.id);
+          
+          // 予約から生徒IDを抽出（重複を除去）
+          const studentIds = new Set<number>();
+          bookings.forEach(booking => {
+            if (booking.studentId !== null) {
+              studentIds.add(booking.studentId);
+            }
+          });
+          
+          // 生徒情報を取得
+          students = await Promise.all(
+            Array.from(studentIds).map(async (id) => {
+              const student = await storage.getStudent(id);
+              return student!;
+            })
+          ).then(results => results.filter(Boolean) as Student[]);
+        }
       } else {
         // 保護者または通常アカウントの場合は全ての生徒情報を取得
         students = await storage.getStudentsByUserId(userId);
@@ -1001,7 +1023,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const bookings = await storage.getBookingsByTutorId(tutor.id);
-      res.json(bookings);
+      
+      // 生徒名を付加した予約情報を作成
+      const bookingsWithStudentInfo = await Promise.all(
+        bookings.map(async (booking) => {
+          let studentName = undefined;
+          
+          if (booking.studentId) {
+            const student = await storage.getStudent(booking.studentId);
+            if (student) {
+              studentName = `${student.lastName} ${student.firstName}`;
+            }
+          }
+          
+          return {
+            ...booking,
+            studentName
+          };
+        })
+      );
+      
+      res.json(bookingsWithStudentInfo);
     } catch (error) {
       res.status(400).json({ message: "Failed to fetch tutor bookings", error });
     }
