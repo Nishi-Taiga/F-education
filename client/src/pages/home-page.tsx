@@ -63,6 +63,9 @@ export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const [, navigate] = useLocation();
   
+  // 生徒情報の読み込みを追跡する状態
+  const [studentsLoaded, setStudentsLoaded] = useState(false);
+  
   // キャンセル関連の状態
   const [selectedBooking, setSelectedBooking] = useState<(Booking & { studentName?: string }) | null>(null);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
@@ -138,6 +141,13 @@ export default function HomePage() {
   
   const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
     queryKey: ["/api/students"],
+    onSuccess: (data) => {
+      if (data && data.length > 0) {
+        console.log(`生徒データ取得成功: ${data.length}件`);
+        setStudentsLoaded(true);
+      }
+    },
+    staleTime: 5 * 60 * 1000, // 5分間キャッシュ有効
   });
   
   // 講師アカウントの場合は講師プロフィール情報を取得
@@ -154,6 +164,12 @@ export default function HomePage() {
   }>>({
     queryKey: ["/api/student-tickets"],
     enabled: !!user && user.role !== 'tutor',
+    onSuccess: (data) => {
+      if (data && data.length > 0) {
+        console.log(`チケットデータ取得成功: ${data.length}件`);
+      }
+    },
+    staleTime: 5 * 60 * 1000, // 5分間キャッシュ有効
   });
   
   // 開発用：チケットを追加するミューテーション
