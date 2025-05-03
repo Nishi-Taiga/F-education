@@ -1217,16 +1217,17 @@ export class DatabaseStorage implements IStorage {
   }
   
   // 科目、日付、時間帯に基づいて利用可能な講師を取得
-  async getAvailableTutorsBySubject(subject: string, date: string, timeSlot: string): Promise<any[]> {
+  async getAvailableTutorsBySubject(subject: string, date: string, timeSlot: string, schoolLevel?: string): Promise<any[]> {
     try {
-      console.log(`[API] 利用可能な講師検索: 科目=${subject}, 日付=${date}, 時間=${timeSlot}`);
+      console.log(`[API] 利用可能な講師検索: 科目=${subject}, 日付=${date}, 時間=${timeSlot}, 学校区分=${schoolLevel || '未指定'}`);
       
       // 1. 講師シフトを取得 (指定した日時にONになっているシフトで、予約可能なもの)
       const availableShifts = await db
         .select({
           shift_id: tutorShifts.id,
           tutor_id: tutorShifts.tutorId,
-          shift_subject: tutorShifts.subject
+          shift_subject: tutorShifts.subject,
+          shift_school_level: tutorShifts.schoolLevel
         })
         .from(tutorShifts)
         .where(
@@ -1273,6 +1274,7 @@ export class DatabaseStorage implements IStorage {
         .select({
           shift_id: tutorShifts.id,
           shift_subject: tutorShifts.subject,
+          shift_school_level: tutorShifts.schoolLevel,
           tutor_id: tutors.id,
           last_name: tutors.lastName,
           first_name: tutors.firstName,
@@ -1324,54 +1326,68 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      // 5. 科目でフィルタリング
-      const filteredResults = subject 
-        ? results.filter(r => {
-            // 講師のシフトに設定された科目を取得
-            const shiftSubject = r.shift_subject || "";
-            console.log(`[API] 講師ID ${r.tutor_id} のシフト科目: ${shiftSubject}, 検索科目: ${subject}`);
-            
-            // すべてのシフトが対象の場合（科目指定なし）
-            if (shiftSubject === "すべての科目" || shiftSubject === "全科目") {
-              console.log(`[API] 講師ID ${r.tutor_id} はすべての科目を担当可能`);
-              return true;
-            }
-            
-            // シフト科目が未設定またはemptyの場合は、講師情報から取得した科目でチェック
-            if (!shiftSubject || shiftSubject === "") {
-              const tutorSubjects = tutorInfoMap.get(r.tutor_id) || "";
-              console.log(`[API] シフト科目が未設定のため、講師の担当科目で確認: ${tutorSubjects}`);
-              
-              // 講師の担当科目も未設定の場合は、すべての科目に対応可能と見なす
-              if (!tutorSubjects || tutorSubjects === "") {
-                console.log(`[API] 講師の担当科目も未設定のため、すべての科目対応として扱います`);
-                return true;
-              }
-              
-              // 講師の担当科目と一致するかチェック - いずれかの科目がマッチするかをチェック
-              return targetSubjects.some(sub => tutorSubjects.includes(sub));
-            }
-            
-            // シフト科目が設定されている場合は、指定された科目と一致するかチェック
-            // いずれかの科目がマッチするかをチェック
-            const matchFound = targetSubjects.some(sub => shiftSubject.includes(sub));
-            if (matchFound) {
-              console.log(`[API] 講師ID ${r.tutor_id} の科目 ${shiftSubject} が ${targetSubjects.join(' または ')} にマッチしました`);
-              return true;
-            }
-            
-            // 特別な対応: 小学生の科目
-            // 「小学国語」「小学算数」などのフォーマットに対応
-            if (shiftSubject.includes("小学") && targetSubjects.some(sub => shiftSubject.includes(sub))) {
-              console.log(`[API] 講師ID ${r.tutor_id} の科目 ${shiftSubject} が小学科目として ${targetSubjects.join(' または ')} にマッチしました`);
-              return true;
-            }
-            
+      // 5. 科目と学校区分でフィルタリング
+      const filteredResults = results.filter(r => {
+        // 学校区分のチェック（指定されている場合のみ）
+        if (schoolLevel) {
+          const shiftSchoolLevel = r.shift_school_level || "";
+          // 学校区分が指定されていて、シフトの学校区分と一致しない場合
+          if (shiftSchoolLevel && shiftSchoolLevel !== schoolLevel && shiftSchoolLevel !== "all") {
+            console.log(`[API] 講師ID ${r.tutor_id} の学校区分 ${shiftSchoolLevel} が ${schoolLevel} と一致しません`);
             return false;
-          })
-        : results;
+          }
+        }
+        
+        // 科目のチェック（指定されている場合のみ）
+        if (subject) {
+          // 講師のシフトに設定された科目を取得
+          const shiftSubject = r.shift_subject || "";
+          console.log(`[API] 講師ID ${r.tutor_id} のシフト科目: ${shiftSubject}, 検索科目: ${subject}`);
+          
+          // すべてのシフトが対象の場合（科目指定なし）
+          if (shiftSubject === "すべての科目" || shiftSubject === "全科目") {
+            console.log(`[API] 講師ID ${r.tutor_id} はすべての科目を担当可能`);
+            return true;
+          }
+          
+          // シフト科目が未設定またはemptyの場合は、講師情報から取得した科目でチェック
+          if (!shiftSubject || shiftSubject === "") {
+            const tutorSubjects = tutorInfoMap.get(r.tutor_id) || "";
+            console.log(`[API] シフト科目が未設定のため、講師の担当科目で確認: ${tutorSubjects}`);
+            
+            // 講師の担当科目も未設定の場合は、すべての科目に対応可能と見なす
+            if (!tutorSubjects || tutorSubjects === "") {
+              console.log(`[API] 講師の担当科目も未設定のため、すべての科目対応として扱います`);
+              return true;
+            }
+            
+            // 講師の担当科目と一致するかチェック - いずれかの科目がマッチするかをチェック
+            return targetSubjects.some(sub => tutorSubjects.includes(sub));
+          }
+          
+          // シフト科目が設定されている場合は、指定された科目と一致するかチェック
+          // いずれかの科目がマッチするかをチェック
+          const matchFound = targetSubjects.some(sub => shiftSubject.includes(sub));
+          if (matchFound) {
+            console.log(`[API] 講師ID ${r.tutor_id} の科目 ${shiftSubject} が ${targetSubjects.join(' または ')} にマッチしました`);
+            return true;
+          }
+          
+          // 特別な対応: 小学生の科目
+          // 「小学国語」「小学算数」などのフォーマットに対応
+          if (shiftSubject.includes("小学") && targetSubjects.some(sub => shiftSubject.includes(sub))) {
+            console.log(`[API] 講師ID ${r.tutor_id} の科目 ${shiftSubject} が小学科目として ${targetSubjects.join(' または ')} にマッチしました`);
+            return true;
+          }
+          
+          return false;
+        }
+        
+        // 科目指定がない場合は、学校区分だけのチェックでOK
+        return true;
+      });
       
-      console.log(`[API] 科目フィルタ適用後の講師: ${filteredResults.length}件`);
+      console.log(`[API] フィルタ適用後の講師: ${filteredResults.length}件`);
       
       return filteredResults;
     } catch (error) {

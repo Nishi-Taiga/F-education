@@ -96,7 +96,7 @@ export default function BookingPage() {
 
   // 利用可能な講師を取得
   const { data: availableTutors, isLoading: isLoadingTutors } = useQuery({
-    queryKey: ["/api/tutors/available", selectedSubject, selectedDate, selectedTimeSlot],
+    queryKey: ["/api/tutors/available", selectedSubject, selectedDate, selectedTimeSlot, studentSchoolLevel],
     queryFn: async () => {
       if (!selectedSubject || !selectedDate || !selectedTimeSlot) return null;
       
@@ -105,6 +105,11 @@ export default function BookingPage() {
         date: selectedDate,
         timeSlot: selectedTimeSlot
       });
+      
+      // 学校区分が設定されている場合はパラメータに追加
+      if (studentSchoolLevel) {
+        params.append('schoolLevel', studentSchoolLevel);
+      }
       
       const res = await apiRequest('GET', `/api/tutors/available?${params}`);
       if (!res.ok) throw new Error('講師情報の取得に失敗しました');
