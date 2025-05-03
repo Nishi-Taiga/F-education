@@ -618,6 +618,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
   
+  // 親の電話番号を取得するヘルパー関数
+  async function getParentPhone(userId: number): Promise<string | null> {
+    try {
+      const user = await storage.getUser(userId);
+      return user?.phone || null;
+    } catch (error) {
+      console.error("Failed to get parent phone:", error);
+      return null;
+    }
+  }
+  
+  // 生徒の前回の授業レポートを取得するヘルパー関数
+  async function getPreviousReport(studentId: number, currentDate: string, tutorId: number): Promise<{date: string, content: string} | null> {
+    try {
+      // 現在の日付より前の、同じ生徒と講師の授業を取得
+      const bookings = await storage.getBookingsByTutorId(tutorId);
+      
+      // 現在の授業以前の、同じ生徒のレポート作成済み授業をフィルタリング
+      const previousBookings = bookings.filter(b => 
+        b.studentId === studentId && 
+        b.date < currentDate && 
+        b.reportStatus === 'completed' &&
+        b.reportContent
+      );
+      
+      // 日付で降順ソート（最新のものを先頭に）
+      previousBookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      // 直近の授業レポートを返す
+      if (previousBookings.length > 0) {
+        const mostRecent = previousBookings[0];
+        return {
+          date: mostRecent.date,
+          content: mostRecent.reportContent || ''
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Failed to get previous report:", error);
+      return null;
+    }
+  }
+  
   // 生徒のチケット残数取得
   app.get("/api/students/:id/tickets", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
