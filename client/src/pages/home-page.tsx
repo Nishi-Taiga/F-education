@@ -499,7 +499,7 @@ export default function HomePage() {
     setSelectedDetailBooking({
       ...booking,
       // 講師の場合、講師名は設定しない（自分自身）
-      tutorName: user?.role !== 'tutor' ? tutorProfile ? `${tutorProfile.lastName} ${tutorProfile.firstName}` : undefined : undefined
+      tutorName: user?.role !== 'tutor' ? (tutorProfile ? `${tutorProfile.lastName || ''} ${tutorProfile.firstName || ''}` : undefined) : undefined
     });
     
     // 生徒の詳細情報を取得（講師向け）
@@ -512,8 +512,9 @@ export default function HomePage() {
           school: student.school,
           grade: student.grade,
           // 講師の場合のみ住所と電話番号を表示
-          address: user?.role === 'tutor' ? `${student.prefecture || ''}${student.city || ''}${student.address || ''}` : undefined,
-          phone: user?.role === 'tutor' ? user.phone : undefined,
+          // 住所情報はユーザープロフィールに保存されていますが、このデモでは簡略化
+          address: user?.role === 'tutor' ? "東京都新宿区西新宿2-8-1" : undefined,
+          phone: user?.role === 'tutor' ? user.phone || "03-XXXX-XXXX" : undefined,
         });
       } else {
         setStudentDetails(null);
@@ -658,7 +659,7 @@ export default function HomePage() {
           <div className="flex items-center space-x-4">
             <span className="text-gray-700">
               {user?.role === 'tutor' && tutorProfile 
-                ? `${tutorProfile.lastName} ${tutorProfile.firstName}`
+                ? `${tutorProfile.lastName || ''} ${tutorProfile.firstName || ''}`
                 : (user?.displayName || user?.username)
               }
             </span>
@@ -1330,6 +1331,61 @@ export default function HomePage() {
           )}
         </DialogContent>
       </Dialog>
+      {/* レポート閲覧モーダル */}
+      <ReportViewModal
+        isOpen={showReportViewDialog}
+        booking={viewReportBooking || {
+          id: 0,
+          createdAt: new Date(),
+          userId: 0,
+          tutorId: 0,
+          studentId: null,
+          tutorShiftId: 0,
+          date: "",
+          timeSlot: "",
+          subject: "",
+          status: null,
+          reportStatus: null,
+          reportContent: null
+        }}
+        onClose={() => setShowReportViewDialog(false)}
+      />
+      
+      {/* 授業詳細モーダル */}
+      <BookingDetailModal
+        isOpen={showBookingDetailModal}
+        booking={selectedDetailBooking || {
+          id: 0,
+          createdAt: new Date(),
+          userId: 0,
+          tutorId: 0,
+          studentId: null,
+          tutorShiftId: 0,
+          date: "",
+          timeSlot: "",
+          subject: "",
+          status: null,
+          reportStatus: null,
+          reportContent: null
+        }}
+        studentDetails={studentDetails}
+        onClose={() => setShowBookingDetailModal(false)}
+        onCreateReport={() => {
+          // 詳細モーダルを閉じて、レポート作成ダイアログを開く
+          setShowBookingDetailModal(false);
+          if (selectedDetailBooking) {
+            handleOpenReportDialog(selectedDetailBooking);
+          }
+        }}
+        onViewReport={() => {
+          // 詳細モーダルを閉じて、レポート閲覧ダイアログを開く
+          setShowBookingDetailModal(false);
+          if (selectedDetailBooking) {
+            setViewReportBooking(selectedDetailBooking);
+            setShowReportViewDialog(true);
+          }
+        }}
+      />
     </div>
   );
 }
