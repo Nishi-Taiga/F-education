@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { BookingDetailModal } from "@/components/booking-detail-modal";
 import { CalendarView } from "@/components/calendar-view";
+import { Calendar } from "@/components/ui/calendar";
 
 // 予約情報の型定義
 type Booking = {
@@ -72,6 +73,24 @@ export default function TutorBookingsPage() {
     enabled: !!tutorProfile
   });
   
+  // 生徒情報の取得
+  const { data: students, isLoading: isLoadingStudents } = useQuery({
+    queryKey: ["/api/students"],
+    queryFn: async () => {
+      try {
+        const response = await fetch("/api/students");
+        if (!response.ok) {
+          throw new Error("Failed to fetch students");
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching students:", error);
+        throw error;
+      }
+    },
+    retry: false
+  });
+  
   // 講師でない場合はリダイレクト
   useEffect(() => {
     if (user && user.role !== "tutor") {
@@ -111,8 +130,43 @@ export default function TutorBookingsPage() {
   
   const bookingDates = getBookingDates();
   
+  // 生徒IDから生徒名を取得する関数
+  const getStudentName = (studentId: number | null): string | undefined => {
+    if (!studentId || !students) return undefined;
+    const student = students.find((s: any) => s.id === studentId);
+    if (!student) return undefined;
+    return `${student.lastName} ${student.firstName}`;
+  };
+  
+  // 予約カードがクリックされたときの処理
+  const handleBookingClick = async (booking: Booking & { studentName?: string }) => {
+    // クリックされた予約を選択
+    setSelectedBooking(booking);
+    
+    // 生徒情報を取得
+    if (booking.studentId) {
+      try {
+        const response = await fetch(`/api/students/${booking.studentId}`);
+        if (response.ok) {
+          const studentDetails = await response.json();
+          setStudentDetails(studentDetails);
+        } else {
+          setStudentDetails(null);
+        }
+      } catch (error) {
+        console.error("生徒情報の取得に失敗しました", error);
+        setStudentDetails(null);
+      }
+    } else {
+      setStudentDetails(null);
+    }
+    
+    // モーダルを表示
+    setShowBookingDetailModal(true);
+  };
+  
   // 読み込み中の表示
-  if (isLoadingProfile || isLoadingBookings) {
+  if (isLoadingProfile || isLoadingBookings || isLoadingStudents) {
     return (
       <div className="container py-8 flex justify-center">
         <div className="text-center">
@@ -127,115 +181,99 @@ export default function TutorBookingsPage() {
     return null;
   }
   
+  // 生徒名を含む予約データを作成
+  const bookingsWithStudentNames = bookings?.map((booking: Booking) => ({
+    ...booking,
+    studentName: getStudentName(booking.studentId)
+  })) || [];
+  
   return (
     <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">予約管理</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* カレンダー表示（デスクトップのみ） */}
-        <div className="hidden md:block md:col-span-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>予約カレンダー</CardTitle>
-              <CardDescription>
-                授業の予約がある日付はハイライトされます
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                className="rounded-md border"
-                modifiers={{
-                  booked: bookingDates
-                }}
-                modifiersStyles={{
-                  booked: {
-                    backgroundColor: "rgba(var(--primary), 0.1)",
-                    fontWeight: "bold"
-                  }
-                }}
-                locale={ja}
-              />
-              
-              {bookingsOnSelectedDate.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium mb-2">
-                    {selectedDateStr ? format(parseISO(selectedDateStr), "yyyy年M月d日", { locale: ja }) : ""}
-                    の予約 ({bookingsOnSelectedDate.length}件)
-                  </h3>
-                  <ul className="space-y-2">
-                    {bookingsOnSelectedDate.map((booking: Booking) => (
-                      <li key={booking.id} className="text-sm p-2 border rounded-md">
-                        <div className="flex justify-between">
-                          <div className="font-medium">{booking.timeSlot}</div>
-                          <Badge variant={booking.status === "cancelled" ? "destructive" : "default"}>
-                            {booking.status === "cancelled" ? "キャンセル" : "確定"}
-                          </Badge>
-                        </div>
-                        <div>{booking.subject || "科目未設定"}</div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      <div className="grid grid-cols-1 gap-6">
+        {/* カレンダービュー（タブレット・デスクトップ・モバイル対応） */}
+        <Card>
+          <CardHeader>
+            <CardTitle>予約カレンダー</CardTitle>
+            <CardDescription>
+              予約をクリックすると詳細が表示されます
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CalendarView 
+              key={`calendar-bookings-${bookingsWithStudentNames.length}`} // 強制再描画のためのkey
+              showLegend={true} // 講師用は凡例を表示
+              interactive={true} // インタラクティブにする
+              onBookingClick={handleBookingClick} // 予約クリック時のハンドラを追加
+              bookings={bookingsWithStudentNames}
+            />
+          </CardContent>
+        </Card>
         
         {/* 授業予約リスト */}
-        <div className="col-span-1 md:col-span-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>授業予約一覧</CardTitle>
-              <CardDescription>
-                授業の予約状況を確認できます
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="upcoming" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="upcoming">
-                    今後の予約 ({upcomingBookings.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="past">
-                    過去の予約 ({pastBookings.length})
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="upcoming">
-                  {upcomingBookings.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      現在予約はありません
-                    </div>
-                  ) : (
-                    <div className="space-y-4 mt-4">
-                      {upcomingBookings.map((booking: Booking) => (
-                        <BookingCard key={booking.id} booking={booking} />
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="past">
-                  {pastBookings.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      過去の予約はありません
-                    </div>
-                  ) : (
-                    <div className="space-y-4 mt-4">
-                      {pastBookings.map((booking: Booking) => (
-                        <BookingCard key={booking.id} booking={booking} isPast />
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>授業予約一覧</CardTitle>
+            <CardDescription>
+              授業の予約状況を確認できます
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="upcoming" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="upcoming">
+                  今後の予約 ({upcomingBookings.length})
+                </TabsTrigger>
+                <TabsTrigger value="past">
+                  過去の予約 ({pastBookings.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="upcoming">
+                {upcomingBookings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    現在予約はありません
+                  </div>
+                ) : (
+                  <div className="space-y-4 mt-4">
+                    {upcomingBookings.map((booking: Booking) => (
+                      <BookingCard key={booking.id} booking={booking} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="past">
+                {pastBookings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    過去の予約はありません
+                  </div>
+                ) : (
+                  <div className="space-y-4 mt-4">
+                    {pastBookings.map((booking: Booking) => (
+                      <BookingCard key={booking.id} booking={booking} isPast />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
+      
+      {/* 予約詳細モーダル */}
+      {selectedBooking && (
+        <BookingDetailModal
+          isOpen={showBookingDetailModal}
+          booking={{
+            ...selectedBooking,
+            studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId)
+          }}
+          studentDetails={studentDetails}
+          onClose={() => setShowBookingDetailModal(false)}
+        />
+      )}
     </div>
   );
 }

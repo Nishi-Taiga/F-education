@@ -530,6 +530,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 生徒の詳細情報取得
+  app.get("/api/students/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const studentId = parseInt(req.params.id);
+    
+    try {
+      // 生徒の存在チェック
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      
+      // 権限チェック（講師の場合は生徒情報を見ることができる）
+      const canViewStudent = 
+        student.userId === userId || // 親
+        req.user!.role === 'tutor' || // 講師
+        (req.user!.role === 'student' && req.user!.studentId === studentId); // 自分自身
+      
+      if (!canViewStudent) {
+        return res.status(403).json({ message: "Not authorized to view this student" });
+      }
+      
+      // チケット残数を取得
+      const ticketCount = await storage.getStudentTickets(studentId);
+      
+      // 詳細情報を返す
+      res.json({
+        id: student.id,
+        lastName: student.lastName,
+        firstName: student.firstName,
+        lastNameFurigana: student.lastNameFurigana,
+        firstNameFurigana: student.firstNameFurigana,
+        gender: student.gender,
+        school: student.school,
+        grade: student.grade,
+        ticketCount,
+        // 保護者の住所情報を取得（講師表示用）
+        address: student.userId ? await getParentAddress(student.userId) : null
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get student details", error });
+    }
+  });
+  
+  // 親の住所情報を取得するヘルパー関数
+  async function getParentAddress(userId: number): Promise<string | null> {
+    try {
+      const user = await storage.getUser(userId);
+      if (!user || !user.address) return null;
+      
+      // 郵便番号・都道府県・市区町村・番地を組み合わせて住所を作成
+      let address = '';
+      if (user.postalCode) address += `〒${user.postalCode} `;
+      if (user.prefecture) address += `${user.prefecture}`;
+      if (user.city) address += `${user.city}`;
+      if (user.address) address += `${user.address}`;
+      
+      return address || null;
+    } catch (error) {
+      console.error("Failed to get parent address:", error);
+      return null;
+    }
+  }
+  
   // 生徒のチケット残数取得
   app.get("/api/students/:id/tickets", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
