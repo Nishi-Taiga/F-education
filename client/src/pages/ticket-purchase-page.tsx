@@ -195,11 +195,11 @@ export default function TicketPurchasePage() {
             {studentTickets.length > 0 && (
               <div className="mt-2 bg-gray-50 p-3 rounded-lg">
                 <p className="text-xs text-gray-500 mb-2">生徒別チケット残数</p>
-                <div className="grid grid-cols-1 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {studentTickets.map(ticket => (
-                    <div key={ticket.studentId} className="flex justify-between items-center px-3 py-2 bg-white rounded-md border border-gray-100">
-                      <span className="text-sm font-medium">{ticket.name}</span>
-                      <span className="text-sm font-semibold text-primary">{ticket.ticketCount}枚</span>
+                    <div key={ticket.studentId} className="flex-1 flex justify-between items-center px-3 py-2 bg-white rounded-md border border-gray-100 min-w-[200px] whitespace-nowrap overflow-hidden">
+                      <span className="text-sm font-medium truncate">{ticket.name}</span>
+                      <span className="text-sm font-semibold text-primary ml-2 flex-shrink-0">{ticket.ticketCount}枚</span>
                     </div>
                   ))}
                 </div>

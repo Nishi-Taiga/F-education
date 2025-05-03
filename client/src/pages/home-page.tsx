@@ -678,9 +678,9 @@ export default function HomePage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {studentTickets.map(ticket => (
-                      <div key={ticket.studentId} className="flex-1 flex justify-between items-center bg-gray-50 p-2 rounded-md min-w-[120px]">
-                        <span className="text-sm font-medium">{ticket.name}</span>
-                        <span className="text-base font-bold ml-2">{ticket.ticketCount}枚</span>
+                      <div key={ticket.studentId} className="flex-1 flex justify-between items-center bg-gray-50 p-2 rounded-md min-w-[200px] whitespace-nowrap overflow-hidden">
+                        <span className="text-sm font-medium truncate">{ticket.name}</span>
+                        <span className="text-base font-bold ml-2 flex-shrink-0">{ticket.ticketCount}枚</span>
                       </div>
                     ))}
                   </div>
