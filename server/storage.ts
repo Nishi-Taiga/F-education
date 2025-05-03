@@ -1132,10 +1132,9 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Tutor shift not found");
     }
     
-    // シフトの科目をデフォルトで使用
+    // シフト管理の簡素化に伴い、ユーザーが選択した科目をそのまま使用
     const bookingData = {
-      ...booking,
-      subject: booking.subject || shift.subject
+      ...booking
     };
     
     const [newBooking] = await db
