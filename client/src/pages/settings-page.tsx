@@ -28,8 +28,6 @@ const settingsSchema = z.object({
   prefecture: z.string().optional(),
   city: z.string().optional(),
   address: z.string().optional(),
-  emailNotifications: z.boolean().default(true),
-  smsNotifications: z.boolean().default(false),
 });
 
 type SettingsForm = z.infer<typeof settingsSchema>;
@@ -150,22 +148,10 @@ export default function SettingsPage() {
       prefecture: user?.prefecture || "",
       city: user?.city || "",
       address: user?.address || "",
-      emailNotifications: user?.emailNotifications || true,
-      smsNotifications: user?.smsNotifications || false,
     },
   });
 
-  // 住所情報フォーム
-  const addressForm = useForm<AddressForm>({
-    resolver: zodResolver(addressSchema),
-    defaultValues: {
-      phone: user?.phone || "",
-      postalCode: user?.postalCode || "",
-      prefecture: user?.prefecture || "",
-      city: user?.city || "",
-      address: user?.address || "",
-    },
-  });
+  // 住所情報フォームは設定フォームに統合されました
 
   // 生徒情報フォーム
   const studentForm = useForm<StudentForm>({
@@ -199,8 +185,8 @@ export default function SettingsPage() {
       if (response.data.results && response.data.results.length > 0) {
         const result = response.data.results[0];
         // フォームに住所情報をセット
-        addressForm.setValue('prefecture', result.address1);
-        addressForm.setValue('city', result.address2 + result.address3);
+        settingsForm.setValue('prefecture', result.address1);
+        settingsForm.setValue('city', result.address2 + result.address3);
         
         toast({
           title: "住所が見つかりました",
@@ -224,39 +210,19 @@ export default function SettingsPage() {
     }
   };
 
-  // 設定の更新
+  // 設定の更新（プロフィールと住所情報を統合）
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: SettingsForm) => {
-      const res = await apiRequest("PATCH", "/api/user/settings", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      toast({
-        title: "設定を保存しました",
-        description: "アカウント設定が正常に更新されました。",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "エラーが発生しました",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // 住所情報の更新
-  const updateAddressMutation = useMutation({
-    mutationFn: async (data: AddressForm) => {
+      // アカウント設定（displayName, email, phone, postalCode, prefecture, city, address）を更新
+      // 設定情報と住所情報を含めた1回のAPIリクエスト
       const res = await apiRequest("PATCH", "/api/user/profile", data);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
-        title: "住所情報を保存しました",
-        description: "住所情報が正常に更新されました。",
+        title: "設定を保存しました",
+        description: "アカウント設定と住所情報が正常に更新されました。",
       });
     },
     onError: (error) => {
@@ -608,7 +574,10 @@ export default function SettingsPage() {
   });
 
   const onSubmitSettings = (data: SettingsForm) => {
-    updateSettingsMutation.mutate(data);
+    // 検証エラーがなければ更新を実行
+    if (Object.keys(settingsForm.formState.errors).length === 0) {
+      updateSettingsMutation.mutate(data);
+    }
   };
 
   const onSubmitPasswordChange = (data: PasswordChangeForm) => {
@@ -649,10 +618,6 @@ export default function SettingsPage() {
               <User className="mr-2 h-4 w-4" />
               プロフィール
             </TabsTrigger>
-            <TabsTrigger value="address">
-              <Search className="mr-2 h-4 w-4" />
-              住所情報
-            </TabsTrigger>
             <TabsTrigger value="students">
               <UsersRound className="mr-2 h-4 w-4" />
               生徒管理
@@ -670,81 +635,137 @@ export default function SettingsPage() {
               
               <Form {...settingsForm}>
                 <form onSubmit={settingsForm.handleSubmit(onSubmitSettings)} className="space-y-8">
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    <FormField
-                      control={settingsForm.control}
-                      name="displayName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>氏名</FormLabel>
-                          <FormControl>
-                            <Input placeholder="田中 花子" {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                  <div className="space-y-6">
+                    {/* 基本情報 */}
+                    <div>
+                      <h4 className="text-md font-medium text-gray-700 mb-4">基本情報</h4>
+                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <FormField
+                          control={settingsForm.control}
+                          name="displayName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>氏名</FormLabel>
+                              <FormControl>
+                                <Input placeholder="田中 花子" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={settingsForm.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>メールアドレス</FormLabel>
+                              <FormControl>
+                                <Input placeholder="example@email.com" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
                     
-                    <FormField
-                      control={settingsForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>メールアドレス</FormLabel>
-                          <FormControl>
-                            <Input placeholder="example@email.com" {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-6">通知設定</h3>
-                    
-                    <div className="space-y-4">
+                    {/* 住所情報 */}
+                    <div>
+                      <h4 className="text-md font-medium text-gray-700 mb-4">住所情報</h4>
+                      
                       <FormField
                         control={settingsForm.control}
-                        name="emailNotifications"
+                        name="phone"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md">
+                          <FormItem>
+                            <FormLabel>電話番号</FormLabel>
                             <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
+                              <Input placeholder="090-1234-5678" {...field} />
                             </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>メール通知</FormLabel>
-                              <FormDescription>
-                                予約確認やリマインダーをメールで受け取る
-                              </FormDescription>
-                            </div>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
                       
-                      <FormField
-                        control={settingsForm.control}
-                        name="smsNotifications"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>SMS通知</FormLabel>
-                              <FormDescription>
-                                予約確認やリマインダーをSMSで受け取る
-                              </FormDescription>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
+                      <div className="flex space-x-2 mt-4">
+                        <FormField
+                          control={settingsForm.control}
+                          name="postalCode"
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormLabel>郵便番号</FormLabel>
+                              <div className="flex items-center space-x-2">
+                                <FormControl>
+                                  <Input placeholder="123-4567" {...field} />
+                                </FormControl>
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  size="icon"
+                                  disabled={isSearchingAddress || !field.value || field.value.length < 7}
+                                  onClick={() => searchAddressByPostalCode(field.value)}
+                                >
+                                  {isSearchingAddress ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Search className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <FormField
+                          control={settingsForm.control}
+                          name="prefecture"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>都道府県</FormLabel>
+                              <FormControl>
+                                <Input placeholder="東京都" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={settingsForm.control}
+                          name="city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>市区町村</FormLabel>
+                              <FormControl>
+                                <Input placeholder="渋谷区" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="mt-4">
+                        <FormField
+                          control={settingsForm.control}
+                          name="address"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>番地・マンション名等</FormLabel>
+                              <FormControl>
+                                <Input placeholder="1-2-3 ○○マンション101" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
                   </div>
+                  
+
                   
                   <div className="flex justify-end space-x-4">
                     <Button type="button" variant="outline" onClick={() => navigate("/")}>
@@ -766,121 +787,7 @@ export default function SettingsPage() {
             </div>
           </TabsContent>
 
-          {/* 住所情報タブ */}
-          <TabsContent value="address">
-            <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-6">住所情報</h3>
-              
-              <Form {...addressForm}>
-                <form onSubmit={addressForm.handleSubmit((data) => updateAddressMutation.mutate(data))} className="space-y-6">
-                  <FormField
-                    control={addressForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>電話番号</FormLabel>
-                        <FormControl>
-                          <Input placeholder="090-1234-5678" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
-                  <div className="flex space-x-2">
-                    <FormField
-                      control={addressForm.control}
-                      name="postalCode"
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>郵便番号</FormLabel>
-                          <div className="flex items-center space-x-2">
-                            <FormControl>
-                              <Input placeholder="123-4567" {...field} />
-                            </FormControl>
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="icon"
-                              disabled={isSearchingAddress || !field.value || field.value.length < 7}
-                              onClick={() => searchAddressByPostalCode(field.value)}
-                            >
-                              {isSearchingAddress ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Search className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={addressForm.control}
-                      name="prefecture"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>都道府県</FormLabel>
-                          <FormControl>
-                            <Input placeholder="東京都" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={addressForm.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>市区町村</FormLabel>
-                          <FormControl>
-                            <Input placeholder="渋谷区" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={addressForm.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>番地・マンション名等</FormLabel>
-                        <FormControl>
-                          <Input placeholder="1-2-3 ○○マンション101" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex justify-end space-x-4">
-                    <Button type="button" variant="outline" onClick={() => navigate("/")}>
-                      キャンセル
-                    </Button>
-                    <Button type="submit" disabled={updateAddressMutation.isPending}>
-                      {updateAddressMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          保存中...
-                        </>
-                      ) : (
-                        "保存する"
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </div>
-          </TabsContent>
 
           {/* 生徒情報管理タブ */}
           <TabsContent value="students">
