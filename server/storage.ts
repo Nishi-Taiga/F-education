@@ -438,7 +438,7 @@ export class MemStorage implements IStorage {
       // tutorIdとsubjectはrequired
       tutorId: insertBooking.tutorId,
       tutorShiftId: insertBooking.tutorShiftId,
-      subject: insertBooking.subject || shift.subject, // シフトの科目をデフォルトで使用
+      subject: insertBooking.subject, // シフト管理の簡素化に伴い、ユーザーが選択した科目を使用
       status: insertBooking.status || "confirmed",
       createdAt: now
     };
