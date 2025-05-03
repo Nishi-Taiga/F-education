@@ -512,8 +512,8 @@ export default function HomePage() {
   
   // 今日の授業を取得する関数
   const getTodaysBookings = (): (Booking & { studentName?: string })[] => {
-    // テスト用に4/30を固定で「今日」として設定
-    const today = "2025-04-30"; // 本番では getJapanDate() を使用
+    // 実際の今日の日付を使用
+    const today = getJapanDate();
     return getBookingsByDate(today);
   };
   
@@ -709,7 +709,10 @@ export default function HomePage() {
                 showLegend={user?.role === 'tutor'} // 講師用のみ凡例を表示
                 interactive={user?.role === 'tutor'} // 講師の場合のみインタラクティブに
                 bookings={user?.role === 'tutor'
-                  ? testBookings.length > 0 ? testBookings : [
+                  ? (bookings && bookings.length > 0) ? bookings.map(booking => ({
+                      ...booking,
+                      studentName: getStudentName(booking.studentId)
+                    })) : [
                       // 4/29の予定
                       {
                         id: 1001,
