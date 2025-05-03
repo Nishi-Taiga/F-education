@@ -147,14 +147,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "選択したシフトとチューターが一致しません" });
       }
       
-      // 科目が指定されていない場合はシフトの科目を使用
+      // シフト管理をシンプル化し、subject="available"にしたので、
+      // 科目のチェックをスキップし、bookingDataの科目をそのまま使用する
       if (!bookingData.subject) {
-        bookingData.subject = shift.subject;
-      } else if (bookingData.subject !== shift.subject) {
-        return res.status(400).json({ 
-          message: "選択した科目がシフトの科目と一致しません。選択した科目: " + 
-                  bookingData.subject + ", シフトの科目: " + shift.subject 
-        });
+        // 科目が指定されていない場合は適切な科目を設定
+        return res.status(400).json({ message: "予約には科目の指定が必要です" });
       }
       
       // Create booking and deduct one ticket
