@@ -6,6 +6,7 @@ import { CalendarView } from "@/components/calendar-view";
 import { BookingCard } from "@/components/booking-card";
 import { BookingCancellationModal } from "@/components/booking-cancellation-modal";
 import { ReportViewModal } from "@/components/report-view-modal";
+import { BookingDetailModal } from "@/components/booking-detail-modal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Ticket, CalendarCheck, Settings, Plus, UserCircle, ClipboardList, UserCog, Clock, BookOpen, Scroll, MapPin, GraduationCap, Copy, Check, FileText } from "lucide-react";
@@ -94,6 +95,18 @@ export default function HomePage() {
   // レポート閲覧ダイアログ用の状態
   const [showReportViewDialog, setShowReportViewDialog] = useState(false);
   const [viewReportBooking, setViewReportBooking] = useState<(Booking & { studentName?: string }) | null>(null);
+  
+  // 予約詳細モーダル用の状態
+  const [showBookingDetailModal, setShowBookingDetailModal] = useState(false);
+  const [selectedDetailBooking, setSelectedDetailBooking] = useState<(Booking & { studentName?: string, tutorName?: string }) | null>(null);
+  const [studentDetails, setStudentDetails] = useState<{
+    lastName: string;
+    firstName: string;
+    school: string;
+    grade: string;
+    address?: string;
+    phone?: string;
+  } | null>(null);
   
   // アドレスをコピーする関数
   const copyAddressToClipboard = () => {

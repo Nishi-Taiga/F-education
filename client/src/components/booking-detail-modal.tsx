@@ -1,0 +1,187 @@
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Booking } from "@shared/schema";
+import { FileText, User, Calendar, Clock, BookOpen, MapPin, Phone } from "lucide-react";
+import { format } from "date-fns";
+
+interface BookingDetailModalProps {
+  isOpen: boolean;
+  booking: Booking & { 
+    studentName?: string;
+    tutorName?: string;
+  };
+  onClose: () => void;
+  onCreateReport?: () => void;
+  onViewReport?: () => void;
+  studentDetails?: {
+    lastName: string;
+    firstName: string;
+    school: string;
+    grade: string;
+    address?: string;
+    phone?: string;
+  } | null;
+}
+
+export function BookingDetailModal({
+  isOpen,
+  booking,
+  onClose,
+  onCreateReport,
+  onViewReport,
+  studentDetails
+}: BookingDetailModalProps) {
+  // 授業のステータスを判定
+  const isCompletedWithReport = booking.reportStatus === 'completed';
+  const isCompletedNoReport = booking.reportStatus === 'pending' || booking.reportStatus === null;
+  
+  // 日本時間を取得するヘルパー関数
+  const getJapanTime = () => {
+    const now = new Date();
+    // 日本時間（UTC+9）に調整
+    return new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  };
+  
+  // 授業が過去のものかどうか確認
+  const isPastLesson = () => {
+    const japanTime = getJapanTime();
+    const todayStr = format(japanTime, 'yyyy-MM-dd');
+    return booking.date < todayStr;
+  };
+  
+  // 授業が終了していて、かつ報告書が未作成の場合
+  const showCreateReportButton = isPastLesson() && isCompletedNoReport && onCreateReport;
+  
+  // 報告書が作成済みの場合
+  const showViewReportButton = isCompletedWithReport && onViewReport;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl">授業詳細</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          {/* 日付と時間 */}
+          <div className="flex items-start">
+            <Calendar className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+            <div>
+              <p className="font-medium text-gray-900">{booking.date}</p>
+              <p className="text-sm text-gray-500">{booking.timeSlot}</p>
+            </div>
+          </div>
+          
+          {/* 科目 */}
+          <div className="flex items-start">
+            <BookOpen className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+            <div>
+              <p className="font-medium text-gray-900">科目</p>
+              <p className="text-sm text-gray-600">{booking.subject}</p>
+            </div>
+          </div>
+          
+          {/* 生徒情報 */}
+          {booking.studentName && (
+            <div className="flex items-start">
+              <User className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+              <div>
+                <p className="font-medium text-gray-900">生徒</p>
+                <p className="text-sm text-gray-600">{booking.studentName}</p>
+                {studentDetails && (
+                  <div className="mt-1 text-xs text-gray-500">
+                    <p>{studentDetails.school} {studentDetails.grade}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* 講師情報 */}
+          {booking.tutorName && (
+            <div className="flex items-start">
+              <User className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+              <div>
+                <p className="font-medium text-gray-900">講師</p>
+                <p className="text-sm text-gray-600">{booking.tutorName}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* 電話番号 - 講師用のみ表示 */}
+          {studentDetails?.phone && (
+            <div className="flex items-start">
+              <Phone className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+              <div>
+                <p className="font-medium text-gray-900">電話番号</p>
+                <p className="text-sm text-gray-600">{studentDetails.phone}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* 住所 - 講師用のみ表示 */}
+          {studentDetails?.address && (
+            <div className="flex items-start">
+              <MapPin className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+              <div>
+                <p className="font-medium text-gray-900">住所</p>
+                <p className="text-sm text-gray-600">{studentDetails.address}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* レポート状態 */}
+          <div className="flex items-start">
+            <FileText className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
+            <div>
+              <p className="font-medium text-gray-900">レポート状態</p>
+              {isCompletedWithReport ? (
+                <p className="text-sm text-green-600 font-medium">作成済み</p>
+              ) : isPastLesson() ? (
+                <p className="text-sm text-red-500 font-medium">未作成</p>
+              ) : (
+                <p className="text-sm text-gray-500">授業前</p>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          {showCreateReportButton && (
+            <Button
+              type="button"
+              variant="default"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={onCreateReport}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              レポート作成
+            </Button>
+          )}
+          
+          {showViewReportButton && (
+            <Button
+              type="button"
+              variant="outline"
+              className="border-green-600 text-green-600 hover:bg-green-50"
+              onClick={onViewReport}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              レポート確認
+            </Button>
+          )}
+          
+          <Button type="button" variant="outline" onClick={onClose}>
+            閉じる
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

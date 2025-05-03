@@ -16,11 +16,12 @@ type ExtendedBooking = Booking & {
 interface CalendarViewProps {
   bookings: ExtendedBooking[];
   onSelectDate?: (date: string) => void;
+  onBookingClick?: (booking: ExtendedBooking) => void; // 予約クリック時のコールバック
   interactive?: boolean;
   showLegend?: boolean; // 凡例を表示するかどうか
 }
 
-export function CalendarView({ bookings, onSelectDate, interactive = false, showLegend = false }: CalendarViewProps) {
+export function CalendarView({ bookings, onSelectDate, onBookingClick, interactive = false, showLegend = false }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState<Date[]>([]);
 
@@ -213,8 +214,12 @@ export function CalendarView({ bookings, onSelectDate, interactive = false, show
                   return (
                     <div key={index} className="mt-auto mb-0.5 mx-0.5 min-w-0 w-full">
                       <div 
-                        className={`px-1 py-0.5 text-[10px] leading-tight rounded ${bgColorClass} text-white text-center relative group overflow-hidden max-w-full`}
+                        className={`px-1 py-0.5 text-[10px] leading-tight rounded ${bgColorClass} text-white text-center relative group overflow-hidden max-w-full cursor-pointer`}
                         title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
+                        onClick={(e) => {
+                          e.stopPropagation(); // 日付クリックイベントが発火するのを防ぐ
+                          onBookingClick?.(booking);
+                        }}
                       >
                         <span className="block truncate font-medium">{booking.timeSlot.split('-')[0]}</span>
                         {booking.studentName && (
