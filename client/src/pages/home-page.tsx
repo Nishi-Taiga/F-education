@@ -676,11 +676,11 @@ export default function HomePage() {
                     </div>
                     <p className="text-base font-medium text-gray-900">チケット残数</p>
                   </div>
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {studentTickets.map(ticket => (
-                      <div key={ticket.studentId} className="flex justify-between items-center bg-gray-50 p-2 rounded-md">
+                      <div key={ticket.studentId} className="flex-1 flex justify-between items-center bg-gray-50 p-2 rounded-md min-w-[120px]">
                         <span className="text-sm font-medium">{ticket.name}</span>
-                        <span className="text-base font-bold">{ticket.ticketCount}枚</span>
+                        <span className="text-base font-bold ml-2">{ticket.ticketCount}枚</span>
                       </div>
                     ))}
                   </div>
