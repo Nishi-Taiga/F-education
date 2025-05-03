@@ -666,25 +666,27 @@ export default function SettingsPage() {
                           )}
                         />
                       </div>
+                      
+                      <div className="mt-4 sm:col-span-2">
+                        <FormField
+                          control={settingsForm.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>電話番号</FormLabel>
+                              <FormControl>
+                                <Input placeholder="090-1234-5678" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
                     
                     {/* 住所情報 */}
                     <div>
                       <h4 className="text-md font-medium text-gray-700 mb-4">住所情報</h4>
-                      
-                      <FormField
-                        control={settingsForm.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>電話番号</FormLabel>
-                            <FormControl>
-                              <Input placeholder="090-1234-5678" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                       
                       <div className="flex space-x-2 mt-4">
                         <FormField
