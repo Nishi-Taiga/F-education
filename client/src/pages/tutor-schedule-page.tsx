@@ -21,6 +21,8 @@ type Shift = {
   tutorId: number;
   date: string;
   timeSlot: string;
+  subject: string;
+  schoolLevel: string | null;
   isAvailable: boolean;
   createdAt: string;
 };

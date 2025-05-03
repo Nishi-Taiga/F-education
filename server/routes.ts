@@ -818,6 +818,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 講師のシフト登録・更新
+  app.post("/api/tutor/shifts", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    
+    // ユーザーが講師かどうかチェック
+    if (req.user!.role !== "tutor") {
+      return res.status(403).json({ message: "Access denied. User is not a tutor" });
+    }
+    
+    try {
+      const { date, timeSlot, subject, schoolLevel, isAvailable } = req.body;
+      
+      if (!date || !timeSlot) {
+        return res.status(400).json({ message: "Date and timeSlot are required" });
+      }
+      
+      // 講師情報の取得
+      const tutor = await storage.getTutorByUserId(userId);
+      if (!tutor) {
+        return res.status(404).json({ message: "Tutor profile not found" });
+      }
+      
+      // 既存のシフトを確認
+      const existingShifts = await storage.getTutorShiftsByDate(tutor.id, date);
+      const existingShift = existingShifts.find(shift => shift.timeSlot === timeSlot);
+      
+      let shift;
+      
+      if (existingShift) {
+        // 既存のシフトを更新
+        shift = await storage.updateTutorShift(existingShift.id, {
+          isAvailable: isAvailable ?? existingShift.isAvailable,
+          subject: subject ?? existingShift.subject,
+          schoolLevel: schoolLevel ?? existingShift.schoolLevel
+        });
+      } else {
+        // 新しいシフトを作成
+        shift = await storage.createTutorShift({
+          tutorId: tutor.id,
+          date,
+          timeSlot,
+          subject: subject ?? "国語", // デフォルト科目
+          schoolLevel: schoolLevel ?? "elementary", // デフォルト学校区分
+          isAvailable: isAvailable ?? false
+        });
+      }
+      
+      res.json(shift);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update tutor shift", error });
+    }
+  });
+  
   // 特定日の講師シフト取得
   app.get("/api/tutor/shifts/:date", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -848,76 +903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // 講師シフトの設定
-  app.post("/api/tutor/shifts", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    const userId = req.user!.id;
-    
-    // ユーザーが講師かどうかチェック
-    if (req.user!.role !== "tutor") {
-      return res.status(403).json({ message: "Access denied. User is not a tutor" });
-    }
-    
-    try {
-      const tutor = await storage.getTutorByUserId(userId);
-      if (!tutor) {
-        return res.status(404).json({ message: "Tutor profile not found" });
-      }
-      
-      const { date, timeSlot, isAvailable } = req.body;
-      
-      // バリデーション
-      if (!date || !timeSlot) {
-        return res.status(400).json({ message: "Date and timeSlot are required" });
-      }
-      
-      // 日付形式のバリデーション (YYYY-MM-DD)
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD" });
-      }
-      
-      // 時間枠の検証
-      if (!timeSlots.includes(timeSlot)) {
-        return res.status(400).json({ message: "Invalid time slot" });
-      }
-      
-      // 既存のシフトをチェック
-      const existingShifts = await storage.getTutorShiftsByDate(tutor.id, date);
-      const existingShift = existingShifts.find(shift => shift.timeSlot === timeSlot);
-      
-      let shift;
-      if (existingShift) {
-        // 更新
-        shift = await storage.updateTutorShift(existingShift.id, { 
-          isAvailable: isAvailable !== undefined ? isAvailable : existingShift.isAvailable 
-        });
-      } else {
-        // 講師情報から担当科目を取得
-        const tutorProfile = await storage.getTutor(tutor.id);
-        if (!tutorProfile || !tutorProfile.subjects) {
-          return res.status(400).json({ error: "講師の担当科目が設定されていません" });
-        }
-        
-        // デフォルトでは最初の科目を設定
-        const subjectList = tutorProfile.subjects.split(',');
-        const defaultSubject = subjectList[0];
-        
-        // 新規作成
-        shift = await storage.createTutorShift({
-          tutorId: tutor.id,
-          date,
-          timeSlot,
-          subject: defaultSubject, // 追加: シフトの科目を設定
-          isAvailable: isAvailable !== undefined ? isAvailable : true
-        });
-      }
-      
-      res.json(shift);
-    } catch (error) {
-      res.status(400).json({ message: "Failed to update tutor shift", error });
-    }
-  });
+
   
   // 講師の予約一覧取得
   app.get("/api/tutor/bookings", async (req, res) => {
