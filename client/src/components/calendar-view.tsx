@@ -220,10 +220,11 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                           e.stopPropagation(); // 日付クリックイベントが発火するのを防ぐ
                           onBookingClick?.(booking);
                         }}
+                        style={{ minHeight: '34px' }}
                       >
                         <span className="block truncate font-medium">{booking.timeSlot.split('-')[0]}</span>
                         {booking.studentName && (
-                          <span className="block truncate text-[9px] bg-white bg-opacity-80 text-gray-900 rounded-sm font-medium">
+                          <span className="block truncate text-[9px] bg-white bg-opacity-90 text-gray-900 rounded px-0.5 py-px mt-0.5 font-semibold">
                             {booking.studentName}
                           </span>
                         )}
