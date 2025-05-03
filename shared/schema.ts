@@ -86,10 +86,9 @@ export const tutorShifts = pgTable("tutor_shifts", {
   tutorId: integer("tutor_id").notNull().references(() => tutors.id),
   date: text("date").notNull(), // in YYYY-MM-DD format
   timeSlot: text("time_slot").notNull(), // format: "HH:MM-HH:MM"
-  subject: text("subject"), // 指導科目（講師のプロファイルから参照するので実質使用しない）
+  subject: text("subject").default("available").notNull(), // 指導可能状態を示す
   isAvailable: boolean("is_available").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  schoolLevel: text("school_level"), // 対象学年（講師のプロファイルから参照するので実質使用しない）
 });
 
 export const tutorShiftsRelations = relations(tutorShifts, ({ one, many }) => ({
