@@ -384,26 +384,35 @@ export default function HomePage() {
       message: string, 
       goal: string 
     }) => {
-      // 3つのフィールドを結合してレポート本文を作成
-      const content = `【単元】\n${unit}\n\n【伝言事項】\n${message}\n\n【来週までの目標(課題)】\n${goal}`;
-      
       // ダミーIDのチェック (デモデータ)
       if (bookingId === 1001 || bookingId === 1002 || bookingId === 1003 || 
           bookingId === 2001 || bookingId === 2002) {
         console.log("テスト用ダミーIDのためモックレスポンスを返します");
+        
+        // タイムスタンプを含むステータスを生成
+        const timestamp = new Date().toISOString();
+        const reportStatus = `completed:${timestamp}`;
+        
+        // 3つのフィールドを結合してレポート本文を作成
+        const content = `【単元】\n${unit}\n\n【伝言事項】\n${message}\n\n【来週までの目標(課題)】\n${goal}`;
+        
         // テスト用ダミーIDの場合は実際のAPIを呼び出さずに成功レスポンスを返す
         return {
           message: "レポートが正常に保存されました(テスト用)",
           booking: {
             id: bookingId,
-            reportStatus: "completed",
+            reportStatus: reportStatus,
             reportContent: content
           }
         };
       }
       
       // 実際のAPI呼び出し (ダミーID以外)
-      const res = await apiRequest("POST", `/api/bookings/${bookingId}/report`, { reportContent: content });
+      const res = await apiRequest("POST", `/api/bookings/${bookingId}/report`, { 
+        unit, 
+        message, 
+        goal 
+      });
       return await res.json();
     },
     onSuccess: (data) => {

@@ -1,10 +1,10 @@
 import { type Booking } from "@shared/schema";
-import { format, parse } from "date-fns";
+import { format, parse, formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import { DialogTitle, DialogDescription, DialogHeader, DialogFooter, DialogContent, Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { User, CalendarDays, BookOpen, ChevronRight } from "lucide-react";
+import { User, CalendarDays, BookOpen, ChevronRight, Calendar, Clock } from "lucide-react";
 
 interface ReportViewModalProps {
   isOpen: boolean;
@@ -20,6 +20,28 @@ export function ReportViewModal({
   // 日付をフォーマット
   const dateObj = parse(booking.date, "yyyy-MM-dd", new Date());
   const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
+  
+  // レポート作成日時を取得（新フォーマット: "completed:2023-05-03T12:34:56.789Z"）
+  let reportDate: Date | null = null;
+  let reportDateStr = "";
+  
+  if (booking.reportStatus && booking.reportStatus.startsWith('completed:')) {
+    try {
+      // タイムスタンプ部分を抽出
+      const timestamp = booking.reportStatus.split('completed:')[1];
+      reportDate = new Date(timestamp);
+      
+      // 何日前かを表示
+      reportDateStr = formatDistanceToNow(reportDate, { locale: ja, addSuffix: true });
+      
+      // 日本時間に変換してフォーマット
+      const japanTime = new Date(reportDate.getTime() + (9 * 60 * 60 * 1000));
+      const fullDateStr = format(japanTime, "yyyy年M月d日 H:mm", { locale: ja });
+      reportDateStr = `${reportDateStr} (${fullDateStr})`;
+    } catch (e) {
+      reportDateStr = "日時不明";
+    }
+  }
   
   // レポート内容を分解（新フォーマット: 【単元】【伝言事項】【来週までの目標(課題)】）
   let unit = "";
@@ -94,7 +116,16 @@ export function ReportViewModal({
           
           {/* レポート内容 */}
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold">レポート内容</h4>
+            <div className="flex justify-between items-center">
+              <h4 className="text-sm font-semibold">レポート内容</h4>
+              
+              {reportDateStr && (
+                <div className="flex items-center text-xs text-gray-500">
+                  <Clock className="h-3 w-3 mr-1" />
+                  <span>作成: {reportDateStr}</span>
+                </div>
+              )}
+            </div>
             
             <div className="space-y-3 bg-gray-50 p-3 rounded-md">
               <div>
