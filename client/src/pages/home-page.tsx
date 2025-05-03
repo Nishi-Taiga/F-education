@@ -118,12 +118,19 @@ export default function HomePage() {
     }
   };
 
+  // 予約データの取得クエリ - 講師の場合は特別なエンドポイントを使用
   const { data: bookings, isLoading: isLoadingBookings } = useQuery<Booking[]>({
-    queryKey: ["/api/bookings"],
+    queryKey: [user?.role === 'tutor' ? "/api/tutor/bookings" : "/api/bookings"],
   });
   
   const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
     queryKey: ["/api/students"],
+  });
+  
+  // 講師アカウントの場合は講師プロフィール情報を取得
+  const { data: tutorProfile, isLoading: isLoadingTutorProfile } = useQuery({
+    queryKey: ["/api/tutor/profile"],
+    enabled: !!user && user.role === 'tutor',
   });
   
   // 生徒ごとのチケット残数を取得
@@ -604,7 +611,10 @@ export default function HomePage() {
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-gray-700">
-              {user?.displayName || user?.username}
+              {user?.role === 'tutor' && tutorProfile 
+                ? `${tutorProfile.lastName} ${tutorProfile.firstName}`
+                : (user?.displayName || user?.username)
+              }
             </span>
             <Button 
               variant="ghost" 
