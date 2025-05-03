@@ -38,7 +38,7 @@ export function BookingCancellationModal({
             以下の授業予約をキャンセルします。キャンセルすると、チケットが1枚返却されます。
             <div className="flex items-center mt-2 p-2 bg-amber-50 text-amber-700 rounded-md text-xs">
               <Info className="h-4 w-4 mr-2 flex-shrink-0" />
-              <span>授業開始の24時間前を過ぎるとキャンセルできなくなります。</span>
+              <span>授業開始の24時間前を過ぎると、予約のキャンセルができなくなります。（葬儀等の緊急時はLINEにてご連絡ください）</span>
             </div>
           </DialogDescription>
         </DialogHeader>

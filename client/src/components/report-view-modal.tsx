@@ -21,16 +21,33 @@ export function ReportViewModal({
   const dateObj = parse(booking.date, "yyyy-MM-dd", new Date());
   const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
   
-  // レポート内容を分解（フォーマット: 単元、伝言事項、来週までの目標（課題））
+  // レポート内容を分解（新フォーマット: 【単元】【伝言事項】【来週までの目標(課題)】）
   let unit = "";
   let message = "";
   let goal = "";
   
   if (booking.reportContent) {
-    const parts = booking.reportContent.split("\n");
-    if (parts.length >= 1) unit = parts[0];
-    if (parts.length >= 2) message = parts[1];
-    if (parts.length >= 3) goal = parts[2];
+    if (booking.reportContent.includes('【単元】')) {
+      // 新フォーマット
+      try {
+        const unitPart = booking.reportContent.split('【単元】')[1].split('【伝言事項】')[0].trim();
+        const messagePart = booking.reportContent.split('【伝言事項】')[1].split('【来週までの目標(課題)】')[0].trim();
+        const goalPart = booking.reportContent.split('【来週までの目標(課題)】')[1].trim();
+        
+        unit = unitPart;
+        message = messagePart;
+        goal = goalPart;
+      } catch (e) {
+        // フォーマットエラーの場合は単純にそのまま表示
+        unit = booking.reportContent;
+      }
+    } else {
+      // 古いフォーマット（単純に分割）
+      const parts = booking.reportContent.split("\n");
+      if (parts.length >= 1) unit = parts[0];
+      if (parts.length >= 2) message = parts[1];
+      if (parts.length >= 3) goal = parts[2];
+    }
   }
 
   return (
