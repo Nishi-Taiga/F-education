@@ -707,30 +707,12 @@ export class DatabaseStorage implements IStorage {
   
   async addStudentTickets(studentId: number, userId: number, quantity: number): Promise<void> {
     try {
-      // 既存のチケットを確認
-      const [existingTicket] = await db.select()
-        .from(studentTickets)
-        .where(and(
-          eq(studentTickets.studentId, studentId),
-          eq(studentTickets.userId, userId)
-        ));
-      
-      if (existingTicket) {
-        // 既存のチケットを更新
-        await db.update(studentTickets)
-          .set({ quantity: existingTicket.quantity + quantity })
-          .where(and(
-            eq(studentTickets.studentId, studentId),
-            eq(studentTickets.userId, userId)
-          ));
-      } else {
-        // 新しいチケットを追加
-        await db.insert(studentTickets).values({
-          studentId,
-          userId,
-          quantity
-        });
-      }
+      // シンプルに新しいチケットを追加（チケット履歴としての機能を維持）
+      await db.insert(studentTickets).values({
+        studentId,
+        userId,
+        quantity
+      });
     } catch (error) {
       console.error("Error adding student tickets:", error);
       throw new Error("Failed to add tickets to student");
