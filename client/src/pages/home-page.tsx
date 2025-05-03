@@ -493,6 +493,39 @@ export default function HomePage() {
     return undefined;
   };
   
+  // 予約クリック時のハンドラ（カレンダー内の予約をクリックしたとき）
+  const handleBookingClick = (booking: Booking & { studentName?: string }) => {
+    // 予約詳細に必要なデータを設定
+    setSelectedDetailBooking({
+      ...booking,
+      // 講師の場合、講師名は設定しない（自分自身）
+      tutorName: user?.role !== 'tutor' ? tutorProfile ? `${tutorProfile.lastName} ${tutorProfile.firstName}` : undefined : undefined
+    });
+    
+    // 生徒の詳細情報を取得（講師向け）
+    if (booking.studentId && students) {
+      const student = students.find(s => s.id === booking.studentId);
+      if (student) {
+        setStudentDetails({
+          lastName: student.lastName,
+          firstName: student.firstName,
+          school: student.school,
+          grade: student.grade,
+          // 講師の場合のみ住所と電話番号を表示
+          address: user?.role === 'tutor' ? `${student.prefecture || ''}${student.city || ''}${student.address || ''}` : undefined,
+          phone: user?.role === 'tutor' ? user.phone : undefined,
+        });
+      } else {
+        setStudentDetails(null);
+      }
+    } else {
+      setStudentDetails(null);
+    }
+    
+    // モーダルを表示
+    setShowBookingDetailModal(true);
+  };
+  
   // 日本時間で日付を取得するヘルパー関数
   const getJapanDate = (): string => {
     const now = new Date();
@@ -733,6 +766,7 @@ export default function HomePage() {
                 key={forceUpdate ? "updated" : "initial"} // forceUpdateによる強制再描画のためのkey
                 showLegend={user?.role === 'tutor'} // 講師用のみ凡例を表示
                 interactive={user?.role === 'tutor'} // 講師の場合のみインタラクティブに
+                onBookingClick={handleBookingClick} // 予約クリック時のハンドラを追加
                 bookings={(bookings || []).map(booking => ({
                     ...booking,
                     studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
