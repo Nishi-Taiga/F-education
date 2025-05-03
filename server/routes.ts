@@ -1231,15 +1231,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userId = req.user!.id;
       const bookingId = parseInt(req.params.id);
-      const { reportContent } = req.body;
+      const { unit, message, goal } = req.body;
       
       if (isNaN(bookingId)) {
         return res.status(400).json({ message: "予約IDが無効です" });
       }
       
-      if (!reportContent || typeof reportContent !== 'string') {
-        return res.status(400).json({ message: "レポート内容が無効です" });
+      // 最低でも1つのフィールドに内容があるか確認
+      if ((!unit || unit.trim() === '') && 
+          (!message || message.trim() === '') && 
+          (!goal || goal.trim() === '')) {
+        return res.status(400).json({ message: "少なくとも1つのフィールドに内容を入力してください" });
       }
+      
+      // フォーマットされたレポート内容を作成
+      const reportContent = `【単元】\n${unit || ''}\n\n【伝言事項】\n${message || ''}\n\n【来週までの目標(課題)】\n${goal || ''}`;
       
       // 予約情報を取得
       const booking = await storage.getBookingById(bookingId);
@@ -1259,8 +1265,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "この予約のレポートを作成する権限がありません" });
       }
       
+      // レポートステータスに現在のタイムスタンプを追加
+      const reportStatus = `completed:${new Date().toISOString()}`;
+      
       // レポートを更新
-      const updatedBooking = await storage.updateBookingReport(bookingId, "completed", reportContent);
+      const updatedBooking = await storage.updateBookingReport(bookingId, reportStatus, reportContent);
       
       res.status(200).json({
         message: "レポートが正常に保存されました",
