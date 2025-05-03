@@ -1,21 +1,18 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, addDays, startOfWeek, subDays, addWeeks, subWeeks, isEqual, parseISO, getDay } from "date-fns";
+import { format, addDays, startOfWeek, subDays, addWeeks, subWeeks, parseISO, getDay } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { timeSlots, subjectsBySchoolLevel, SchoolLevel } from "@shared/schema";
+import { timeSlots } from "@shared/schema";
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, Home, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 // シフト情報の型定義
 type Shift = {
@@ -24,7 +21,6 @@ type Shift = {
   date: string;
   timeSlot: string;
   subject: string;
-  schoolLevel: string | null;
   isAvailable: boolean;
   createdAt: string;
 };
@@ -39,7 +35,6 @@ type DayShift = {
       isAvailable: boolean;
       id?: number;
       subject?: string;
-      schoolLevel?: string;
     };
   };
 };
@@ -53,23 +48,7 @@ export default function TutorSchedulePage() {
     date: string;
     timeSlot: string;
     isAvailable: boolean;
-    subject?: string;
-    schoolLevel?: string;
   }>>([]);
-  
-  // 選択された学校区分と科目
-  const [selectedSchoolLevel, setSelectedSchoolLevel] = useState<SchoolLevel>("elementary");
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
-  const [shiftModalOpen, setShiftModalOpen] = useState(false);
-  const [activeShiftDetails, setActiveShiftDetails] = useState<{
-    date: string;
-    timeSlot: string;
-    exists: boolean;
-    isAvailable: boolean;
-    id?: number;
-    subject?: string;
-    schoolLevel?: string;
-  } | null>(null);
   
   // 現在の週の開始日（日曜日）
   const [weekStart, setWeekStart] = useState(() => {
@@ -121,8 +100,6 @@ export default function TutorSchedulePage() {
       date: string; 
       timeSlot: string; 
       isAvailable: boolean;
-      subject?: string;
-      schoolLevel?: string;
     }) => {
       const res = await apiRequest("POST", "/api/tutor/shifts", data);
       return await res.json();
@@ -170,8 +147,7 @@ export default function TutorSchedulePage() {
         exists: !!existingShift,
         isAvailable: existingShift ? existingShift.isAvailable : false, // デフォルトでOFF（不可）に設定
         id: existingShift?.id,
-        subject: existingShift?.subject,
-        schoolLevel: existingShift?.schoolLevel
+        subject: existingShift?.subject
       };
     });
     
@@ -221,75 +197,6 @@ export default function TutorSchedulePage() {
           isAvailable: newIsAvailable
         }
       ]);
-    }
-  };
-  
-  // シフト詳細を編集するための処理
-  const handleShiftClick = (date: string, timeSlot: string) => {
-    const shiftInfo = weekShifts
-      .find(day => day.date === date)
-      ?.shifts[timeSlot];
-    
-    if (!shiftInfo) return;
-    
-    // デフォルト値を設定
-    setSelectedSchoolLevel((shiftInfo.schoolLevel as SchoolLevel) || "elementary");
-    setSelectedSubject(shiftInfo.subject || "国語");
-    
-    // 現在のシフト詳細をモーダル用に保存
-    setActiveShiftDetails({
-      date,
-      timeSlot,
-      exists: shiftInfo.exists,
-      isAvailable: shiftInfo.isAvailable,
-      id: shiftInfo.id,
-      subject: shiftInfo.subject,
-      schoolLevel: shiftInfo.schoolLevel
-    });
-    
-    // モーダルを表示
-    setShiftModalOpen(true);
-  };
-  
-  // シフト詳細を保存
-  const saveShiftDetails = async () => {
-    if (!activeShiftDetails) return;
-    
-    // 既存の変更を探す
-    const existingIndex = pendingShifts.findIndex(
-      shift => shift.date === activeShiftDetails.date && shift.timeSlot === activeShiftDetails.timeSlot
-    );
-    
-    const shiftUpdate = {
-      date: activeShiftDetails.date,
-      timeSlot: activeShiftDetails.timeSlot,
-      isAvailable: activeShiftDetails.isAvailable,
-      subject: selectedSubject,
-      schoolLevel: selectedSchoolLevel
-    };
-    
-    try {
-      // 直接APIで更新
-      await updateShiftMutation.mutateAsync(shiftUpdate);
-      
-      // 保留中のリストから削除（存在する場合）
-      if (existingIndex >= 0) {
-        const newPendingShifts = [...pendingShifts];
-        newPendingShifts.splice(existingIndex, 1);
-        setPendingShifts(newPendingShifts);
-      }
-      
-      // モーダルを閉じる
-      setShiftModalOpen(false);
-      setActiveShiftDetails(null);
-      
-    } catch (error) {
-      console.error("シフト詳細の更新エラー:", error);
-      toast({
-        title: "エラーが発生しました",
-        description: "シフト詳細の更新に失敗しました。",
-        variant: "destructive",
-      });
     }
   };
   
@@ -529,32 +436,6 @@ export default function TutorSchedulePage() {
                               (shiftInfo?.isAvailable ?? false) ? "可能" : "不可"}
                               {isPending && " (未保存)"}
                             </div>
-                            
-                            {/* ONの場合のみ詳細設定ボタンと科目情報を表示 */}
-                            {((pendingShifts.find(
-                              shift => shift.date === day.date && shift.timeSlot === timeSlot
-                            )?.isAvailable ?? shiftInfo?.isAvailable) === true) && (
-                              <>
-                                {/* 設定されている科目と学校区分を表示 */}
-                                {(shiftInfo?.subject || shiftInfo?.schoolLevel) && (
-                                  <div className="text-xs mt-1 text-blue-600 font-medium">
-                                    {shiftInfo?.schoolLevel === "elementary" && "小学"}
-                                    {shiftInfo?.schoolLevel === "junior_high" && "中学"}
-                                    {shiftInfo?.schoolLevel === "high_school" && "高校"}
-                                    {shiftInfo?.subject && ` / ${shiftInfo.subject}`}
-                                  </div>
-                                )}
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="text-xs mt-1 h-auto py-1 px-2"
-                                  onClick={() => handleShiftClick(day.date, timeSlot)}
-                                  disabled={isPast || updateShiftMutation.isPending}
-                                >
-                                  詳細設定
-                                </Button>
-                              </>
-                            )}
                           </div>
                         </td>
                       );
@@ -588,66 +469,6 @@ export default function TutorSchedulePage() {
           </div>
         </CardContent>
       </Card>
-      {/* シフト詳細設定モーダル */}
-      <Dialog open={shiftModalOpen} onOpenChange={setShiftModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>シフト詳細設定</DialogTitle>
-            <DialogDescription>
-              {activeShiftDetails && (
-                <span>
-                  {format(parseISO(activeShiftDetails.date), "yyyy年MM月dd日", { locale: ja })} {activeShiftDetails.timeSlot}
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="schoolLevel">学校区分</Label>
-              <Select
-                value={selectedSchoolLevel}
-                onValueChange={(value) => setSelectedSchoolLevel(value as SchoolLevel)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="学校区分を選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="elementary">小学生</SelectItem>
-                  <SelectItem value="junior_high">中学生</SelectItem>
-                  <SelectItem value="high_school">高校生</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="subject">教科</Label>
-              <Select
-                value={selectedSubject}
-                onValueChange={setSelectedSubject}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="教科を選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedSchoolLevel && subjectsBySchoolLevel[selectedSchoolLevel].map((subject) => (
-                    <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShiftModalOpen(false)}>
-              キャンセル
-            </Button>
-            <Button onClick={saveShiftDetails} disabled={updateShiftMutation.isPending}>
-              保存
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

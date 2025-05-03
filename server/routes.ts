@@ -834,7 +834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const { date, timeSlot, subject, schoolLevel, isAvailable } = req.body;
+      const { date, timeSlot, isAvailable } = req.body;
       
       if (!date || !timeSlot) {
         return res.status(400).json({ message: "Date and timeSlot are required" });
@@ -855,9 +855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingShift) {
         // 既存のシフトを更新
         shift = await storage.updateTutorShift(existingShift.id, {
-          isAvailable: isAvailable ?? existingShift.isAvailable,
-          subject: subject ?? existingShift.subject,
-          schoolLevel: schoolLevel ?? existingShift.schoolLevel
+          isAvailable: isAvailable ?? existingShift.isAvailable
         });
       } else {
         // 新しいシフトを作成
@@ -865,8 +863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tutorId: tutor.id,
           date,
           timeSlot,
-          subject: subject ?? "国語", // デフォルト科目
-          schoolLevel: schoolLevel ?? "elementary", // デフォルト学校区分
+          subject: "", // subjectは使用しない
           isAvailable: isAvailable ?? false
         });
       }
