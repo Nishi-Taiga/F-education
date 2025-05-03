@@ -635,7 +635,7 @@ export default function BookingPage() {
                             <span className="mr-2">⚠️</span>
                             <div>
                               <p className="font-medium mb-1">予約可能な講師が見つかりません</p>
-                              <p>選択した日時・科目に対応可能な講師がいないか、すでに予約で埋まっています。別の日時や科目を選択してください。</p>
+                              <p>選択した日時・科目に予約可能な講師がいません。別の日時や科目を選択してください。</p>
                             </div>
                           </div>
                         </div>
