@@ -174,9 +174,12 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
           const dayBookings = getBookingsForDay(day);
           const japanTime = getJapanTime();
           const isCurrentDay = isToday(day);
-          const isPast = isBefore(day, japanTime) && !isCurrentDay;
+          // 日付が昨日以前の場合のみ過去とみなす（今日と将来の日付は過去とみなさない）
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          const isPast = isBefore(day, today);
           const isCurrentMonth = isSameMonth(day, currentDate);
-          const isSelectable = interactive && !isPast;
+          const isSelectable = interactive && (!isPast || isCurrentDay);
           const dayOfWeek = getDay(day);
           
           // 曜日に基づく色分け
@@ -191,7 +194,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
             <div key={day.toString()} className="aspect-square p-0.5 min-w-0">
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} 
-                  ${isPast ? 'opacity-60' : ''} 
+                  ${isPast && !isCurrentDay ? 'opacity-60' : ''} 
                   ${isCurrentDay ? 'bg-blue-50 border border-blue-200 shadow-sm' : ''} 
                   overflow-hidden`}
                 style={{ height: '90px', maxHeight: '90px' }}
