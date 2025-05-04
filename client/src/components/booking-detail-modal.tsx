@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Booking } from "@shared/schema";
-import { FileText, User, Calendar, Clock, BookOpen, MapPin, Phone, History } from "lucide-react";
+import { FileText, User, Calendar, Clock, BookOpen, MapPin, Phone, History, Edit } from "lucide-react";
 import { format } from "date-fns";
 
 interface BookingDetailModalProps {
@@ -23,6 +23,7 @@ interface BookingDetailModalProps {
   onClose: () => void;
   onCreateReport?: () => void;
   onViewReport?: () => void;
+  onEditReport?: () => void; // レポート編集用コールバック追加
   studentDetails?: {
     lastName: string;
     firstName: string;
@@ -39,10 +40,11 @@ export function BookingDetailModal({
   onClose,
   onCreateReport,
   onViewReport,
+  onEditReport,
   studentDetails
 }: BookingDetailModalProps) {
   // 授業のステータスを判定
-  const isCompletedWithReport = booking.reportStatus === 'completed';
+  const isCompletedWithReport = booking.reportStatus === 'completed' || (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
   const isCompletedNoReport = booking.reportStatus === 'pending' || booking.reportStatus === null;
   
   // 日本時間を取得するヘルパー関数
@@ -64,6 +66,9 @@ export function BookingDetailModal({
   
   // 報告書が作成済みの場合（保護者側ではボタンを常に表示、講師側では条件付き）
   const showViewReportButton = isCompletedWithReport && onViewReport;
+  
+  // レポート編集ボタンを表示する条件（講師用）
+  const showEditReportButton = isCompletedWithReport && onEditReport;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -225,6 +230,18 @@ export function BookingDetailModal({
             >
               <FileText className="mr-2 h-4 w-4" />
               レポート確認
+            </Button>
+          )}
+          
+          {showEditReportButton && (
+            <Button
+              type="button"
+              variant="outline"
+              className="border-amber-600 text-amber-600 hover:bg-amber-50"
+              onClick={onEditReport}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              レポート編集
             </Button>
           )}
           

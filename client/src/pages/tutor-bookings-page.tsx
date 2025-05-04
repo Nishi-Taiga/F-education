@@ -13,6 +13,8 @@ import { Separator } from "@/components/ui/separator";
 import { BookingDetailModal } from "@/components/booking-detail-modal";
 import { CalendarView } from "@/components/calendar-view";
 import { Calendar } from "@/components/ui/calendar";
+import { ReportViewModal } from "@/components/report-view-modal";
+import { ReportEditModal } from "@/components/report-edit-modal";
 
 // 予約情報の型定義
 type Booking = {
@@ -33,6 +35,8 @@ export default function TutorBookingsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedBooking, setSelectedBooking] = useState<Booking & { studentName?: string }>();
   const [showBookingDetailModal, setShowBookingDetailModal] = useState(false);
+  const [showReportViewModal, setShowReportViewModal] = useState(false);
+  const [showReportEditModal, setShowReportEditModal] = useState(false);
   const [studentDetails, setStudentDetails] = useState<any>(null);
   
   // 講師プロフィールの取得
@@ -288,6 +292,44 @@ export default function TutorBookingsPage() {
           }}
           studentDetails={studentDetails}
           onClose={() => setShowBookingDetailModal(false)}
+          onViewReport={() => {
+            setShowBookingDetailModal(false);
+            setShowReportViewModal(true);
+          }}
+          onEditReport={() => {
+            setShowBookingDetailModal(false);
+            setShowReportEditModal(true);
+          }}
+        />
+      )}
+      
+      {/* レポート表示モーダル */}
+      {selectedBooking && (
+        <ReportViewModal
+          isOpen={showReportViewModal}
+          booking={{
+            ...selectedBooking,
+            studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId),
+            tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
+          }}
+          onClose={() => setShowReportViewModal(false)}
+        />
+      )}
+      
+      {/* レポート編集モーダル */}
+      {selectedBooking && (
+        <ReportEditModal
+          isOpen={showReportEditModal}
+          booking={{
+            ...selectedBooking,
+            studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId),
+            tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
+          }}
+          onClose={() => setShowReportEditModal(false)}
+          onSuccess={() => {
+            // レポート編集が成功したら予約情報を再取得
+            // 自動的にinvalidateQueriesで再取得されるので、ここでは何もしない
+          }}
         />
       )}
     </div>
