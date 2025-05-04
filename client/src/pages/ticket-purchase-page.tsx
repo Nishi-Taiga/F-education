@@ -9,6 +9,8 @@ import { ArrowLeft, Ticket, Loader2 } from "lucide-react";
 import { TicketCard } from "@/components/ticket-card";
 import { Cart } from "@/components/cart";
 import { PaymentSuccessModal } from "@/components/payment-success-modal";
+import { PaymentModal } from "@/components/PaymentModal";
+import { useToast } from "@/hooks/use-toast";
 import { Student } from "@shared/schema";
 
 export type CartItem = {
@@ -70,9 +72,11 @@ type StudentTicket = {
 
 export default function TicketPurchasePage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [, navigate] = useLocation();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedStudentType, setSelectedStudentType] = useState<StudentType | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isExamCourse, setIsExamCourse] = useState(false);
@@ -139,8 +143,15 @@ export default function TicketPurchasePage() {
     setCartItems(cartItems.filter(item => item.id !== id));
   };
 
+  // チェックアウト処理（PayPalモーダルを開く）
   const checkout = () => {
-    // 生徒ごとにチケットをグループ化
+    if (cartItems.length === 0) return;
+    setShowPaymentModal(true);
+  };
+  
+  // PayPal決済成功時の処理
+  const handlePaymentSuccess = (paymentData: any) => {
+    // PayPal決済が成功したら、通常のチケット購入処理を実行
     const purchaseItems = cartItems
       .filter(item => item.studentId) // 念のため生徒IDがあるアイテムのみ
       .map(item => ({
@@ -150,7 +161,23 @@ export default function TicketPurchasePage() {
     
     if (purchaseItems.length === 0) return;
     
+    // PayPal取引IDをコンソールに出力（開発用）
+    console.log("PayPal transaction completed:", paymentData);
+    
+    // チケット購入APIを呼び出し
     purchaseMutation.mutate({ items: purchaseItems });
+    setShowPaymentModal(false);
+  };
+  
+  // PayPal決済エラー時の処理
+  const handlePaymentError = (error: any) => {
+    console.error("PayPal payment error:", error);
+    toast({
+      title: "決済エラー",
+      description: "支払い処理中にエラーが発生しました。時間をおいて再度お試しください。",
+      variant: "destructive",
+    });
+    setShowPaymentModal(false);
   };
 
   return (
@@ -317,6 +344,16 @@ export default function TicketPurchasePage() {
         </Card>
       </main>
 
+      {/* PayPalモーダル */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        cartItems={cartItems}
+        onPaymentSuccess={handlePaymentSuccess}
+        onPaymentError={handlePaymentError}
+      />
+      
+      {/* 支払い成功モーダル */}
       <PaymentSuccessModal 
         isOpen={showSuccessModal} 
         onClose={() => {
