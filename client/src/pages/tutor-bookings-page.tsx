@@ -39,6 +39,13 @@ export default function TutorBookingsPage() {
   const [showReportEditModal, setShowReportEditModal] = useState(false);
   const [studentDetails, setStudentDetails] = useState<any>(null);
   
+  // 編集モーダルを開く関数（レポート編集ボタンに渡す）
+  const handleOpenEditModal = () => {
+    console.log("レポート編集モーダルを開きます（専用関数）", selectedBooking);
+    setShowBookingDetailModal(false);
+    setShowReportEditModal(true);
+  };
+  
   // 講師プロフィールの取得
   const { data: tutorProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ["/api/tutor/profile"],
