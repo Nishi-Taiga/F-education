@@ -24,6 +24,15 @@ export function ReportEditModal({
   onClose,
   onSuccess
 }: ReportEditModalProps) {
+  // デバッグ情報の出力
+  console.log("レポート編集モーダルが呼び出されました", { isOpen, bookingId: booking?.id });
+  
+  // 強制的に表示するためのテスト
+  useEffect(() => {
+    if (isOpen) {
+      console.log("レポート編集モーダルが開きました", booking);
+    }
+  }, [isOpen, booking]);
   const { toast } = useToast();
   const [unitContent, setUnitContent] = useState("");
   const [messageContent, setMessageContent] = useState("");

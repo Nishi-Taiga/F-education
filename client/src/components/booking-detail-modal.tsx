@@ -264,7 +264,7 @@ export function BookingDetailModal({
               }}
             >
               <Edit className="mr-2 h-4 w-4" />
-              {editButtonText}
+              レポート編集
             </Button>
           )}
           

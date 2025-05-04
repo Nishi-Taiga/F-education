@@ -5,6 +5,7 @@ import { format, parseISO, isBefore, isToday } from "date-fns";
 import { ja } from "date-fns/locale";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -412,6 +413,42 @@ export default function TutorBookingsPage() {
           }}
         />
       )}
+      
+      {/* テスト用ボタン - デバッグのためページ上部に追加 */}
+      <div className="fixed top-20 right-5 z-50 flex flex-col gap-2">
+        <Button 
+          onClick={() => {
+            console.log("テスト用編集ボタンがクリックされました");
+            
+            // テスト用のデータ
+            const testBooking = {
+              id: 999,
+              userId: 3,
+              tutorId: 2,
+              studentId: 4,
+              tutorShiftId: 46,
+              date: "2025-05-06",
+              timeSlot: "16:00-17:30",
+              subject: "テスト科目",
+              status: "confirmed",
+              reportStatus: "completed",
+              reportContent: "【単元】\nテスト単元\n\n【伝言事項】\nテストメッセージ\n\n【来週までの目標(課題)】\nテスト目標",
+              createdAt: new Date().toISOString(),
+              studentName: "テスト生徒"
+            };
+            
+            // 編集用の予約データを設定
+            setReportEditBooking(testBooking);
+            
+            // モーダルを表示
+            setShowReportEditModal(true);
+            console.log("テスト用レポート編集モーダルが表示されました");
+          }}
+          className="bg-red-500 hover:bg-red-600 text-white"
+        >
+          テスト：レポート編集
+        </Button>
+      </div>
       
       {/* レポート表示モーダル */}
       {selectedBooking && (
