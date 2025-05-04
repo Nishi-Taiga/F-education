@@ -463,39 +463,44 @@ export default function TutorBookingsPage() {
         />
       )}
       
-      {/* テスト用ボタン - デバッグのためページ上部に追加 */}
+      {/* テスト用ボタン - デバッグのためページ上部に配置 */}
       <div className="fixed top-20 right-5 z-50 flex flex-col gap-2">
         <Button 
           onClick={() => {
-            console.log("テスト用編集ボタンがクリックされました");
+            console.log("テスト用編集ボタンがクリックされました - 実際の予約ID使用");
             
-            // テスト用のデータ
+            // 実際に存在する予約のデータ
             const testBooking = {
-              id: 999,
+              id: 7, // 実際に存在する予約ID
               userId: 3,
               tutorId: 2,
               studentId: 4,
-              tutorShiftId: 46,
-              date: "2025-05-06",
+              tutorShiftId: 61,
+              date: "2025-05-01",
               timeSlot: "16:00-17:30",
-              subject: "テスト科目",
+              subject: "小学算数",
               status: "confirmed",
               reportStatus: "completed",
-              reportContent: "【単元】\nテスト単元\n\n【伝言事項】\nテストメッセージ\n\n【来週までの目標(課題)】\nテスト目標",
+              reportContent: "【単元】\n割り算の応用問題\n\n【伝言事項】\n基本的な計算はよくできています。\n\n【来週までの目標(課題)】\n教科書p.45-46の問題を解いてみましょう。",
               createdAt: new Date().toISOString(),
-              studentName: "テスト生徒"
+              studentName: "テスト 花子"
             };
+            
+            // 一度falseにしてから
+            setShowReportEditModal(false);
             
             // 編集用の予約データを設定
             setReportEditBooking(testBooking);
             
-            // モーダルを表示
-            setShowReportEditModal(true);
-            console.log("テスト用レポート編集モーダルが表示されました");
+            // 少し遅延させてからモーダルを表示
+            setTimeout(() => {
+              setShowReportEditModal(true);
+              console.log("テスト用レポート編集モーダルが表示されました", testBooking);
+            }, 50);
           }}
-          className="bg-red-500 hover:bg-red-600 text-white"
+          className="bg-red-500 hover:bg-red-600 text-white p-2 font-bold animate-pulse"
         >
-          テスト：レポート編集
+          レポート編集テスト (ID:7)
         </Button>
       </div>
       

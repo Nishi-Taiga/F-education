@@ -251,25 +251,26 @@ export function BookingDetailModal({
           
 
           
-          {showEditReportButton && (
+          {/* レポート編集ボタン - 常に表示（強制的にショウ） */}
+          {(showEditReportButton || isPastLesson()) && (
             <Button
               type="button"
               variant="outline"
               className="border-amber-600 text-amber-600 hover:bg-amber-50"
               onClick={() => {
-                console.log("編集ボタンがクリックされました");
-                // コールバックが存在する場合は実行、存在しない場合は何もしない
+                console.log("編集ボタンがクリックされました - 強化版");
+                // コールバックが存在する場合は実行
                 if (onEditReport) {
                   onEditReport();
                 } else {
                   console.error("編集コールバックが設定されていません");
-                  // コールバックがない場合はモーダルを閉じるだけ
+                  // エラーは表示するが、モーダルは閉じる
                   onClose();
                 }
               }}
             >
               <Edit className="mr-2 h-4 w-4" />
-              レポート編集
+              {isCompletedWithReport ? "レポート編集" : "レポート作成"}
             </Button>
           )}
           
