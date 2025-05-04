@@ -145,6 +145,8 @@ export default function TutorBookingsPage() {
   // 予約カードがクリックされたときの処理
   const handleBookingClick = async (booking: Booking & { studentName?: string }) => {
     try {
+      console.log("予約クリック:", booking);
+      
       // 予約の詳細情報を取得 (生徒情報や前回のレポートも含む)
       const response = await fetch(`/api/bookings/${booking.id}`);
       if (response.ok) {
@@ -164,14 +166,17 @@ export default function TutorBookingsPage() {
         }
         
         // 編集ボタン表示のためにselectedBookingに完全な情報を設定
-        setSelectedBooking({
+        const enhancedBookingDetails = {
           ...bookingDetails,
           // 既存のフィールドを保持しつつ、必要なフィールドを確実に設定
           studentName: bookingDetails.studentName || getStudentName(bookingDetails.studentId),
           id: bookingDetails.id,
-          reportStatus: bookingDetails.reportStatus || 'pending',
+          reportStatus: bookingDetails.reportStatus || null,
           reportContent: bookingDetails.reportContent || ''
-        });
+        };
+        
+        // 選択された予約を設定
+        setSelectedBooking(enhancedBookingDetails);
         
         // 生徒詳細情報を設定
         setStudentDetails(bookingDetails.studentDetails || null);
@@ -318,12 +323,12 @@ export default function TutorBookingsPage() {
             setShowBookingDetailModal(false);
             setShowReportViewModal(true);
           }}
-          // 必ず講師アカウントではレポート編集を有効にする
-          onEditReport={selectedBooking.reportStatus === 'completed' ? () => {
+          // 講師アカウントではレポート編集を常に有効にする
+          onEditReport={() => {
             console.log("レポート編集モーダルを開きます", selectedBooking);
             setShowBookingDetailModal(false);
             setShowReportEditModal(true);
-          } : undefined}
+          }}
         />
       )}
       
