@@ -157,6 +157,11 @@ export function BookingDetailModal({
             </div>
           )}
           
+          {/* デバッグ情報（一時的） */}
+          <div className="mt-4 bg-gray-100 border border-gray-200 p-2 rounded text-xs text-gray-500">
+            <p>コールバック状態: {onEditReport ? "設定済み" : "未設定"}</p>
+          </div>
+          
           {/* 住所 - 講師用のみ表示 */}
           {studentDetails?.address && (
             <div className="flex items-start">

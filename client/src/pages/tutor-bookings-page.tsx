@@ -291,49 +291,53 @@ export default function TutorBookingsPage() {
     <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">予約管理</h1>
       
-      {/* 緊急デバッグ用テストボタン - 更新版 */}
-      <div className="mb-4">
-        <Button 
-          onClick={() => {
-            console.log("レポート編集テストボタンがクリックされました - 更新版");
-            
-            // テスト用のデータ
-            const testBooking = {
-              id: 999,
-              userId: 3,
-              tutorId: 2,
-              studentId: 4,
-              tutorShiftId: 46,
-              date: "2025-05-06",
-              timeSlot: "16:00-17:30",
-              subject: "テスト科目",
-              status: "confirmed",
-              reportStatus: "completed",
-              reportContent: "【単元】\nテスト単元\n\n【伝言事項】\nテストメッセージ\n\n【来週までの目標(課題)】\nテスト目標",
-              createdAt: new Date().toISOString(),
-              studentName: "テスト生徒"
-            };
-            
-            // 編集用の予約データを設定
-            setReportEditBooking(testBooking);
-            
-            // ここで一度stateをリセット
-            setShowReportEditModal(false);
-            
-            // 少し遅延させてからモーダルを表示
-            setTimeout(() => {
-              setShowReportEditModal(true);
-              console.log("レポート編集モーダルが表示されました！", {
-                modalState: showReportEditModal,
-                bookingData: reportEditBooking
-              });
-            }, 10);
-          }}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-5 shadow-lg"
-          size="lg"
-        >
-          テスト：レポート編集ボタン (更新版)
-        </Button>
+      {/* 緊急デバッグ用テストボタン - さらに目立つようにするバージョン */}
+      <div className="mb-8 flex justify-center items-center">
+        <div className="p-4 bg-red-50 border-2 border-red-500 rounded-lg animate-pulse shadow-xl">
+          <Button 
+            onClick={() => {
+              console.log("新レポート編集テストボタンがクリックされました");
+              
+              // テスト用のデータ
+              const testBooking = {
+                id: 999,
+                userId: 3,
+                tutorId: 2,
+                studentId: 4,
+                tutorShiftId: 46,
+                date: "2025-05-06",
+                timeSlot: "16:00-17:30",
+                subject: "テスト科目",
+                status: "confirmed",
+                reportStatus: "completed",
+                reportContent: "【単元】\nテスト単元\n\n【伝言事項】\nテストメッセージ\n\n【来週までの目標(課題)】\nテスト目標",
+                createdAt: new Date().toISOString(),
+                studentName: "テスト生徒"
+              };
+              
+              // 一度確実にfalseに
+              setShowReportEditModal(false);
+              
+              // データを設定
+              setReportEditBooking(testBooking);
+              
+              // 確実に遅延させる
+              setTimeout(() => {
+                // モーダルを表示
+                setShowReportEditModal(true);
+                
+                console.log("新版レポート編集モーダルを表示しました", {
+                  modal: true,
+                  booking: testBooking
+                });
+              }, 50);
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 text-lg shadow-lg"
+            size="lg"
+          >
+            ⚠️ 緊急テスト：新レポート編集ボタン ⚠️
+          </Button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 gap-6">
