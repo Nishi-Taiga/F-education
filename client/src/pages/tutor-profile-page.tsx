@@ -178,7 +178,7 @@ export default function TutorProfilePage() {
         selectedSubjects: subjects,
         subjects: tutorProfile.subjects || "", // 追加
         bio: tutorProfile.bio || "",
-        email: user?.email || ""
+        email: tutorProfile.email || user?.email || ""
       });
       
       // 新規プロフィール作成時は編集モードにする

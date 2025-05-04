@@ -1,9 +1,8 @@
 import nodemailer from 'nodemailer';
-import { User, Booking, Student, Tutor } from '@shared/schema';
+import { User, Booking, Student, Tutor, users, tutors } from '@shared/schema';
 import { format } from 'date-fns';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
-import { users } from '@shared/schema';
 
 // メール送信クラス
 export class EmailService {
@@ -209,7 +208,10 @@ export class EmailService {
     
     // 講師へのメール
     if (tutor) {
-      const tutorEmail = await this.getUserEmail(tutor.userId);
+      // まずtutorsテーブルのemailを確認
+      const tutorEmailFromTable = await this.getTutorEmail(tutor.id);
+      // バックアップとしてusersテーブルのemailも確認
+      const tutorEmail = tutorEmailFromTable || await this.getUserEmail(tutor.userId);
       
       if (tutorEmail) {
         const tutorMailOptions: nodemailer.SendMailOptions = {
