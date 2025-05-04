@@ -8,21 +8,21 @@ export default function DebugPage() {
   const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
   
-  // テスト用の予約データ（最小限のフィールドのみ）
+  // テスト用の予約データ（実際に存在する予約IDを使用）
   const testBooking = {
-    id: 999,
+    id: 7, // 実際に存在する予約ID
     userId: user?.id || 3,
     tutorId: 2,
     studentId: 4,
-    tutorShiftId: 46,
-    date: "2025-05-06",
+    tutorShiftId: 61,
+    date: "2025-05-01",
     timeSlot: "16:00-17:30",
-    subject: "テスト科目",
+    subject: "小学算数",
     status: "confirmed", 
     reportStatus: "completed",
-    reportContent: "【単元】\nテスト単元\n\n【伝言事項】\nテストメッセージ\n\n【来週までの目標(課題)】\nテスト目標",
+    reportContent: "【単元】\n割り算の応用問題\n\n【伝言事項】\n基本的な計算はよくできています。\n\n【来週までの目標(課題)】\n教科書p.45-46の問題を解いてみましょう。",
     createdAt: new Date().toISOString(),
-    studentName: "テスト生徒"
+    studentName: "テスト 花子"
   };
 
   return (
