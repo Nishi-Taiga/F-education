@@ -291,11 +291,11 @@ export default function TutorBookingsPage() {
     <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">予約管理</h1>
       
-      {/* 緊急デバッグ用テストボタン */}
+      {/* 緊急デバッグ用テストボタン - 更新版 */}
       <div className="mb-4">
         <Button 
           onClick={() => {
-            console.log("レポート編集テストボタンがクリックされました");
+            console.log("レポート編集テストボタンがクリックされました - 更新版");
             
             // テスト用のデータ
             const testBooking = {
@@ -317,13 +317,22 @@ export default function TutorBookingsPage() {
             // 編集用の予約データを設定
             setReportEditBooking(testBooking);
             
-            // モーダルを表示
-            setShowReportEditModal(true);
-            console.log("レポート編集モーダルが表示されました");
+            // ここで一度stateをリセット
+            setShowReportEditModal(false);
+            
+            // 少し遅延させてからモーダルを表示
+            setTimeout(() => {
+              setShowReportEditModal(true);
+              console.log("レポート編集モーダルが表示されました！", {
+                modalState: showReportEditModal,
+                bookingData: reportEditBooking
+              });
+            }, 10);
           }}
-          className="bg-red-500 hover:bg-red-600 text-white font-bold"
+          className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-5 shadow-lg"
+          size="lg"
         >
-          緊急テスト：レポート編集ボタン
+          テスト：レポート編集ボタン (更新版)
         </Button>
       </div>
       
