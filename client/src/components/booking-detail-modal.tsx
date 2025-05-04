@@ -43,29 +43,6 @@ export function BookingDetailModal({
   onEditReport,
   studentDetails
 }: BookingDetailModalProps) {
-  // 授業のステータスを判定（修正）
-  // 'completed'または'completed:'で始まる場合はレポート作成済み
-  const isCompletedWithReport = booking.reportStatus === 'completed' || (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
-  // 'pending'または未設定（null）の場合はレポート未作成
-  const isCompletedNoReport = booking.reportStatus === 'pending' || booking.reportStatus === null;
-  
-  console.log("レポートステータス詳細:", {
-    reportStatus: booking.reportStatus,
-    isCompleted: isCompletedWithReport,
-    hasEditCallback: Boolean(onEditReport),
-    shouldShowEditButton: isCompletedWithReport && Boolean(onEditReport)
-  });
-  
-  // デバッグ情報を追加
-  console.log("Booking Detail Debug:", {
-    bookingId: booking.id,
-    date: booking.date,
-    reportStatus: booking.reportStatus,
-    hasReportContent: Boolean(booking.reportContent),
-    isCompletedWithReport: isCompletedWithReport,
-    hasEditCallback: Boolean(onEditReport)
-  });
-  
   // 日本時間を取得するヘルパー関数
   const getJapanTime = () => {
     const now = new Date();
@@ -79,6 +56,30 @@ export function BookingDetailModal({
     const todayStr = format(japanTime, 'yyyy-MM-dd');
     return booking.date < todayStr;
   };
+
+  // 授業のステータスを判定（修正）
+  // 'completed'または'completed:'で始まる場合はレポート作成済み
+  const isCompletedWithReport = booking.reportStatus === 'completed' || (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
+  // 'pending'または未設定（null）の場合はレポート未作成
+  const isCompletedNoReport = booking.reportStatus === 'pending' || booking.reportStatus === null;
+  
+  console.log("レポートステータス詳細:", {
+    reportStatus: booking.reportStatus,
+    isCompleted: isCompletedWithReport,
+    hasEditCallback: Boolean(onEditReport),
+    isPastLesson: isPastLesson()
+  });
+  
+  // デバッグ情報を追加
+  console.log("Booking Detail Debug:", {
+    bookingId: booking.id,
+    date: booking.date,
+    reportStatus: booking.reportStatus,
+    hasReportContent: Boolean(booking.reportContent),
+    isCompletedWithReport: isCompletedWithReport,
+    hasEditCallback: Boolean(onEditReport),
+    onEditReportType: typeof onEditReport
+  });
   
   // 授業が終了していて、かつ報告書が未作成の場合
   const showCreateReportButton = isPastLesson() && isCompletedNoReport && onCreateReport;
