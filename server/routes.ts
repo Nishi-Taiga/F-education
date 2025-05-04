@@ -1651,6 +1651,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // レッスンレポート関連のエンドポイント
+  // 特定の予約に関連するレポートを取得
+  app.get("/api/lesson-reports/booking/:bookingId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const bookingId = parseInt(req.params.bookingId);
+    
+    if (isNaN(bookingId)) {
+      return res.status(400).json({ message: "無効な予約IDです" });
+    }
+    
+    try {
+      // まず予約情報を取得して権限チェック
+      const booking = await storage.getBookingById(bookingId);
+      if (!booking) {
+        return res.status(404).json({ message: "予約が見つかりません" });
+      }
+      
+      // 権限チェック: 自分の予約または担当する授業のレポートのみアクセス可能
+      const userId = req.user!.id;
+      const userRole = req.user!.role;
+      
+      if (userRole === 'tutor') {
+        const tutorProfile = await storage.getTutorByUserId(userId);
+        if (!tutorProfile || booking.tutorId !== tutorProfile.id) {
+          return res.status(403).json({ message: "このレポートへのアクセス権限がありません" });
+        }
+      } else {
+        // 生徒または保護者の場合は自分の予約のみアクセス可能
+        if (booking.userId !== userId && (!req.user!.studentId || booking.studentId !== req.user!.studentId)) {
+          return res.status(403).json({ message: "このレポートへのアクセス権限がありません" });
+        }
+      }
+      
+      // レポートを取得
+      const report = await storage.getLessonReportByBookingId(bookingId);
+      res.json(report || null);
+    } catch (error) {
+      console.error("レポート取得エラー:", error);
+      res.status(500).json({ message: "レッスンレポートの取得に失敗しました", error: error.message });
+    }
+  });
+  
+  // レッスンレポートを作成
+  app.post("/api/lesson-reports", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
+    
+    // 講師のみレポート作成可能
+    if (userRole !== 'tutor') {
+      return res.status(403).json({ message: "講師のみレポート作成が可能です" });
+    }
+    
+    try {
+      // 講師IDを取得
+      const tutorProfile = await storage.getTutorByUserId(userId);
+      if (!tutorProfile) {
+        return res.status(404).json({ message: "講師プロフィールが見つかりません" });
+      }
+      
+      // リクエストデータをバリデーション
+      const reportData = insertLessonReportSchema.parse({
+        ...req.body,
+        tutorId: tutorProfile.id
+      });
+      
+      // 予約データを取得して権限チェック
+      const booking = await storage.getBookingById(reportData.bookingId);
+      if (!booking) {
+        return res.status(404).json({ message: "予約が見つかりません" });
+      }
+      
+      // この講師がこの授業を担当しているか確認
+      if (booking.tutorId !== tutorProfile.id) {
+        return res.status(403).json({ message: "この授業のレポートを作成する権限がありません" });
+      }
+      
+      // 既存のレポートがあるか確認
+      const existingReport = await storage.getLessonReportByBookingId(reportData.bookingId);
+      if (existingReport) {
+        return res.status(400).json({ message: "この予約に対するレポートは既に存在します" });
+      }
+      
+      // レポートを作成
+      const report = await storage.createLessonReport(reportData);
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("レポート作成エラー:", error);
+      res.status(400).json({ message: "レッスンレポートの作成に失敗しました", error: error.message });
+    }
+  });
+  
+  // レッスンレポートを更新
+  app.put("/api/lesson-reports/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const reportId = parseInt(req.params.id);
+    
+    if (isNaN(reportId)) {
+      return res.status(400).json({ message: "無効なレポートIDです" });
+    }
+    
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
+    
+    // 講師のみレポート更新可能
+    if (userRole !== 'tutor') {
+      return res.status(403).json({ message: "講師のみレポート更新が可能です" });
+    }
+    
+    try {
+      // 講師IDを取得
+      const tutorProfile = await storage.getTutorByUserId(userId);
+      if (!tutorProfile) {
+        return res.status(404).json({ message: "講師プロフィールが見つかりません" });
+      }
+      
+      // リクエストデータをバリデーション
+      const reportUpdateData = {
+        ...req.body
+      };
+      
+      // レポートを取得して権限チェック
+      const existingReports = await storage.getLessonReportsByTutorId(tutorProfile.id);
+      const report = existingReports.find(r => r.id === reportId);
+      
+      if (!report) {
+        return res.status(404).json({ message: "レポートが見つからないか、このレポートを編集する権限がありません" });
+      }
+      
+      // レポートを更新
+      const updatedReport = await storage.updateLessonReport(reportId, reportUpdateData);
+      res.json(updatedReport);
+    } catch (error) {
+      console.error("レポート更新エラー:", error);
+      res.status(400).json({ message: "レッスンレポートの更新に失敗しました", error: error.message });
+    }
+  });
+  
+  // 特定の生徒のレッスンレポート一覧を取得
+  app.get("/api/lesson-reports/student/:studentId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const studentId = parseInt(req.params.studentId);
+    
+    if (isNaN(studentId)) {
+      return res.status(400).json({ message: "無効な生徒IDです" });
+    }
+    
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
+    
+    try {
+      // 権限チェック
+      if (userRole === 'student') {
+        // 生徒は自分のレポートのみ閲覧可能
+        if (req.user!.studentId !== studentId) {
+          return res.status(403).json({ message: "このレポート一覧へのアクセス権限がありません" });
+        }
+      } else if (userRole === 'parent') {
+        // 保護者は自分の子供のレポートのみ閲覧可能
+        const students = await storage.getStudentsByUserId(userId);
+        const isMyStudent = students.some(student => student.id === studentId);
+        if (!isMyStudent) {
+          return res.status(403).json({ message: "このレポート一覧へのアクセス権限がありません" });
+        }
+      } else if (userRole !== 'admin') { // 管理者はすべてのレポートにアクセス可能
+        // 講師は自分が担当した授業のレポートのみ閲覧可能
+        const tutorProfile = await storage.getTutorByUserId(userId);
+        if (!tutorProfile) {
+          return res.status(403).json({ message: "このレポート一覧へのアクセス権限がありません" });
+        }
+        // ここでは講師IDをチェックせず、レポート一覧取得時にフィルタリングされるため権限チェックは省略
+      }
+      
+      // レポート一覧を取得
+      const reports = await storage.getLessonReportsByStudentId(studentId);
+      
+      // 講師の場合は自分が担当したレポートのみフィルタリング
+      if (userRole === 'tutor') {
+        const tutorProfile = await storage.getTutorByUserId(userId);
+        const filteredReports = reports.filter(report => report.tutorId === tutorProfile!.id);
+        res.json(filteredReports);
+      } else {
+        res.json(reports);
+      }
+    } catch (error) {
+      console.error("レポート一覧取得エラー:", error);
+      res.status(500).json({ message: "レッスンレポート一覧の取得に失敗しました", error: error.message });
+    }
+  });
+  
+  // 講師のレッスンレポート一覧を取得
+  app.get("/api/lesson-reports/tutor", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
+    
+    // 講師のみ自分のレポート一覧を取得可能
+    if (userRole !== 'tutor' && userRole !== 'admin') {
+      return res.status(403).json({ message: "講師のみレポート一覧を取得できます" });
+    }
+    
+    try {
+      if (userRole === 'tutor') {
+        // 講師IDを取得
+        const tutorProfile = await storage.getTutorByUserId(userId);
+        if (!tutorProfile) {
+          return res.status(404).json({ message: "講師プロフィールが見つかりません" });
+        }
+        
+        // レポート一覧を取得
+        const reports = await storage.getLessonReportsByTutorId(tutorProfile.id);
+        res.json(reports);
+      } else {
+        // 管理者の場合、講師IDをクエリパラメータで指定可能
+        const tutorId = req.query.tutorId ? parseInt(req.query.tutorId as string) : null;
+        
+        if (tutorId) {
+          const reports = await storage.getLessonReportsByTutorId(tutorId);
+          res.json(reports);
+        } else {
+          // 講師IDが指定されていない場合は400エラー
+          res.status(400).json({ message: "講師IDを指定してください" });
+        }
+      }
+    } catch (error) {
+      console.error("レポート一覧取得エラー:", error);
+      res.status(500).json({ message: "レッスンレポート一覧の取得に失敗しました", error: error.message });
+    }
+  });
+
   // PayPal関連のAPIエンドポイント
   app.get("/api/paypal/setup", async (req, res) => {
     await loadPaypalDefault(req, res);
