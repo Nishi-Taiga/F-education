@@ -78,8 +78,8 @@ export function BookingDetailModal({
   const showViewReportButton = isCompletedWithReport && onViewReport;
   
   // レポート編集ボタンを表示する条件（講師用）
-  // レポートが作成済みかつ編集コールバックが提供されている場合に表示
-  const showEditReportButton = isCompletedWithReport && onEditReport;
+  // レポートが作成済みの場合は常に表示する（講師アカウントの場合）
+  const showEditReportButton = isCompletedWithReport;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -249,7 +249,9 @@ export function BookingDetailModal({
               type="button"
               variant="outline"
               className="border-amber-600 text-amber-600 hover:bg-amber-50"
-              onClick={onEditReport}
+              onClick={onEditReport ? onEditReport : () => {
+                alert("レポート編集機能が利用できません。編集機能を有効にするには、カレンダーから予約を選択してください。");
+              }}
             >
               <Edit className="mr-2 h-4 w-4" />
               レポート編集

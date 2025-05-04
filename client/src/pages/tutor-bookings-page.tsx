@@ -149,7 +149,29 @@ export default function TutorBookingsPage() {
       const response = await fetch(`/api/bookings/${booking.id}`);
       if (response.ok) {
         const bookingDetails = await response.json();
-        setSelectedBooking(bookingDetails);
+        
+        // デバッグ出力を追加
+        console.log("詳細情報取得成功:", bookingDetails);
+        
+        // 生徒情報があればログ出力
+        if (bookingDetails.studentDetails) {
+          console.log("生徒詳細情報:", bookingDetails.studentDetails);
+        }
+        
+        // 前回のレポート情報があればログ出力
+        if (bookingDetails.previousReport) {
+          console.log("前回のレポート:", bookingDetails.previousReport);
+        }
+        
+        // 編集ボタン表示のためにselectedBookingに完全な情報を設定
+        setSelectedBooking({
+          ...bookingDetails,
+          // 既存のフィールドを保持しつつ、必要なフィールドを確実に設定
+          studentName: bookingDetails.studentName || getStudentName(bookingDetails.studentId),
+          id: bookingDetails.id,
+          reportStatus: bookingDetails.reportStatus || 'pending',
+          reportContent: bookingDetails.reportContent || ''
+        });
         
         // 生徒詳細情報を設定
         setStudentDetails(bookingDetails.studentDetails || null);
@@ -296,10 +318,12 @@ export default function TutorBookingsPage() {
             setShowBookingDetailModal(false);
             setShowReportViewModal(true);
           }}
-          onEditReport={() => {
+          // 必ず講師アカウントではレポート編集を有効にする
+          onEditReport={selectedBooking.reportStatus === 'completed' ? () => {
+            console.log("レポート編集モーダルを開きます", selectedBooking);
             setShowBookingDetailModal(false);
             setShowReportEditModal(true);
-          }}
+          } : undefined}
         />
       )}
       
