@@ -62,7 +62,7 @@ export function BookingDetailModal({
   // 授業が終了していて、かつ報告書が未作成の場合
   const showCreateReportButton = isPastLesson() && isCompletedNoReport && onCreateReport;
   
-  // 報告書が作成済みの場合
+  // 報告書が作成済みの場合（保護者側ではボタンを常に表示、講師側では条件付き）
   const showViewReportButton = isCompletedWithReport && onViewReport;
 
   return (
@@ -177,10 +177,23 @@ export function BookingDetailModal({
                 </div>
               </div>
               
-              {/* 今回のレポート内容があれば表示 */}
+              {/* 今回のレポート内容があれば表示（プレビュー） */}
               {isCompletedWithReport && booking.reportContent && (
                 <div className="bg-gray-50 p-3 rounded-md mt-2 border border-gray-200">
-                  <p className="text-sm font-medium text-gray-900 mb-1">レポート内容</p>
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="text-sm font-medium text-gray-900">レポート内容</p>
+                    {onViewReport && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 flex items-center text-green-600 hover:text-green-700 hover:bg-green-50 -mt-1 -mr-1"
+                        onClick={onViewReport}
+                      >
+                        <span className="text-xs mr-1">詳細</span>
+                        <FileText className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                   <div className="text-sm text-gray-600 whitespace-pre-line max-h-40 overflow-y-auto">
                     {booking.reportContent}
                   </div>
