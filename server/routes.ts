@@ -1022,11 +1022,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         university, 
         birthDate,
         subjects,
-        bio 
+        bio,
+        email
       } = req.body;
       
       if (!lastName || !firstName || !lastNameFurigana || !firstNameFurigana || !university || !birthDate || !subjects) {
         return res.status(400).json({ message: "All required fields must be provided" });
+      }
+      
+      // メールアドレスが指定されている場合は、ユーザー情報を更新
+      if (email) {
+        await storage.updateUserSettings(userId, { email });
       }
       
       // 既存の講師プロフィールを確認
