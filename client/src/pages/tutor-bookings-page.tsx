@@ -592,37 +592,65 @@ export default function TutorBookingsPage() {
       {/* テスト用ボタン - デバッグのためページ上部に配置 */}
       <div className="fixed top-20 right-5 z-50 flex flex-col gap-2">
         <Button 
-          onClick={() => {
-            console.log("テスト用編集ボタンがクリックされました - 実際の予約ID使用");
+          onClick={async () => {
+            console.log("テスト用編集ボタンがクリックされました - 実際の予約ID:7を取得");
             
-            // 実際に存在する予約のデータ
-            const testBooking = {
-              id: 7, // 実際に存在する予約ID
-              userId: 3,
-              tutorId: 2,
-              studentId: 4,
-              tutorShiftId: 61,
-              date: "2025-05-01",
-              timeSlot: "16:00-17:30",
-              subject: "小学算数",
-              status: "confirmed",
-              reportStatus: "completed",
-              reportContent: "【単元】\n割り算の応用問題\n\n【伝言事項】\n基本的な計算はよくできています。\n\n【来週までの目標(課題)】\n教科書p.45-46の問題を解いてみましょう。",
-              createdAt: new Date().toISOString(),
-              studentName: "テスト 花子"
-            };
-            
-            // 一度falseにしてから
-            setShowReportEditModal(false);
-            
-            // 編集用の予約データを設定
-            setReportEditBooking(testBooking);
-            
-            // 少し遅延させてからモーダルを表示
-            setTimeout(() => {
-              setShowReportEditModal(true);
-              console.log("テスト用レポート編集モーダルが表示されました", testBooking);
-            }, 50);
+            // 実際の予約データを取得（より確実に実際のデータを使用）
+            try {
+              const response = await fetch("/api/bookings/7");
+              if (response.ok) {
+                const bookingData = await response.json();
+                console.log("テスト用に取得した実際の予約データ:", bookingData);
+                
+                // まずモーダルを閉じる
+                setShowReportEditModal(false);
+                
+                // 編集用の予約データを設定
+                // reportContentがあることを確認し、明示的に設定
+                setReportEditBooking({
+                  ...bookingData,
+                  id: bookingData.id,
+                  reportStatus: bookingData.reportStatus || "completed",
+                  reportContent: bookingData.reportContent || 
+                    "【単元】\nテスト\n\n【伝言事項】\nテスト\n\n【来週までの目標(課題)】\nテスト",
+                  studentName: bookingData.studentName || "テスト 花子"
+                });
+                
+                // 少し遅延させてからモーダルを表示
+                setTimeout(() => {
+                  setShowReportEditModal(true);
+                  console.log("テスト用レポート編集モーダルが表示されました - モーダル用データ:", reportEditBooking);
+                }, 100);
+              } else {
+                console.error("テスト用予約データの取得に失敗しました");
+                // 取得に失敗した場合はハードコードされたデータを使用
+                const testBooking = {
+                  id: 7,
+                  userId: 3,
+                  tutorId: 2,
+                  studentId: 4,
+                  tutorShiftId: 61,
+                  date: "2025-05-01",
+                  timeSlot: "16:00-17:30",
+                  subject: "小学算数",
+                  status: "confirmed",
+                  reportStatus: "completed",
+                  reportContent: "【単元】\nテスト用単元\n\n【伝言事項】\nテスト用伝言\n\n【来週までの目標(課題)】\nテスト用課題",
+                  createdAt: new Date().toISOString(),
+                  studentName: "テスト 花子"
+                };
+                
+                // 編集用の予約データを設定
+                setReportEditBooking(testBooking);
+                
+                // 少し遅延させてからモーダルを表示
+                setTimeout(() => {
+                  setShowReportEditModal(true);
+                }, 100);
+              }
+            } catch (error) {
+              console.error("テスト用データ取得中にエラーが発生しました:", error);
+            }
           }}
           className="bg-red-500 hover:bg-red-600 text-white p-2 font-bold animate-pulse"
         >
@@ -644,12 +672,16 @@ export default function TutorBookingsPage() {
       )}
       
       {/* レポート編集モーダル - 専用の状態変数を使用 */}
-      {(reportEditBooking || selectedBooking) && (
+      {showReportEditModal && (
         <ReportEditModal
           isOpen={showReportEditModal}
           booking={{
             ...(reportEditBooking || selectedBooking),
-            studentName: selectedBooking?.studentName || getStudentName(selectedBooking?.studentId || null),
+            // 明示的にreportContentを設定しないとmodalが開いた時に正しく反映されない場合がある
+            reportContent: reportEditBooking?.reportContent || selectedBooking?.reportContent || "",
+            studentName: reportEditBooking?.studentName || 
+                        selectedBooking?.studentName || 
+                        getStudentName(reportEditBooking?.studentId || selectedBooking?.studentId || null),
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
           }}
           onClose={() => {

@@ -52,51 +52,58 @@ export function ReportEditModal({
     console.error("Invalid date format:", booking.date);
   }
 
-  // マウント時に既存のレポート内容を解析して各フィールドに設定する
-  // 予約情報のデバッグ出力
+  // モーダルが開かれたときに既存のレポート内容を解析して各フィールドに設定する
   useEffect(() => {
-    console.log("ReportEditModal - 受け取った予約情報:", booking);
-  }, [booking]);
-
-  // レポートコンテンツが更新されたら、各テキストエリアを更新
-  useEffect(() => {
-    console.log("レポート内容を解析します:", booking.reportContent);
-    
-    if (booking.reportContent) {
-      if (booking.reportContent.includes('【単元】')) {
-        // 新フォーマットの場合
-        try {
-          console.log("新フォーマットのレポートを検出しました");
-          const unitPart = booking.reportContent.split('【単元】')[1].split('【伝言事項】')[0].trim();
-          const messagePart = booking.reportContent.split('【伝言事項】')[1].split('【来週までの目標(課題)】')[0].trim();
-          const goalPart = booking.reportContent.split('【来週までの目標(課題)】')[1].trim();
-          
-          console.log("パースしたコンテンツ:", { unitPart, messagePart, goalPart });
-          
-          setUnitContent(unitPart);
-          setMessageContent(messagePart);
-          setGoalContent(goalPart);
-        } catch (e) {
-          // 解析に失敗した場合は、全てをユニットコンテンツに設定
-          console.error("レポート解析エラー:", e);
-          setUnitContent(booking.reportContent);
+    if (isOpen) {
+      console.log("ReportEditModal - モーダルが開かれました。予約情報:", booking);
+      
+      // reportContentの状態を詳細にログ出力
+      console.log("レポート内容の詳細:", {
+        hasContent: !!booking.reportContent,
+        contentType: typeof booking.reportContent,
+        contentLength: booking.reportContent ? booking.reportContent.length : 0,
+        contentValue: booking.reportContent
+      });
+      
+      // レポート内容の解析
+      if (booking.reportContent) {
+        if (booking.reportContent.includes('【単元】')) {
+          // 新フォーマットの場合
+          try {
+            console.log("新フォーマットのレポートを解析します");
+            const unitPart = booking.reportContent.split('【単元】')[1].split('【伝言事項】')[0].trim();
+            const messagePart = booking.reportContent.split('【伝言事項】')[1].split('【来週までの目標(課題)】')[0].trim();
+            const goalPart = booking.reportContent.split('【来週までの目標(課題)】')[1].trim();
+            
+            console.log("パースしたコンテンツ:", { unitPart, messagePart, goalPart });
+            
+            setUnitContent(unitPart);
+            setMessageContent(messagePart);
+            setGoalContent(goalPart);
+          } catch (e) {
+            // 解析に失敗した場合は、全てをユニットコンテンツに設定
+            console.error("レポート解析エラー:", e);
+            setUnitContent(booking.reportContent);
+            setMessageContent("");
+            setGoalContent("");
+          }
+        } else {
+          // 古いフォーマットの場合
+          console.log("古いフォーマットのレポートを解析します");
+          const parts = booking.reportContent.split("\n");
+          setUnitContent(parts.length >= 1 ? parts[0] : "");
+          setMessageContent(parts.length >= 2 ? parts[1] : "");
+          setGoalContent(parts.length >= 3 ? parts[2] : "");
         }
       } else {
-        // 古いフォーマットの場合
-        console.log("古いフォーマットのレポートを検出しました");
-        const parts = booking.reportContent.split("\n");
-        if (parts.length >= 1) setUnitContent(parts[0]);
-        if (parts.length >= 2) setMessageContent(parts[1]);
-        if (parts.length >= 3) setGoalContent(parts[2]);
+        console.log("レポート内容がありません、フィールドをクリアします");
+        // レポート内容がない場合は空にする
+        setUnitContent("");
+        setMessageContent("");
+        setGoalContent("");
       }
-    } else {
-      console.log("レポート内容がありません");
-      // レポート内容がない場合は空にする
-      setUnitContent("");
-      setMessageContent("");
-      setGoalContent("");
     }
-  }, [booking.reportContent]);
+  }, [isOpen, booking]); // isOpenとbookingの両方の変更を監視
 
   // レポート保存のミューテーション
   const saveReportMutation = useMutation({
