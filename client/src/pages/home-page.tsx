@@ -314,20 +314,29 @@ export default function HomePage() {
   
   // 予約カードまたはカレンダー上の予約がクリックされたときの処理
   const handleBookingClick = async (booking: Booking & { studentName?: string }) => {
+    console.log("予約クリック:", booking);
     try {
       // 予約の詳細情報を取得（生徒情報や前回のレポートも含む）
       const response = await fetch(`/api/bookings/${booking.id}`);
       if (response.ok) {
         const bookingDetails = await response.json();
+        console.log("詳細情報取得成功:", bookingDetails);
         setSelectedDetailBooking(bookingDetails);
         
         // 生徒の詳細情報があれば設定
         if (bookingDetails.studentDetails) {
+          console.log("生徒詳細情報:", bookingDetails.studentDetails);
           setStudentDetails(bookingDetails.studentDetails);
         } else {
           setStudentDetails(null);
         }
+        
+        // 前回のレポート情報を確認
+        if (bookingDetails.previousReport) {
+          console.log("前回のレポート:", bookingDetails.previousReport);
+        }
       } else {
+        console.log("詳細情報取得失敗:", response.status);
         // 詳細情報が取得できない場合は元の予約情報を使用
         setSelectedDetailBooking(booking);
         setStudentDetails(null);
@@ -338,6 +347,7 @@ export default function HomePage() {
             const studentResponse = await fetch(`/api/students/${booking.studentId}`);
             if (studentResponse.ok) {
               const studentDetails = await studentResponse.json();
+              console.log("個別取得した生徒情報:", studentDetails);
               setStudentDetails(studentDetails);
             }
           } catch (error) {
