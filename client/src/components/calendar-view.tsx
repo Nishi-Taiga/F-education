@@ -87,8 +87,9 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
       return 'upcoming';
     }
     
-    // レポート完了状態なら「完了済み」（緑色）
-    if (booking.reportStatus === 'completed') {
+    // レポート完了状態なら「完了済み」（緑色）- 拡張対応
+    if (booking.reportStatus === 'completed' || 
+        (booking.reportStatus && booking.reportStatus.startsWith('completed'))) {
       return 'completed-with-report';
     }
     
