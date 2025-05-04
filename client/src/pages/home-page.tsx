@@ -101,7 +101,14 @@ export default function HomePage() {
   
   // 予約詳細モーダル用の状態
   const [showBookingDetailModal, setShowBookingDetailModal] = useState(false);
-  const [selectedDetailBooking, setSelectedDetailBooking] = useState<(Booking & { studentName?: string, tutorName?: string }) | null>(null);
+  const [selectedDetailBooking, setSelectedDetailBooking] = useState<(Booking & { 
+    studentName?: string;
+    tutorName?: string;
+    previousReport?: {
+      date: string;
+      content: string;
+    } | null;
+  }) | null>(null);
   const [studentDetails, setStudentDetails] = useState<{
     lastName: string;
     firstName: string;
@@ -303,6 +310,48 @@ export default function HomePage() {
   const handleViewReportClick = (booking: Booking & { studentName?: string }) => {
     setViewReportBooking(booking);
     setShowReportViewDialog(true);
+  };
+  
+  // 予約カードまたはカレンダー上の予約がクリックされたときの処理
+  const handleBookingClick = async (booking: Booking & { studentName?: string }) => {
+    try {
+      // 予約の詳細情報を取得（生徒情報や前回のレポートも含む）
+      const response = await fetch(`/api/bookings/${booking.id}`);
+      if (response.ok) {
+        const bookingDetails = await response.json();
+        setSelectedDetailBooking(bookingDetails);
+        
+        // 生徒の詳細情報があれば設定
+        if (bookingDetails.studentDetails) {
+          setStudentDetails(bookingDetails.studentDetails);
+        } else {
+          setStudentDetails(null);
+        }
+      } else {
+        // 詳細情報が取得できない場合は元の予約情報を使用
+        setSelectedDetailBooking(booking);
+        setStudentDetails(null);
+        
+        // 生徒情報を個別に取得（講師の場合のみ）
+        if (user?.role === 'tutor' && booking.studentId) {
+          try {
+            const studentResponse = await fetch(`/api/students/${booking.studentId}`);
+            if (studentResponse.ok) {
+              const studentDetails = await studentResponse.json();
+              setStudentDetails(studentDetails);
+            }
+          } catch (error) {
+            console.error("生徒情報の取得に失敗しました", error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("予約詳細の取得に失敗しました", error);
+      setSelectedDetailBooking(booking);
+    }
+    
+    // モーダルを表示
+    setShowBookingDetailModal(true);
   };
 
   // キャンセルの確認
@@ -507,40 +556,6 @@ export default function HomePage() {
       return `${student.lastName} ${student.firstName}`;
     }
     return undefined;
-  };
-  
-  // 予約クリック時のハンドラ（カレンダー内の予約をクリックしたとき）
-  const handleBookingClick = (booking: Booking & { studentName?: string }) => {
-    // 予約詳細に必要なデータを設定
-    setSelectedDetailBooking({
-      ...booking,
-      // 講師の場合、講師名は設定しない（自分自身）
-      tutorName: user?.role !== 'tutor' ? (tutorProfile ? `${tutorProfile.lastName || ''} ${tutorProfile.firstName || ''}` : undefined) : undefined
-    });
-    
-    // 生徒の詳細情報を取得（講師向け）
-    if (booking.studentId && students) {
-      const student = students.find(s => s.id === booking.studentId);
-      if (student) {
-        setStudentDetails({
-          lastName: student.lastName,
-          firstName: student.firstName,
-          school: student.school,
-          grade: student.grade,
-          // 講師の場合のみ住所と電話番号を表示
-          // 住所情報はユーザープロフィールに保存されていますが、このデモでは簡略化
-          address: user?.role === 'tutor' ? "東京都新宿区西新宿2-8-1" : undefined,
-          phone: user?.role === 'tutor' ? user.phone || "03-XXXX-XXXX" : undefined,
-        });
-      } else {
-        setStudentDetails(null);
-      }
-    } else {
-      setStudentDetails(null);
-    }
-    
-    // モーダルを表示
-    setShowBookingDetailModal(true);
   };
   
   // 日本時間で日付を取得するヘルパー関数
