@@ -1333,6 +1333,54 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+  
+  // 支払い取引関連のメソッド
+  async createPaymentTransaction(transaction: InsertPaymentTransaction): Promise<PaymentTransaction> {
+    try {
+      const [result] = await db
+        .insert(paymentTransactions)
+        .values({
+          userId: transaction.userId,
+          transactionId: transaction.transactionId,
+          paymentMethod: transaction.paymentMethod || "paypal",
+          amount: transaction.amount,
+          currency: transaction.currency || "JPY",
+          status: transaction.status,
+          metadata: transaction.metadata
+        })
+        .returning();
+      return result;
+    } catch (error) {
+      console.error("支払い取引作成エラー:", error);
+      throw new Error("Failed to create payment transaction");
+    }
+  }
+  
+  async getPaymentTransactionByTransactionId(transactionId: string): Promise<PaymentTransaction | undefined> {
+    try {
+      const [result] = await db
+        .select()
+        .from(paymentTransactions)
+        .where(eq(paymentTransactions.transactionId, transactionId));
+      return result;
+    } catch (error) {
+      console.error("支払い取引検索エラー:", error);
+      return undefined;
+    }
+  }
+  
+  async getUserPaymentTransactions(userId: number): Promise<PaymentTransaction[]> {
+    try {
+      return db
+        .select()
+        .from(paymentTransactions)
+        .where(eq(paymentTransactions.userId, userId))
+        .orderBy(sql`${paymentTransactions.createdAt} DESC`);
+    } catch (error) {
+      console.error("ユーザー支払い取引履歴取得エラー:", error);
+      return [];
+    }
+  }
 }
 
 // MemStorageからDatabaseStorageに変更
