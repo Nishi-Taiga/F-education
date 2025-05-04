@@ -40,12 +40,7 @@ export default function TutorBookingsPage() {
   const [reportEditBooking, setReportEditBooking] = useState<Booking | null>(null);
   const [studentDetails, setStudentDetails] = useState<any>(null);
   
-  // 編集モーダルを開く関数（レポート編集ボタンに渡す）
-  const handleOpenEditModal = () => {
-    console.log("レポート編集モーダルを開きます（専用関数）", selectedBooking);
-    setShowBookingDetailModal(false);
-    setShowReportEditModal(true);
-  };
+  // こちらの関数は使用していないので削除（handleOpenReportEditModalを使用）
   
   // 講師プロフィールの取得
   const { data: tutorProfile, isLoading: isLoadingProfile } = useQuery({
@@ -380,8 +375,41 @@ export default function TutorBookingsPage() {
             setShowBookingDetailModal(false);
             setShowReportViewModal(true);
           }}
-          // 講師アカウントではレポート編集を常に有効にする
-          onEditReport={handleOpenReportEditModal}
+          // 講師アカウントではレポート編集を常に有効にする - インラインで実装して問題解決
+          onEditReport={() => {
+            console.log("インライン：レポート編集モーダルを開きます");
+            // 選択された予約がない場合は処理を中止
+            if (!selectedBooking) {
+              console.error("レポート編集対象の予約が選択されていません");
+              return;
+            }
+            
+            // 編集用の予約データを設定
+            setReportEditBooking({
+              ...selectedBooking,
+              id: selectedBooking.id,
+              userId: selectedBooking.userId,
+              tutorId: selectedBooking.tutorId,
+              studentId: selectedBooking.studentId,
+              tutorShiftId: selectedBooking.tutorShiftId || 0, 
+              date: selectedBooking.date,
+              timeSlot: selectedBooking.timeSlot,
+              subject: selectedBooking.subject || "",
+              status: selectedBooking.status || null,
+              createdAt: selectedBooking.createdAt,
+              reportStatus: selectedBooking.reportStatus || null,
+              reportContent: selectedBooking.reportContent || ''
+            });
+            
+            // モーダルを閉じる
+            setShowBookingDetailModal(false);
+            
+            // 少し遅延させてモーダルを表示
+            setTimeout(() => {
+              setShowReportEditModal(true);
+              console.log("レポート編集モーダルが表示されました");
+            }, 100);
+          }}
         />
       )}
       

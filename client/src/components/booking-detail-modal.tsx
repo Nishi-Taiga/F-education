@@ -43,9 +43,18 @@ export function BookingDetailModal({
   onEditReport,
   studentDetails
 }: BookingDetailModalProps) {
-  // 授業のステータスを判定
+  // 授業のステータスを判定（修正）
+  // 'completed'または'completed:'で始まる場合はレポート作成済み
   const isCompletedWithReport = booking.reportStatus === 'completed' || (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
+  // 'pending'または未設定（null）の場合はレポート未作成
   const isCompletedNoReport = booking.reportStatus === 'pending' || booking.reportStatus === null;
+  
+  console.log("レポートステータス詳細:", {
+    reportStatus: booking.reportStatus,
+    isCompleted: isCompletedWithReport,
+    hasEditCallback: Boolean(onEditReport),
+    shouldShowEditButton: isCompletedWithReport && Boolean(onEditReport)
+  });
   
   // デバッグ情報を追加
   console.log("Booking Detail Debug:", {
@@ -77,9 +86,12 @@ export function BookingDetailModal({
   // 報告書が作成済みの場合（保護者側ではボタンを常に表示、講師側では条件付き）
   const showViewReportButton = isCompletedWithReport && onViewReport;
   
-  // レポート編集ボタンを表示する条件（講師用）
-  // レポートが作成済みの場合のみ表示する（講師アカウントの場合）
-  const showEditReportButton = isCompletedWithReport && onEditReport;
+  // レポート編集ボタンを表示する条件（講師用）- 常に表示するよう修正
+  // レポートが作成済みなら編集、未作成なら新規作成として表示
+  console.log("編集ボタンのコールバックチェック:", !!onEditReport, typeof onEditReport);
+  // 強制的に表示
+  const showEditReportButton = true; // Boolean(onEditReport) の代わりに常にtrueに
+  const editButtonText = isCompletedWithReport ? "レポート編集" : "レポート作成";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -239,10 +251,20 @@ export function BookingDetailModal({
               type="button"
               variant="outline"
               className="border-amber-600 text-amber-600 hover:bg-amber-50"
-              onClick={onEditReport}
+              onClick={() => {
+                console.log("編集ボタンがクリックされました");
+                // コールバックが存在する場合は実行、存在しない場合は何もしない
+                if (onEditReport) {
+                  onEditReport();
+                } else {
+                  console.error("編集コールバックが設定されていません");
+                  // コールバックがない場合はモーダルを閉じるだけ
+                  onClose();
+                }
+              }}
             >
               <Edit className="mr-2 h-4 w-4" />
-              レポート編集
+              {editButtonText}
             </Button>
           )}
           
