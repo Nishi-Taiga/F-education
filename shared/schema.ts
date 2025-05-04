@@ -110,8 +110,8 @@ export const bookings = pgTable("bookings", {
   timeSlot: text("time_slot").notNull(), // format: "HH:MM-HH:MM"
   subject: text("subject").notNull(), // 科目（数学、英語など）
   status: text("status").default("confirmed"), // "confirmed", "cancelled"
-  reportStatus: text("report_status").default("pending"), // "pending", "completed"
-  reportContent: text("report_content"), // レポート内容（JSON文字列として保存）
+  reportStatus: text("report_status").default("pending"), // "pending", "completed" - 互換性のために残す（レポートテーブル移行前のデータ用）
+  reportContent: text("report_content"), // レポート内容 - 互換性のために残す（レポートテーブル移行前のデータ用）
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -171,6 +171,35 @@ export const paymentTransactionsRelations = relations(paymentTransactions, ({ on
   user: one(users, {
     fields: [paymentTransactions.userId],
     references: [users.id]
+  }),
+}));
+
+// レッスンレポートテーブル
+export const lessonReports = pgTable("lesson_reports", {
+  id: serial("id").primaryKey(),
+  bookingId: integer("booking_id").notNull().references(() => bookings.id),
+  tutorId: integer("tutor_id").notNull().references(() => tutors.id),
+  studentId: integer("student_id").references(() => students.id),
+  unitContent: text("unit_content").notNull(), // 単元内容
+  messageContent: text("message_content"), // 伝言事項
+  goalContent: text("goal_content"), // 来週までの目標(課題)
+  status: text("status").default("completed").notNull(), // "completed", "draft"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const lessonReportsRelations = relations(lessonReports, ({ one }) => ({
+  booking: one(bookings, {
+    fields: [lessonReports.bookingId],
+    references: [bookings.id],
+  }),
+  tutor: one(tutors, {
+    fields: [lessonReports.tutorId],
+    references: [tutors.id],
+  }),
+  student: one(students, {
+    fields: [lessonReports.studentId],
+    references: [students.id],
   }),
 }));
 
@@ -268,6 +297,16 @@ export const insertPaymentTransactionSchema = createInsertSchema(paymentTransact
   metadata: true,
 });
 
+export const insertLessonReportSchema = createInsertSchema(lessonReports).pick({
+  bookingId: true,
+  tutorId: true,
+  studentId: true,
+  unitContent: true,
+  messageContent: true,
+  goalContent: true,
+  status: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -285,6 +324,9 @@ export type Booking = typeof bookings.$inferSelect;
 
 export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
 export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+
+export type InsertLessonReport = z.infer<typeof insertLessonReportSchema>;
+export type LessonReport = typeof lessonReports.$inferSelect;
 
 export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
 export type TutorProfile = z.infer<typeof tutorProfileSchema>;

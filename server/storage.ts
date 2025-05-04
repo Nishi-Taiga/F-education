@@ -1,8 +1,9 @@
 import { 
-  users, bookings, students, tutors, tutorShifts, studentTickets, paymentTransactions,
+  users, bookings, students, tutors, tutorShifts, studentTickets, paymentTransactions, lessonReports,
   type User, type InsertUser, type Booking, type InsertBooking, 
   type Student, type InsertStudent, type Tutor, type InsertTutor,
-  type TutorShift, type InsertTutorShift, type InsertPaymentTransaction, type PaymentTransaction
+  type TutorShift, type InsertTutorShift, type InsertPaymentTransaction, type PaymentTransaction,
+  type LessonReport, type InsertLessonReport
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -74,6 +75,13 @@ export interface IStorage {
   getPaymentTransactionByTransactionId(transactionId: string): Promise<PaymentTransaction | undefined>;
   getUserPaymentTransactions(userId: number): Promise<PaymentTransaction[]>;
   
+  // レッスンレポート関連
+  createLessonReport(report: InsertLessonReport): Promise<LessonReport>;
+  updateLessonReport(id: number, report: Partial<InsertLessonReport>): Promise<LessonReport>;
+  getLessonReportByBookingId(bookingId: number): Promise<LessonReport | undefined>;
+  getLessonReportsByTutorId(tutorId: number): Promise<LessonReport[]>;
+  getLessonReportsByStudentId(studentId: number): Promise<LessonReport[]>;
+  
   sessionStore: any; // sessionエラー回避のためany型を使用
 }
 
@@ -85,6 +93,7 @@ export class MemStorage implements IStorage {
   private tutorShifts: Map<number, TutorShift>;
   private studentTicketRecords: Map<number, { studentId: number, userId: number, quantity: number, date: Date }>;
   private paymentTransactions: Map<number, PaymentTransaction>;
+  private lessonReports: Map<number, LessonReport>;
   sessionStore: any; // session.SessionStore型を回避するためにany型を使用
   currentUserId: number;
   currentBookingId: number;
@@ -93,6 +102,7 @@ export class MemStorage implements IStorage {
   currentTutorShiftId: number;
   currentTicketRecordId: number;
   currentPaymentTransactionId: number;
+  currentLessonReportId: number;
   
   // 科目、日付、時間帯に基づいて利用可能な講師を取得
   async getAvailableTutorsBySubject(subject: string, date: string, timeSlot: string): Promise<any[]> {
