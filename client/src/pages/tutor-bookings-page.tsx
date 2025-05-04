@@ -139,6 +139,13 @@ export default function TutorBookingsPage() {
     return uniqueDates.map(date => parseISO(date as string));
   };
   
+  // モーダル開閉とレポート編集のためのハンドラー
+  const handleOpenReportEditModal = () => {
+    console.log("レポート編集モーダルを開きます（グローバル関数）", selectedBooking);
+    setShowBookingDetailModal(false);
+    setShowReportEditModal(true);
+  };
+  
   const bookingDates = getBookingDates();
   
   // 生徒IDから生徒名を取得する関数
@@ -331,11 +338,7 @@ export default function TutorBookingsPage() {
             setShowReportViewModal(true);
           }}
           // 講師アカウントではレポート編集を常に有効にする
-          onEditReport={() => {
-            console.log("レポート編集モーダルを開きます", selectedBooking);
-            setShowBookingDetailModal(false);
-            setShowReportEditModal(true);
-          }}
+          onEditReport={handleOpenReportEditModal}
         />
       )}
       
