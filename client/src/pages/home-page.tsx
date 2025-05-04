@@ -1069,6 +1069,27 @@ export default function HomePage() {
         />
       )}
       
+      {/* 予約詳細モーダル */}
+      {selectedDetailBooking && (
+        <BookingDetailModal
+          isOpen={showBookingDetailModal}
+          booking={selectedDetailBooking}
+          onClose={() => setShowBookingDetailModal(false)}
+          studentDetails={studentDetails}
+          onCreateReport={() => {
+            setShowBookingDetailModal(false);
+            // レポート作成ダイアログを表示
+            handleOpenReportDialog(selectedDetailBooking);
+          }}
+          onViewReport={() => {
+            setShowBookingDetailModal(false);
+            // レポート閲覧ダイアログを表示
+            setViewReportBooking(selectedDetailBooking);
+            setShowReportViewDialog(true);
+          }}
+        />
+      )}
+      
       {/* レポート閲覧モーダル */}
       {viewReportBooking && (
         <ReportViewModal
