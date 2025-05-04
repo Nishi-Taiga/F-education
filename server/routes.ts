@@ -1587,24 +1587,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // テスト用データ作成エンドポイント（開発環境でのみ使用）
-  app.post("/api/test/create-test-booking", async (req, res) => {
+  app.get("/api/test/create-test-booking", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "認証が必要です" });
       }
       
-      // 講師かどうか確認
-      if (req.user!.role !== "tutor") {
-        return res.status(403).json({ message: "講師のみがテストデータを作成できます" });
-      }
-      
+      // 誰でもテストデータを作成できるようにします
       const tutorId = 2; // テスト用講師ID
       const tutorShiftId = 3; // 適当なシフトID（本来はチェックが必要）
       const userId = 3; // テスト用生徒の親ユーザーID
       const studentId = 4; // テスト用生徒ID
       
-      // 過去の授業データを作成
-      const testBooking = {
+      // 過去の授業データを作成 (5月1日)
+      const testBooking1 = await storage.createBooking({
         userId: userId,
         studentId: studentId,
         tutorId: tutorId,
@@ -1615,18 +1611,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "confirmed",
         reportStatus: "completed", // レポート作成済みに設定
         reportContent: "【単元】\n割り算の応用問題\n\n【伝言事項】\n基本的な計算はよくできています。\n\n【来週までの目標(課題)】\n教科書p.45-46の問題を解いてみましょう。"
-      };
+      });
       
-      // データベースに保存
-      const booking = await storage.createBooking(testBooking);
+      // 過去の授業データを作成 (4月15日)
+      const testBooking2 = await storage.createBooking({
+        userId: userId,
+        studentId: studentId,
+        tutorId: tutorId,
+        tutorShiftId: tutorShiftId,
+        date: "2025-04-15", // 4月15日
+        timeSlot: "18:00-19:30",
+        subject: "小学算数",
+        status: "confirmed",
+        reportStatus: "completed", 
+        reportContent: "【単元】\n分数の足し算と引き算\n\n【伝言事項】\n分母が同じ場合の計算はスムーズにできていました。分母が異なる場合は少し苦戦していましたが、最終的には理解できたようです。\n\n【来週までの目標(課題)】\n教科書p.32-33の練習問題を解いておいてください。"
+      });
+      
+      // 過去の授業データを作成 (3月20日)
+      const testBooking3 = await storage.createBooking({
+        userId: userId,
+        studentId: studentId,
+        tutorId: tutorId,
+        tutorShiftId: tutorShiftId,
+        date: "2025-03-20", // 3月20日
+        timeSlot: "16:00-17:30",
+        subject: "小学算数",
+        status: "confirmed",
+        reportStatus: "completed",
+        reportContent: "【単元】\n小数の掛け算\n\n【伝言事項】\n小数点の位置の移動について理解するのに時間がかかりましたが、最終的には概念を把握できました。\n\n【来週までの目標(課題)】\n小数の掛け算練習プリントを完成させてください。"
+      });
       
       res.status(201).json({
         message: "テスト用の過去授業データが作成されました",
-        booking: booking
+        bookings: [testBooking1, testBooking2, testBooking3]
       });
     } catch (error) {
       console.error("テストデータ作成エラー:", error);
-      res.status(500).json({ message: "テストデータの作成に失敗しました" });
+      res.status(500).json({ message: "テストデータの作成に失敗しました", error: error.message });
     }
   });
 
