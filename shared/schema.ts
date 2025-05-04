@@ -154,6 +154,26 @@ export const studentTicketsRelations = relations(studentTickets, ({ one }) => ({
   }),
 }));
 
+// 支払い取引テーブル
+export const paymentTransactions = pgTable("payment_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  transactionId: text("transaction_id").notNull(),
+  paymentMethod: text("payment_method").notNull().default("paypal"),
+  amount: integer("amount").notNull(),
+  currency: text("currency").notNull().default("JPY"),
+  status: text("status").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  metadata: text("metadata") // JSON文字列として保存
+});
+
+export const paymentTransactionsRelations = relations(paymentTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [paymentTransactions.userId],
+    references: [users.id]
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -238,6 +258,16 @@ export const tutorProfileSchema = z.object({
   email: z.string().email("有効なメールアドレスを入力してください").min(1, "メールアドレスは必須です"),
 });
 
+export const insertPaymentTransactionSchema = createInsertSchema(paymentTransactions).pick({
+  userId: true,
+  transactionId: true,
+  paymentMethod: true,
+  amount: true,
+  currency: true,
+  status: true,
+  metadata: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -253,6 +283,9 @@ export type TutorShift = typeof tutorShifts.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
 
+export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+
 export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
 export type TutorProfile = z.infer<typeof tutorProfileSchema>;
 
@@ -260,18 +293,6 @@ export type TicketPurchase = {
   userId: number;
   quantity: number;
   amount: number;
-};
-
-export type PaymentTransaction = {
-  id: number;
-  userId: number;
-  transactionId: string;
-  paymentMethod: string;
-  amount: number;
-  currency: string;
-  status: string;
-  createdAt: Date;
-  metadata?: Record<string, any>;
 };
 
 export const timeSlots = ["16:00-17:30", "18:00-19:30", "20:00-21:30"];

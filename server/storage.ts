@@ -1,8 +1,8 @@
 import { 
-  users, bookings, students, tutors, tutorShifts, studentTickets,
+  users, bookings, students, tutors, tutorShifts, studentTickets, paymentTransactions,
   type User, type InsertUser, type Booking, type InsertBooking, 
   type Student, type InsertStudent, type Tutor, type InsertTutor,
-  type TutorShift, type InsertTutorShift
+  type TutorShift, type InsertTutorShift, type InsertPaymentTransaction, type PaymentTransaction
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -69,6 +69,11 @@ export interface IStorage {
   getBookingById(id: number): Promise<Booking | undefined>;
   deleteBooking(id: number): Promise<void>;
   
+  // 支払い取引関連
+  createPaymentTransaction(transaction: InsertPaymentTransaction): Promise<PaymentTransaction>;
+  getPaymentTransactionByTransactionId(transactionId: string): Promise<PaymentTransaction | undefined>;
+  getUserPaymentTransactions(userId: number): Promise<PaymentTransaction[]>;
+  
   sessionStore: any; // sessionエラー回避のためany型を使用
 }
 
@@ -79,6 +84,7 @@ export class MemStorage implements IStorage {
   private tutors: Map<number, Tutor>;
   private tutorShifts: Map<number, TutorShift>;
   private studentTicketRecords: Map<number, { studentId: number, userId: number, quantity: number, date: Date }>;
+  private paymentTransactions: Map<number, PaymentTransaction>;
   sessionStore: any; // session.SessionStore型を回避するためにany型を使用
   currentUserId: number;
   currentBookingId: number;
@@ -86,6 +92,7 @@ export class MemStorage implements IStorage {
   currentTutorId: number;
   currentTutorShiftId: number;
   currentTicketRecordId: number;
+  currentPaymentTransactionId: number;
   
   // 科目、日付、時間帯に基づいて利用可能な講師を取得
   async getAvailableTutorsBySubject(subject: string, date: string, timeSlot: string): Promise<any[]> {
@@ -149,6 +156,7 @@ export class MemStorage implements IStorage {
     this.tutors = new Map();
     this.tutorShifts = new Map();
     this.studentTicketRecords = new Map();
+    this.paymentTransactions = new Map();
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
@@ -158,9 +166,41 @@ export class MemStorage implements IStorage {
     this.currentTutorId = 1;
     this.currentTutorShiftId = 1;
     this.currentTicketRecordId = 1;
+    this.currentPaymentTransactionId = 1;
     
     // テストユーザーを自動作成
     this.createInitialTestData();
+  }
+  
+  // 支払い取引関連のメソッド
+  async createPaymentTransaction(transaction: InsertPaymentTransaction): Promise<PaymentTransaction> {
+    const id = this.currentPaymentTransactionId++;
+    const paymentTransaction: PaymentTransaction = {
+      id,
+      userId: transaction.userId,
+      transactionId: transaction.transactionId,
+      paymentMethod: transaction.paymentMethod || "paypal",
+      amount: transaction.amount,
+      currency: transaction.currency || "JPY",
+      status: transaction.status,
+      createdAt: new Date(),
+      metadata: transaction.metadata || null
+    };
+    
+    this.paymentTransactions.set(id, paymentTransaction);
+    return paymentTransaction;
+  }
+  
+  async getPaymentTransactionByTransactionId(transactionId: string): Promise<PaymentTransaction | undefined> {
+    return Array.from(this.paymentTransactions.values()).find(
+      transaction => transaction.transactionId === transactionId
+    );
+  }
+  
+  async getUserPaymentTransactions(userId: number): Promise<PaymentTransaction[]> {
+    return Array.from(this.paymentTransactions.values()).filter(
+      transaction => transaction.userId === userId
+    );
   }
   
   // 生徒チケット関連のメソッド
