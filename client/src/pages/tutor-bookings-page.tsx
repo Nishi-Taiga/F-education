@@ -291,6 +291,42 @@ export default function TutorBookingsPage() {
     <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">予約管理</h1>
       
+      {/* 緊急デバッグ用テストボタン */}
+      <div className="mb-4">
+        <Button 
+          onClick={() => {
+            console.log("レポート編集テストボタンがクリックされました");
+            
+            // テスト用のデータ
+            const testBooking = {
+              id: 999,
+              userId: 3,
+              tutorId: 2,
+              studentId: 4,
+              tutorShiftId: 46,
+              date: "2025-05-06",
+              timeSlot: "16:00-17:30",
+              subject: "テスト科目",
+              status: "confirmed",
+              reportStatus: "completed",
+              reportContent: "【単元】\nテスト単元\n\n【伝言事項】\nテストメッセージ\n\n【来週までの目標(課題)】\nテスト目標",
+              createdAt: new Date().toISOString(),
+              studentName: "テスト生徒"
+            };
+            
+            // 編集用の予約データを設定
+            setReportEditBooking(testBooking);
+            
+            // モーダルを表示
+            setShowReportEditModal(true);
+            console.log("レポート編集モーダルが表示されました");
+          }}
+          className="bg-red-500 hover:bg-red-600 text-white font-bold"
+        >
+          緊急テスト：レポート編集ボタン
+        </Button>
+      </div>
+      
       <div className="grid grid-cols-1 gap-6">
         {/* カレンダービュー（タブレット・デスクトップ・モバイル対応） */}
         <Card>
