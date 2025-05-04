@@ -1598,6 +1598,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
     await capturePaypalOrder(req, res);
   });
+  
+  // 支払い取引の記録
+  app.post("/api/payment-transactions", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { transactionId, amount, currency, status, paymentMethod, metadata } = req.body;
+      const userId = req.user!.id;
+      
+      if (!transactionId || !amount || !status) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // メタデータをJSON文字列に変換
+      const metadataStr = metadata ? JSON.stringify(metadata) : null;
+      
+      const transaction = await storage.createPaymentTransaction({
+        userId,
+        transactionId,
+        amount,
+        currency: currency || "JPY",
+        status,
+        paymentMethod: paymentMethod || "paypal",
+        metadata: metadataStr
+      });
+      
+      // チケットの追加処理
+      if (status === "completed" && metadata && metadata.ticketData) {
+        const { studentId, quantity } = metadata.ticketData;
+        if (studentId && quantity > 0) {
+          await storage.addStudentTickets(studentId, userId, quantity);
+        }
+      }
+      
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("支払い取引記録エラー:", error);
+      res.status(500).json({ error: "Failed to record payment transaction" });
+    }
+  });
+  
+  // ユーザーの支払い取引履歴を取得
+  app.get("/api/payment-transactions", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const userId = req.user!.id;
+      const transactions = await storage.getUserPaymentTransactions(userId);
+      
+      res.json(transactions);
+    } catch (error) {
+      console.error("支払い取引履歴取得エラー:", error);
+      res.status(500).json({ error: "Failed to get payment transactions" });
+    }
+  });
 
   const httpServer = createServer(app);
 
