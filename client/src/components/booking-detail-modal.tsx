@@ -78,8 +78,8 @@ export function BookingDetailModal({
   const showViewReportButton = isCompletedWithReport && onViewReport;
   
   // レポート編集ボタンを表示する条件（講師用）
-  // レポートが作成済みの場合は常に表示する（講師アカウントの場合）
-  const showEditReportButton = isCompletedWithReport || (booking.reportStatus === 'completed');
+  // レポートが作成済みの場合のみ表示する（講師アカウントの場合）
+  const showEditReportButton = isCompletedWithReport && onEditReport;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

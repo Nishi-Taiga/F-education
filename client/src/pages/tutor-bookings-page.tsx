@@ -37,6 +37,7 @@ export default function TutorBookingsPage() {
   const [showBookingDetailModal, setShowBookingDetailModal] = useState(false);
   const [showReportViewModal, setShowReportViewModal] = useState(false);
   const [showReportEditModal, setShowReportEditModal] = useState(false);
+  const [reportEditBooking, setReportEditBooking] = useState<Booking | null>(null);
   const [studentDetails, setStudentDetails] = useState<any>(null);
   
   // 編集モーダルを開く関数（レポート編集ボタンに渡す）
@@ -139,21 +140,41 @@ export default function TutorBookingsPage() {
     return uniqueDates.map(date => parseISO(date as string));
   };
   
-  // モーダル開閉とレポート編集のためのハンドラー（デバッグコード追加）
+  // レポート編集モーダルを表示するハンドラー - 完全に再実装（最終解決策）
   const handleOpenReportEditModal = () => {
     console.log("レポート編集モーダルを開きます（グローバル関数）", selectedBooking);
-    console.log("現在のモーダル状態 - 詳細モーダル:", showBookingDetailModal, "編集モーダル:", showReportEditModal);
     
-    // ダイアログを閉じる前に少し遅延を入れる
+    if (!selectedBooking) {
+      console.error("レポート編集対象の予約が選択されていません");
+      return;
+    }
+    
+    // 編集用の予約データを個別に保持する
+    setReportEditBooking({
+      ...selectedBooking,
+      id: selectedBooking.id,
+      userId: selectedBooking.userId,
+      tutorId: selectedBooking.tutorId,
+      studentId: selectedBooking.studentId,
+      tutorShiftId: selectedBooking.tutorShiftId || 0,
+      date: selectedBooking.date,
+      timeSlot: selectedBooking.timeSlot,
+      subject: selectedBooking.subject || "",
+      status: selectedBooking.status || null,
+      createdAt: selectedBooking.createdAt,
+      reportStatus: selectedBooking.reportStatus || null,
+      reportContent: selectedBooking.reportContent || ''
+    });
+    
+    // 詳細モーダルを閉じる
+    setShowBookingDetailModal(false);
+    
+    // 同期的に実行しても非同期的に実行されるため、レンダリングサイクルの後に実行されるようにする
     setTimeout(() => {
-      setShowBookingDetailModal(false);
-      
-      // さらに少し遅延させてから次のモーダルを表示
-      setTimeout(() => {
-        setShowReportEditModal(true);
-        console.log("編集モーダルを開きました！ 状態:", showReportEditModal);
-      }, 100);
-    }, 100);
+      // レポート編集モーダルを表示
+      setShowReportEditModal(true);
+      console.log("編集モーダルを表示しました - データ:", reportEditBooking);
+    }, 50); // タイミングを短くする
   };
   
   const bookingDates = getBookingDates();
@@ -190,14 +211,26 @@ export default function TutorBookingsPage() {
         }
         
         // 編集ボタン表示のためにselectedBookingに完全な情報を設定
+        // 必要なフィールドが全て含まれるように明示的に指定
         const enhancedBookingDetails = {
           ...bookingDetails,
-          // 既存のフィールドを保持しつつ、必要なフィールドを確実に設定
-          studentName: bookingDetails.studentName || getStudentName(bookingDetails.studentId),
           id: bookingDetails.id,
+          userId: bookingDetails.userId,
+          tutorId: bookingDetails.tutorId,
+          studentId: bookingDetails.studentId,
+          tutorShiftId: bookingDetails.tutorShiftId || 0,
+          date: bookingDetails.date,
+          timeSlot: bookingDetails.timeSlot,
+          subject: bookingDetails.subject,
+          status: bookingDetails.status || null,
+          createdAt: bookingDetails.createdAt,
           reportStatus: bookingDetails.reportStatus || null,
-          reportContent: bookingDetails.reportContent || ''
+          reportContent: bookingDetails.reportContent || '',
+          studentName: bookingDetails.studentName || getStudentName(bookingDetails.studentId)
         };
+        
+        // 完全な予約情報をコンソールに出力（デバッグ用）
+        console.log("完全な予約情報:", enhancedBookingDetails);
         
         // 選択された予約を設定
         setSelectedBooking(enhancedBookingDetails);
@@ -365,16 +398,20 @@ export default function TutorBookingsPage() {
         />
       )}
       
-      {/* レポート編集モーダル */}
-      {selectedBooking && (
+      {/* レポート編集モーダル - 専用の状態変数を使用 */}
+      {(reportEditBooking || selectedBooking) && (
         <ReportEditModal
           isOpen={showReportEditModal}
           booking={{
-            ...selectedBooking,
-            studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId),
+            ...(reportEditBooking || selectedBooking),
+            studentName: selectedBooking?.studentName || getStudentName(selectedBooking?.studentId || null),
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
           }}
-          onClose={() => setShowReportEditModal(false)}
+          onClose={() => {
+            setShowReportEditModal(false);
+            // 状態をリセット
+            setReportEditBooking(null);
+          }}
           onSuccess={() => {
             // レポート編集が成功したら予約情報を再取得
             // 自動的にinvalidateQueriesで再取得されるので、ここでは何もしない
