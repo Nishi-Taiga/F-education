@@ -1586,6 +1586,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // テスト用データ作成エンドポイント（開発環境でのみ使用）
+  app.post("/api/test/create-test-booking", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "認証が必要です" });
+      }
+      
+      // 講師かどうか確認
+      if (req.user!.role !== "tutor") {
+        return res.status(403).json({ message: "講師のみがテストデータを作成できます" });
+      }
+      
+      const tutorId = 2; // テスト用講師ID
+      const tutorShiftId = 3; // 適当なシフトID（本来はチェックが必要）
+      const userId = 3; // テスト用生徒の親ユーザーID
+      const studentId = 4; // テスト用生徒ID
+      
+      // 過去の授業データを作成
+      const testBooking = {
+        userId: userId,
+        studentId: studentId,
+        tutorId: tutorId,
+        tutorShiftId: tutorShiftId,
+        date: "2025-05-01", // 5月1日
+        timeSlot: "16:00-17:30",
+        subject: "小学算数",
+        status: "confirmed",
+        reportStatus: "completed", // レポート作成済みに設定
+        reportContent: "【単元】\n割り算の応用問題\n\n【伝言事項】\n基本的な計算はよくできています。\n\n【来週までの目標(課題)】\n教科書p.45-46の問題を解いてみましょう。"
+      };
+      
+      // データベースに保存
+      const booking = await storage.createBooking(testBooking);
+      
+      res.status(201).json({
+        message: "テスト用の過去授業データが作成されました",
+        booking: booking
+      });
+    } catch (error) {
+      console.error("テストデータ作成エラー:", error);
+      res.status(500).json({ message: "テストデータの作成に失敗しました" });
+    }
+  });
+
   // PayPal関連のAPIエンドポイント
   app.get("/api/paypal/setup", async (req, res) => {
     await loadPaypalDefault(req, res);
