@@ -262,6 +262,18 @@ export type TicketPurchase = {
   amount: number;
 };
 
+export type PaymentTransaction = {
+  id: number;
+  userId: number;
+  transactionId: string;
+  paymentMethod: string;
+  amount: number;
+  currency: string;
+  status: string;
+  createdAt: Date;
+  metadata?: Record<string, any>;
+};
+
 export const timeSlots = ["16:00-17:30", "18:00-19:30", "20:00-21:30"];
 
 // 学校レベルの定義
