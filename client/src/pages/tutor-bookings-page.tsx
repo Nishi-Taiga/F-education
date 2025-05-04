@@ -231,11 +231,25 @@ export default function TutorBookingsPage() {
         // 選択された予約を設定
         setSelectedBooking(enhancedBookingDetails);
         
+        // レポート編集用の予約データも設定（カレンダービューからの直接編集のため）
+        setReportEditBooking({
+          ...enhancedBookingDetails
+        });
+        
         // 生徒詳細情報を設定
         setStudentDetails(bookingDetails.studentDetails || null);
       } else {
         // 詳細が取得できない場合は、元の予約情報を使用
         setSelectedBooking(booking);
+        
+        // レポート編集用のデータも同様に設定
+        setReportEditBooking({
+          ...booking,
+          reportStatus: booking.reportStatus || null,
+          reportContent: booking.reportContent || '',
+          tutorShiftId: booking.tutorShiftId || 0,
+          status: booking.status || null
+        });
         
         // 生徒情報を個別に取得
         if (booking.studentId) {
@@ -259,6 +273,15 @@ export default function TutorBookingsPage() {
       console.error("予約詳細の取得に失敗しました", error);
       setSelectedBooking(booking);
       setStudentDetails(null);
+      
+      // エラー時もレポート編集用データを設定しておく
+      setReportEditBooking({
+        ...booking,
+        reportStatus: booking.reportStatus || null,
+        reportContent: booking.reportContent || '',
+        tutorShiftId: booking.tutorShiftId || 0,
+        status: booking.status || null
+      });
     }
     
     // モーダルを表示
