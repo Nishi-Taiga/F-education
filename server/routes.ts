@@ -4,6 +4,7 @@ import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
 import { insertBookingSchema, timeSlots, type Student } from "@shared/schema";
 import { emailService } from "./email-service";
+import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
@@ -1583,6 +1584,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("レポート更新エラー:", error);
       res.status(500).json({ message: "レポート更新中にエラーが発生しました" });
     }
+  });
+
+  // PayPal関連のAPIエンドポイント
+  app.get("/api/paypal/setup", async (req, res) => {
+    await loadPaypalDefault(req, res);
+  });
+
+  app.post("/api/paypal/order", async (req, res) => {
+    await createPaypalOrder(req, res);
+  });
+
+  app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
+    await capturePaypalOrder(req, res);
   });
 
   const httpServer = createServer(app);
