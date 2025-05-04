@@ -246,8 +246,8 @@ export function BookingDetailModal({
           
 
           
-          {/* レポート編集ボタン - 条件付きで表示 */}
-          {showEditReportButton && (
+          {/* レポート編集ボタン - 講師用画面では常に表示する */}
+          {isPastLesson() && (
             <Button
               type="button"
               variant="outline"
