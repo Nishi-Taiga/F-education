@@ -17,17 +17,21 @@ import { Calendar } from "@/components/ui/calendar";
 import { ReportViewModal } from "@/components/report-view-modal";
 import { ReportEditModal } from "@/components/report-edit-modal";
 
-// 予約情報の型定義
+// 予約情報の型定義 - レポート関連のフィールドを追加
 type Booking = {
   id: number;
   userId: number;
   tutorId: number;
   studentId: number | null;
+  tutorShiftId?: number;
   date: string;
   timeSlot: string;
   subject: string | null;
-  status: string;
+  status: string | null;
+  reportStatus?: string | null;
+  reportContent?: string | null;
   createdAt: string;
+  studentName?: string;
 };
 
 export default function TutorBookingsPage() {
@@ -40,6 +44,105 @@ export default function TutorBookingsPage() {
   const [showReportEditModal, setShowReportEditModal] = useState(false);
   const [reportEditBooking, setReportEditBooking] = useState<Booking | null>(null);
   const [studentDetails, setStudentDetails] = useState<any>(null);
+  
+  // 予約カードコンポーネント - コンポーネントを内部で定義し直して必要な状態と関数にアクセスできるようにする
+  function BookingCard({ booking, isPast = false }: { booking: Booking; isPast?: boolean }) {
+    const bookingDate = parseISO(booking.date);
+    const formattedDate = format(bookingDate, "yyyy年M月d日(E)", { locale: ja });
+    
+    // レポート状態を確認（'completed'または'completed:'で始まる場合はレポート作成済み）
+    const hasReport = booking.reportStatus === 'completed' || 
+      (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
+    
+    return (
+      <div 
+        className={`p-4 border rounded-lg ${isPast ? "bg-muted/50" : ""} hover:bg-gray-50 cursor-pointer`}
+        onClick={() => handleBookingClick(booking)}
+      >
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="font-medium text-lg">{formattedDate}</h3>
+            <p className="text-md">{booking.timeSlot}</p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <Badge variant={booking.status === "cancelled" ? "destructive" : "default"}>
+              {booking.status === "cancelled" ? "キャンセル" : "確定"}
+            </Badge>
+            
+            {/* レポート状態バッジを追加 */}
+            {hasReport ? (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                レポート済
+              </Badge>
+            ) : isPast ? (
+              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                レポート未作成
+              </Badge>
+            ) : null}
+          </div>
+        </div>
+        
+        <Separator className="my-3" />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <p className="text-sm text-muted-foreground">科目</p>
+            <p>{booking.subject || "未設定"}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">生徒</p>
+            <p>{getStudentName(booking.studentId) || "未設定"}</p>
+          </div>
+        </div>
+        
+        <div className="mt-3 flex justify-between items-center">
+          <div className="text-xs text-muted-foreground">
+            予約ID: {booking.id}
+          </div>
+          
+          {/* 過去の授業の場合はレポート編集/作成ボタンを表示 */}
+          {isPast && (
+            <Button
+              size="sm"
+              variant={hasReport ? "outline" : "default"}
+              className={hasReport ? "border-amber-500 text-amber-600 hover:bg-amber-50" : "bg-blue-600 hover:bg-blue-700 text-white"}
+              onClick={(e) => {
+                // イベントの伝播を止めてカード自体のクリックイベントが発火しないようにする
+                e.stopPropagation();
+                
+                console.log("レポート作成/編集ボタンがクリックされました", booking);
+                
+                // レポート編集用のデータを設定
+                setReportEditBooking({
+                  ...booking,
+                  id: booking.id,
+                  userId: booking.userId,
+                  tutorId: booking.tutorId,
+                  studentId: booking.studentId,
+                  tutorShiftId: booking.tutorShiftId || 0,
+                  date: booking.date,
+                  timeSlot: booking.timeSlot,
+                  subject: booking.subject || "",
+                  status: booking.status || null,
+                  createdAt: booking.createdAt,
+                  reportStatus: booking.reportStatus || null,
+                  reportContent: booking.reportContent || '',
+                  studentName: getStudentName(booking.studentId)
+                });
+                
+                // 編集モーダルを表示
+                setTimeout(() => {
+                  setShowReportEditModal(true);
+                }, 50);
+              }}
+            >
+              {hasReport ? "レポート編集" : "レポート作成"}
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
   
   // こちらの関数は使用していないので削除（handleOpenReportEditModalを使用）
   
@@ -564,104 +667,3 @@ export default function TutorBookingsPage() {
   );
 }
 
-// 予約カードコンポーネント
-function BookingCard({ booking, isPast = false }: { booking: Booking; isPast?: boolean }) {
-  const bookingDate = parseISO(booking.date);
-  const formattedDate = format(bookingDate, "yyyy年M月d日(E)", { locale: ja });
-  
-  // レポート状態を確認（'completed'または'completed:'で始まる場合はレポート作成済み）
-  const hasReport = booking.reportStatus === 'completed' || 
-    (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
-  
-  // レポート編集/作成ボタンをクリックしたときの処理
-  const handleReportAction = (e: React.MouseEvent) => {
-    // イベントの伝播を止めてカード自体のクリックイベントが発火しないようにする
-    e.stopPropagation();
-    
-    console.log("レポート作成/編集ボタンがクリックされました", booking);
-    
-    // レポート編集用のデータを設定
-    setReportEditBooking({
-      ...booking,
-      id: booking.id,
-      userId: booking.userId,
-      tutorId: booking.tutorId,
-      studentId: booking.studentId,
-      tutorShiftId: booking.tutorShiftId || 0,
-      date: booking.date,
-      timeSlot: booking.timeSlot,
-      subject: booking.subject || "",
-      status: booking.status || null,
-      createdAt: booking.createdAt,
-      reportStatus: booking.reportStatus || null,
-      reportContent: booking.reportContent || '',
-      studentName: getStudentName(booking.studentId)
-    });
-    
-    // 編集モーダルを表示
-    setTimeout(() => {
-      setShowReportEditModal(true);
-    }, 50);
-  };
-  
-  return (
-    <div 
-      className={`p-4 border rounded-lg ${isPast ? "bg-muted/50" : ""} hover:bg-gray-50 cursor-pointer`}
-      onClick={() => handleBookingClick(booking)}
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="font-medium text-lg">{formattedDate}</h3>
-          <p className="text-md">{booking.timeSlot}</p>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <Badge variant={booking.status === "cancelled" ? "destructive" : "default"}>
-            {booking.status === "cancelled" ? "キャンセル" : "確定"}
-          </Badge>
-          
-          {/* レポート状態バッジを追加 */}
-          {hasReport ? (
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-              レポート済
-            </Badge>
-          ) : isPast ? (
-            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-              レポート未作成
-            </Badge>
-          ) : null}
-        </div>
-      </div>
-      
-      <Separator className="my-3" />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <p className="text-sm text-muted-foreground">科目</p>
-          <p>{booking.subject || "未設定"}</p>
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">生徒</p>
-          <p>{getStudentName(booking.studentId) || "未設定"}</p>
-        </div>
-      </div>
-      
-      <div className="mt-3 flex justify-between items-center">
-        <div className="text-xs text-muted-foreground">
-          予約ID: {booking.id}
-        </div>
-        
-        {/* 過去の授業の場合はレポート編集/作成ボタンを表示 */}
-        {isPast && (
-          <Button
-            size="sm"
-            variant={hasReport ? "outline" : "default"}
-            className={hasReport ? "border-amber-500 text-amber-600 hover:bg-amber-50" : "bg-blue-600 hover:bg-blue-700 text-white"}
-            onClick={handleReportAction}
-          >
-            {hasReport ? "レポート編集" : "レポート作成"}
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
