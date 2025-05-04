@@ -40,18 +40,19 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
       calendarStart = subDays(monthStart, startDay);
     }
     
-    // 翌月の最初の日曜日を計算
-    // 月の最後の日の曜日を取得
+    // 月の最後の日を土曜日までに調整する
+    // 月の最後の日の曜日を取得（0は日曜日、6は土曜日）
     const endDay = getDay(monthEnd);
-    // 土曜日でない場合は次の日曜日まで進む
     let calendarEnd = monthEnd;
+    
     if (endDay < 6) {
-      // 6 - endDay日分先に進む（土曜日までを含める）
+      // 土曜日でない場合、6 - endDay日分先に進む（土曜日までを含める）
       calendarEnd = addDays(monthEnd, 6 - endDay);
-    } else if (endDay === 6) {
-      // 土曜日の場合は次の日曜日（翌日）を含める
-      calendarEnd = addDays(monthEnd, 1);
+    } else if (endDay > 6) {
+      // 不正な値の場合（通常は発生しない）、土曜日に調整
+      calendarEnd = addDays(monthEnd, 6 - (endDay % 7));
     }
+    // endDay === 6 (土曜日)の場合は何もしない（すでに土曜日で終わっている）
     
     // 計算された期間の日付配列を生成
     const daysInCalendar = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
