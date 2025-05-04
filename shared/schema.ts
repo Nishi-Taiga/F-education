@@ -66,6 +66,7 @@ export const tutors = pgTable("tutors", {
   university: text("university").notNull(), // 出身または在学中の大学名
   birthDate: text("birth_date").notNull(), // in YYYY-MM-DD format
   subjects: text("subjects").notNull(), // カンマ区切りの科目リスト（例：「小学算数,中学数学,高校数学」）
+  email: text("email"), // 講師用メールアドレス（予約通知用）
   isActive: boolean("is_active").default(true),
   profileCompleted: boolean("profile_completed").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -192,6 +193,7 @@ export const insertTutorSchema = createInsertSchema(tutors).pick({
   university: true,
   birthDate: true,
   subjects: true,
+  email: true,
   profileCompleted: true,
 });
 
@@ -233,6 +235,7 @@ export const tutorProfileSchema = z.object({
   university: z.string().min(1, "大学名を入力してください"),
   birthDate: z.string().min(1, "生年月日を選択してください"),
   subjects: z.string().min(1, "担当科目を選択してください"),
+  email: z.string().email("有効なメールアドレスを入力してください").min(1, "メールアドレスは必須です"),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

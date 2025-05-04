@@ -1048,6 +1048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           university,
           birthDate,
           subjects,
+          email, // メールアドレスを追加
           // bio field removed as requested
           profileCompleted: true
         });
@@ -1062,6 +1063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           university,
           birthDate,
           subjects,
+          email, // メールアドレスを追加
           // bio field removed as requested
         });
       }

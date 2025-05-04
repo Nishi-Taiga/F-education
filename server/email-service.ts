@@ -66,6 +66,17 @@ export class EmailService {
       return null;
     }
   }
+  
+  // 講師のメールアドレスを取得（tutorsテーブルから）
+  private async getTutorEmail(tutorId: number): Promise<string | null> {
+    try {
+      const [tutor] = await db.select().from(tutors).where(eq(tutors.id, tutorId));
+      return tutor?.email || null;
+    } catch (error) {
+      console.error('講師のメールアドレス取得エラー:', error);
+      return null;
+    }
+  }
 
   // 予約完了メール送信
   async sendBookingConfirmation(
@@ -112,7 +123,10 @@ export class EmailService {
     
     // 講師へのメール
     if (tutor) {
-      const tutorEmail = await this.getUserEmail(tutor.userId);
+      // まずtutorsテーブルのemailを確認
+      const tutorEmailFromTable = await this.getTutorEmail(tutor.id);
+      // バックアップとしてusersテーブルのemailも確認
+      const tutorEmail = tutorEmailFromTable || await this.getUserEmail(tutor.userId);
       
       if (tutorEmail) {
         const tutorMailOptions: nodemailer.SendMailOptions = {
