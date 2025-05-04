@@ -86,11 +86,9 @@ export function BookingDetailModal({
   // 報告書が作成済みの場合（保護者側ではボタンを常に表示、講師側では条件付き）
   const showViewReportButton = isCompletedWithReport && onViewReport;
   
-  // レポート編集ボタンを表示する条件（講師用）- 常に表示するよう修正
+  // レポート編集ボタンを表示する条件（講師用）
   // レポートが作成済みなら編集、未作成なら新規作成として表示
-  console.log("編集ボタンのコールバックチェック:", !!onEditReport, typeof onEditReport);
-  // 強制的に表示
-  const showEditReportButton = true; // Boolean(onEditReport) の代わりに常にtrueに
+  const showEditReportButton = Boolean(onEditReport);
   const editButtonText = isCompletedWithReport ? "レポート編集" : "レポート作成";
 
   return (
@@ -157,10 +155,7 @@ export function BookingDetailModal({
             </div>
           )}
           
-          {/* デバッグ情報（一時的） */}
-          <div className="mt-4 bg-gray-100 border border-gray-200 p-2 rounded text-xs text-gray-500">
-            <p>コールバック状態: {onEditReport ? "設定済み" : "未設定"}</p>
-          </div>
+          {/* デバッグ情報を非表示に */}
           
           {/* 住所 - 講師用のみ表示 */}
           {studentDetails?.address && (
@@ -251,14 +246,14 @@ export function BookingDetailModal({
           
 
           
-          {/* レポート編集ボタン - 常に表示（強制的にショウ） */}
-          {(showEditReportButton || isPastLesson()) && (
+          {/* レポート編集ボタン - 条件付きで表示 */}
+          {showEditReportButton && (
             <Button
               type="button"
               variant="outline"
               className="border-amber-600 text-amber-600 hover:bg-amber-50"
               onClick={() => {
-                console.log("編集ボタンがクリックされました - 強化版");
+                console.log("編集ボタンがクリックされました");
                 // コールバックが存在する場合は実行
                 if (onEditReport) {
                   onEditReport();
