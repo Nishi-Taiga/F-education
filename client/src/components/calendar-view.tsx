@@ -173,7 +173,8 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
         {calendarDays.map((day) => {
           const dayBookings = getBookingsForDay(day);
           const japanTime = getJapanTime();
-          const isPast = isBefore(day, japanTime) && !isToday(day);
+          const isCurrentDay = isToday(day);
+          const isPast = isBefore(day, japanTime) && !isCurrentDay;
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isSelectable = interactive && !isPast;
           const dayOfWeek = getDay(day);
@@ -189,13 +190,16 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
           return (
             <div key={day.toString()} className="aspect-square p-0.5 min-w-0">
               <div 
-                className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} flex flex-col ${isPast ? 'opacity-60' : ''} overflow-hidden`}
+                className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} 
+                  ${isPast ? 'opacity-60' : ''} 
+                  ${isCurrentDay ? 'bg-blue-50 border border-blue-200 shadow-sm' : ''} 
+                  overflow-hidden`}
                 style={{ height: '90px', maxHeight: '90px' }}
                 onClick={() => isSelectable && handleDayClick(day)}
               >
                 <div className="p-0.5 text-center">
                   <span className={`
-                    ${format(day, 'yyyy-MM-dd') === format(japanTime, 'yyyy-MM-dd') ? 'bg-primary text-white rounded-full w-7 h-7 flex items-center justify-center mx-auto text-base font-medium' : 'text-base font-medium'}
+                    ${isCurrentDay ? 'bg-primary text-white rounded-full w-7 h-7 flex items-center justify-center mx-auto text-base font-bold' : 'text-base font-medium'}
                     ${!isCurrentMonth ? 'text-gray-400' : textColorClass}
                   `}>
                     {day.getDate()}
