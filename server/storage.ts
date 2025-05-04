@@ -167,6 +167,7 @@ export class MemStorage implements IStorage {
     this.tutorShifts = new Map();
     this.studentTicketRecords = new Map();
     this.paymentTransactions = new Map();
+    this.lessonReports = new Map();
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
@@ -177,9 +178,99 @@ export class MemStorage implements IStorage {
     this.currentTutorShiftId = 1;
     this.currentTicketRecordId = 1;
     this.currentPaymentTransactionId = 1;
+    this.currentLessonReportId = 1;
     
     // テストユーザーを自動作成
     this.createInitialTestData();
+  }
+  
+  // レッスンレポート関連のメソッド
+  async createLessonReport(report: InsertLessonReport): Promise<LessonReport> {
+    const id = this.currentLessonReportId++;
+    const now = new Date();
+    
+    const lessonReport: LessonReport = {
+      id,
+      bookingId: report.bookingId,
+      tutorId: report.tutorId,
+      studentId: report.studentId || null,
+      unitContent: report.unitContent,
+      messageContent: report.messageContent || null,
+      goalContent: report.goalContent || null,
+      status: report.status || "completed",
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.lessonReports.set(id, lessonReport);
+    
+    // 対応する予約のreportStatusも更新する (レガシー互換性のため)
+    const booking = await this.getBookingById(report.bookingId);
+    if (booking) {
+      const updatedBooking = {
+        ...booking,
+        reportStatus: `completed:${now.toISOString()}`,
+        reportContent: this.formatReportContentFromLessonReport(lessonReport)
+      };
+      this.bookings.set(booking.id, updatedBooking);
+    }
+    
+    return lessonReport;
+  }
+  
+  // レポートの内容をbookings.reportContentの形式にフォーマットする
+  private formatReportContentFromLessonReport(report: LessonReport): string {
+    return `【単元】\n${report.unitContent}\n\n【伝言事項】\n${report.messageContent || ""}\n\n【来週までの目標(課題)】\n${report.goalContent || ""}`;
+  }
+  
+  async updateLessonReport(id: number, reportUpdate: Partial<InsertLessonReport>): Promise<LessonReport> {
+    const existingReport = this.lessonReports.get(id);
+    if (!existingReport) {
+      throw new Error("Lesson report not found");
+    }
+    
+    const now = new Date();
+    const updatedReport: LessonReport = {
+      ...existingReport,
+      unitContent: reportUpdate.unitContent !== undefined ? reportUpdate.unitContent : existingReport.unitContent,
+      messageContent: reportUpdate.messageContent !== undefined ? reportUpdate.messageContent : existingReport.messageContent,
+      goalContent: reportUpdate.goalContent !== undefined ? reportUpdate.goalContent : existingReport.goalContent,
+      status: reportUpdate.status || existingReport.status,
+      updatedAt: now
+    };
+    
+    this.lessonReports.set(id, updatedReport);
+    
+    // 対応する予約のreportContentも更新する (レガシー互換性のため)
+    const booking = await this.getBookingById(existingReport.bookingId);
+    if (booking) {
+      const updatedBooking = {
+        ...booking,
+        reportStatus: `completed:${now.toISOString()}`,
+        reportContent: this.formatReportContentFromLessonReport(updatedReport)
+      };
+      this.bookings.set(booking.id, updatedBooking);
+    }
+    
+    return updatedReport;
+  }
+  
+  async getLessonReportByBookingId(bookingId: number): Promise<LessonReport | undefined> {
+    return Array.from(this.lessonReports.values()).find(
+      report => report.bookingId === bookingId
+    );
+  }
+  
+  async getLessonReportsByTutorId(tutorId: number): Promise<LessonReport[]> {
+    return Array.from(this.lessonReports.values()).filter(
+      report => report.tutorId === tutorId
+    );
+  }
+  
+  async getLessonReportsByStudentId(studentId: number): Promise<LessonReport[]> {
+    return Array.from(this.lessonReports.values()).filter(
+      report => report.studentId === studentId
+    );
   }
   
   // 支払い取引関連のメソッド
@@ -737,6 +828,90 @@ export class DatabaseStorage implements IStorage {
       pool, 
       createTableIfMissing: true 
     });
+  }
+  
+  // レッスンレポート関連のメソッド
+  async createLessonReport(report: InsertLessonReport): Promise<LessonReport> {
+    const now = new Date();
+    // レポートを挿入
+    const [lessonReport] = await db.insert(lessonReports)
+      .values({
+        ...report,
+        createdAt: now,
+        updatedAt: now
+      })
+      .returning();
+    
+    // 対応する予約のreportStatusも更新する (レガシー互換性のため)
+    if (lessonReport) {
+      const booking = await this.getBookingById(report.bookingId);
+      if (booking) {
+        await db.update(bookings)
+          .set({
+            reportStatus: `completed:${now.toISOString()}`,
+            reportContent: this.formatReportContentFromLessonReport(lessonReport)
+          })
+          .where(eq(bookings.id, report.bookingId));
+      }
+    }
+    
+    return lessonReport;
+  }
+  
+  // レポートの内容をbookings.reportContentの形式にフォーマットする
+  private formatReportContentFromLessonReport(report: LessonReport): string {
+    return `【単元】\n${report.unitContent}\n\n【伝言事項】\n${report.messageContent || ""}\n\n【来週までの目標(課題)】\n${report.goalContent || ""}`;
+  }
+  
+  async updateLessonReport(id: number, reportUpdate: Partial<InsertLessonReport>): Promise<LessonReport> {
+    const now = new Date();
+    
+    // レポートを更新
+    const [updatedReport] = await db.update(lessonReports)
+      .set({
+        ...reportUpdate,
+        updatedAt: now
+      })
+      .where(eq(lessonReports.id, id))
+      .returning();
+    
+    if (!updatedReport) {
+      throw new Error("Lesson report not found");
+    }
+    
+    // 対応する予約のreportContentも更新する (レガシー互換性のため)
+    await db.update(bookings)
+      .set({
+        reportStatus: `completed:${now.toISOString()}`,
+        reportContent: this.formatReportContentFromLessonReport(updatedReport)
+      })
+      .where(eq(bookings.id, updatedReport.bookingId));
+    
+    return updatedReport;
+  }
+  
+  async getLessonReportByBookingId(bookingId: number): Promise<LessonReport | undefined> {
+    const [report] = await db.select()
+      .from(lessonReports)
+      .where(eq(lessonReports.bookingId, bookingId));
+    
+    return report;
+  }
+  
+  async getLessonReportsByTutorId(tutorId: number): Promise<LessonReport[]> {
+    const reports = await db.select()
+      .from(lessonReports)
+      .where(eq(lessonReports.tutorId, tutorId));
+    
+    return reports;
+  }
+  
+  async getLessonReportsByStudentId(studentId: number): Promise<LessonReport[]> {
+    const reports = await db.select()
+      .from(lessonReports)
+      .where(eq(lessonReports.studentId, studentId));
+    
+    return reports;
   }
   
   // 生徒チケット関連のメソッド

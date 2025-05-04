@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
-import { insertBookingSchema, timeSlots, type Student } from "@shared/schema";
+import { insertBookingSchema, insertLessonReportSchema, timeSlots, type Student, type LessonReport } from "@shared/schema";
 import { emailService } from "./email-service";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
