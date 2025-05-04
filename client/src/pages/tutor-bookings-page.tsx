@@ -34,7 +34,7 @@ export default function TutorBookingsPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedBooking, setSelectedBooking] = useState<Booking & { studentName?: string }>();
+  const [selectedBooking, setSelectedBooking] = useState<any>();
   const [showBookingDetailModal, setShowBookingDetailModal] = useState(false);
   const [showReportViewModal, setShowReportViewModal] = useState(false);
   const [showReportEditModal, setShowReportEditModal] = useState(false);
