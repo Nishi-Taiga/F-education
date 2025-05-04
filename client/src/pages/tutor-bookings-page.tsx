@@ -139,11 +139,21 @@ export default function TutorBookingsPage() {
     return uniqueDates.map(date => parseISO(date as string));
   };
   
-  // モーダル開閉とレポート編集のためのハンドラー
+  // モーダル開閉とレポート編集のためのハンドラー（デバッグコード追加）
   const handleOpenReportEditModal = () => {
     console.log("レポート編集モーダルを開きます（グローバル関数）", selectedBooking);
-    setShowBookingDetailModal(false);
-    setShowReportEditModal(true);
+    console.log("現在のモーダル状態 - 詳細モーダル:", showBookingDetailModal, "編集モーダル:", showReportEditModal);
+    
+    // ダイアログを閉じる前に少し遅延を入れる
+    setTimeout(() => {
+      setShowBookingDetailModal(false);
+      
+      // さらに少し遅延させてから次のモーダルを表示
+      setTimeout(() => {
+        setShowReportEditModal(true);
+        console.log("編集モーダルを開きました！ 状態:", showReportEditModal);
+      }, 100);
+    }, 100);
   };
   
   const bookingDates = getBookingDates();
