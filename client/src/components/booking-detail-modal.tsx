@@ -47,6 +47,16 @@ export function BookingDetailModal({
   const isCompletedWithReport = booking.reportStatus === 'completed' || (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
   const isCompletedNoReport = booking.reportStatus === 'pending' || booking.reportStatus === null;
   
+  // デバッグ情報を追加
+  console.log("Booking Detail Debug:", {
+    bookingId: booking.id,
+    date: booking.date,
+    reportStatus: booking.reportStatus,
+    hasReportContent: Boolean(booking.reportContent),
+    isCompletedWithReport: isCompletedWithReport,
+    hasEditCallback: Boolean(onEditReport)
+  });
+  
   // 日本時間を取得するヘルパー関数
   const getJapanTime = () => {
     const now = new Date();
@@ -68,6 +78,7 @@ export function BookingDetailModal({
   const showViewReportButton = isCompletedWithReport && onViewReport;
   
   // レポート編集ボタンを表示する条件（講師用）
+  // レポートが作成済みかつ編集コールバックが提供されている場合に表示
   const showEditReportButton = isCompletedWithReport && onEditReport;
 
   return (
