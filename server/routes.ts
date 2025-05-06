@@ -1534,7 +1534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // レポート更新エンドポイント
+  // レポート更新エンドポイント - 新しいlesson_reportsテーブルを使用
   app.post("/api/bookings/:id/report", async (req, res) => {
     try {
       if (!req.isAuthenticated()) return res.status(401).json({ message: "認証が必要です" });
@@ -1542,15 +1542,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const bookingId = parseInt(req.params.id);
       
-      // 新しいフォーマット（unit, message, goal）をサポート
-      // 旧式形式（reportContent）との互換性も維持
+      // 新しいフォーマット（unit, message, goal）を取得
       const { unit, message, goal, reportContent: oldFormatContent } = req.body;
       
       if (isNaN(bookingId)) {
         return res.status(400).json({ message: "予約IDが無効です" });
       }
       
-      let reportContent = '';
+      // 入力フィールドの検証
+      let unitContent = '';
+      let messageContent = '';
+      let goalContent = '';
       
       // 新しいフォーマットの場合
       if (unit !== undefined || message !== undefined || goal !== undefined) {
@@ -1561,12 +1563,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "少なくとも1つのフィールドに内容を入力してください" });
         }
         
-        // フォーマットされたレポート内容を作成
-        reportContent = `【単元】\n${unit || ''}\n\n【伝言事項】\n${message || ''}\n\n【来週までの目標(課題)】\n${goal || ''}`;
+        unitContent = unit || '';
+        messageContent = message || '';
+        goalContent = goal || '';
       } 
-      // 旧式形式の場合
+      // 旧式形式の場合、内容を解析して新しい形式に変換
       else if (oldFormatContent) {
-        reportContent = oldFormatContent;
+        const parts = oldFormatContent.split('\n\n');
+        if (parts.length >= 3) {
+          unitContent = parts[0].replace('【単元】\n', '');
+          messageContent = parts[1].replace('【伝言事項】\n', '');
+          goalContent = parts[2].replace('【来週までの目標(課題)】\n', '');
+        } else {
+          // 旧式形式が期待の形式でない場合は全体をunitContentに格納
+          unitContent = oldFormatContent;
+        }
       }
       else {
         return res.status(400).json({ message: "レポート内容が必要です" });
@@ -1590,15 +1601,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "この予約のレポートを作成する権限がありません" });
       }
       
-      // レポートステータスに現在のタイムスタンプを追加
-      const reportStatus = `completed:${new Date().toISOString()}`;
+      // 既存のレポートを確認
+      const existingReport = await storage.getLessonReportByBookingId(bookingId);
+      let report;
       
-      // レポートを更新
-      const updatedBooking = await storage.updateBookingReport(bookingId, reportStatus, reportContent);
+      if (existingReport) {
+        // 既存のレポートを更新
+        report = await storage.updateLessonReport(existingReport.id, {
+          unitContent,
+          messageContent,
+          goalContent
+        });
+      } else {
+        // 新しいレポートを作成
+        report = await storage.createLessonReport({
+          tutorId: tutor.id,
+          studentId: booking.studentId,
+          bookingId: bookingId,
+          unitContent,
+          messageContent,
+          goalContent,
+          date: booking.date,
+          timeSlot: booking.timeSlot
+        });
+      }
       
       res.status(200).json({
         message: "レポートが正常に保存されました",
-        booking: updatedBooking
+        report,
+        booking
       });
     } catch (error) {
       console.error("レポート更新エラー:", error);
