@@ -517,7 +517,18 @@ export default function TutorBookingsPage() {
     const handleOpenReportEditEvent = (event: CustomEvent) => {
       console.log("カスタムイベント openReportEdit を受信:", event.detail);
       if (event.detail && event.detail.booking) {
-        openReportEditModalFn(event.detail.booking);
+        // カスタムイベントからのデータで直接編集モーダルを表示
+        const booking = event.detail.booking;
+        console.log("イベントから受信したデータで編集モーダルを表示します", booking);
+        
+        // 編集用データを設定
+        setReportEditBooking(booking);
+        
+        // 編集モーダルを表示（非同期処理が完了してから）
+        setTimeout(() => {
+          setShowReportEditModal(true);
+          console.log("編集モーダル表示完了！");
+        }, 100);
       }
     };
 
