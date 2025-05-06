@@ -78,6 +78,7 @@ export interface IStorage {
   // レッスンレポート関連
   createLessonReport(report: InsertLessonReport): Promise<LessonReport>;
   updateLessonReport(id: number, report: Partial<InsertLessonReport>): Promise<LessonReport>;
+  getLessonReportById(id: number): Promise<LessonReport | undefined>;
   getLessonReportByBookingId(bookingId: number): Promise<LessonReport | undefined>;
   getLessonReportsByTutorId(tutorId: number): Promise<LessonReport[]>;
   getLessonReportsByStudentId(studentId: number): Promise<LessonReport[]>;
@@ -251,6 +252,10 @@ export class MemStorage implements IStorage {
     }
     
     return updatedReport;
+  }
+  
+  async getLessonReportById(id: number): Promise<LessonReport | undefined> {
+    return this.lessonReports.get(id);
   }
   
   async getLessonReportByBookingId(bookingId: number): Promise<LessonReport | undefined> {

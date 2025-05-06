@@ -3,6 +3,25 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { LessonReport, InsertLessonReport } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
+export function useLessonReportById(reportId: number | null | undefined) {
+  return useQuery<LessonReport | null>({
+    queryKey: ['/api/lesson-reports', reportId],
+    queryFn: async () => {
+      if (!reportId) return null;
+      try {
+        const response = await fetch(`/api/lesson-reports/${reportId}`);
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('レポートの取得に失敗しました');
+        return await response.json();
+      } catch (error) {
+        console.error('レポート取得エラー:', error);
+        throw error;
+      }
+    },
+    enabled: !!reportId
+  });
+}
+
 export function useLessonReportByBookingId(bookingId: number | null | undefined) {
   return useQuery<LessonReport | null>({
     queryKey: ['/api/lesson-reports/booking', bookingId],
