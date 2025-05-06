@@ -212,12 +212,11 @@ export function ReportViewModal({
             variant="outline" 
             onClick={() => {
               console.log("編集ボタンクリック");
-              onClose(); // モーダルを閉じる
               
               // 必要な情報をコンソールに出力
               console.log("編集ボタンクリック時の予約データ:", booking);
               
-              // コールバックの有無に関わらず、常にカスタムイベントを発行する
+              // 重要: 先にカスタムイベントを発行してから、モーダルを閉じる
               console.log("EditReport: レポート編集イベントを発行します");
               
               // カスタムイベントを発行して親コンポーネントに通知
@@ -228,12 +227,15 @@ export function ReportViewModal({
               
               // 親コンポーネントから渡されたコールバックがあれば、それも実行する
               if (typeof onEdit === 'function') {
-                // 少し遅延を持たせて編集モーダルを表示
-                setTimeout(() => {
-                  console.log("編集コールバック実行");
-                  onEdit();
-                }, 100);
+                console.log("編集コールバック実行");
+                onEdit();
               }
+              
+              // モーダルを閉じる（イベント処理の後）
+              setTimeout(() => {
+                console.log("モーダルを閉じます");
+                onClose();
+              }, 50);
             }}
           >
             レポートを編集

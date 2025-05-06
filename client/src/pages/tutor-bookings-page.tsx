@@ -317,11 +317,11 @@ export default function TutorBookingsPage() {
         // モーダルを設定して表示
         setReportEditBooking(reportEditData);
         
-        // 少し遅らせて表示（レポート表示モーダルが完全に閉じてから）
+        // 十分な時間を取ってレポート表示モーダルが完全に閉じてから表示
         setTimeout(() => {
           console.log("編集モーダルを表示します");
           setShowReportEditModal(true);
-        }, 200);
+        }, 400);
       }
     };
 
