@@ -84,7 +84,7 @@ export function BookingDetailModal({
   console.log("レポートステータス詳細:", {
     reportStatus: booking.reportStatus,
     isCompleted: isCompletedWithReport,
-    hasEditCallback: hasEditCallback,
+    hasEditCallback: hasEditCallback, 
     isPastLesson: isPastLesson()
   });
   
@@ -110,6 +110,8 @@ export function BookingDetailModal({
   // 常に講師画面では表示する（過去の授業の場合）
   const showEditReportButton = isPastLesson();
   const editButtonText = isCompletedWithReport ? "レポート編集" : "レポート作成";
+  
+  // 注: hasEditCallbackはこのスコープ外で既に定義されています
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
