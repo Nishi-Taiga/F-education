@@ -217,22 +217,22 @@ export function ReportViewModal({
               // 必要な情報をコンソールに出力
               console.log("編集ボタンクリック時の予約データ:", booking);
               
-              // 親コンポーネントから渡されたコールバックがあれば使用
+              // コールバックの有無に関わらず、常にカスタムイベントを発行する
+              console.log("EditReport: レポート編集イベントを発行します");
+              
+              // カスタムイベントを発行して親コンポーネントに通知
+              const event = new CustomEvent('reportEdit', { 
+                detail: { booking } 
+              });
+              window.dispatchEvent(event);
+              
+              // 親コンポーネントから渡されたコールバックがあれば、それも実行する
               if (typeof onEdit === 'function') {
                 // 少し遅延を持たせて編集モーダルを表示
                 setTimeout(() => {
                   console.log("編集コールバック実行");
                   onEdit();
                 }, 100);
-              } else {
-                // コールバックがない場合はグローバルイベントを発行
-                console.log("編集コールバックがないためカスタムイベントを発行");
-                
-                // カスタムイベントを発行して親コンポーネントに通知
-                const event = new CustomEvent('reportEdit', { 
-                  detail: { booking } 
-                });
-                window.dispatchEvent(event);
               }
             }}
           >

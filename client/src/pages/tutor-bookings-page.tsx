@@ -290,6 +290,8 @@ export default function TutorBookingsPage() {
       if (event.detail && event.detail.booking) {
         const booking = event.detail.booking;
         
+        console.log("カスタムイベントからレポート編集を開始します", booking);
+        
         // 必要なデータを準備
         const reportEditData: ExtendedBooking = {
           id: booking.id,
@@ -309,12 +311,17 @@ export default function TutorBookingsPage() {
           studentName: booking.studentName || getStudentName(booking.studentId)
         };
         
+        // レポート表示モーダルを確実に閉じる
+        setShowReportViewModal(false);
+        
         // モーダルを設定して表示
         setReportEditBooking(reportEditData);
+        
         // 少し遅らせて表示（レポート表示モーダルが完全に閉じてから）
         setTimeout(() => {
+          console.log("編集モーダルを表示します");
           setShowReportEditModal(true);
-        }, 100);
+        }, 200);
       }
     };
 
@@ -325,7 +332,7 @@ export default function TutorBookingsPage() {
     return () => {
       window.removeEventListener('reportEdit', handleReportEdit as EventListener);
     };
-  }, []);
+  }, [students]);
   
   // 今日以降の予約
   const upcomingBookings = bookings?.filter((booking: Booking) => {
@@ -560,53 +567,16 @@ export default function TutorBookingsPage() {
     <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">予約管理</h1>
       
-      {/* 緊急デバッグ用テストボタン - さらに目立つようにするバージョン */}
-      <div className="mb-8 flex justify-center items-center">
-        <div className="p-4 bg-red-50 border-2 border-red-500 rounded-lg animate-pulse shadow-xl">
-          <Button 
-            onClick={() => {
-              console.log("新レポート編集テストボタンがクリックされました");
-              
-              // テスト用のデータ
-              const testBooking: ExtendedBooking = {
-                id: 999,
-                userId: 3,
-                tutorId: 2,
-                studentId: 4,
-                tutorShiftId: 46,
-                date: "2025-05-06",
-                timeSlot: "16:00-17:30",
-                subject: "テスト科目",
-                status: "confirmed",
-                reportStatus: "completed",
-                reportContent: "【単元】\nテスト単元\n\n【伝言事項】\nテストメッセージ\n\n【来週までの目標(課題)】\nテスト目標",
-                createdAt: new Date().toISOString(),
-                studentName: "テスト生徒"
-              };
-              
-              // 一度確実にfalseに
-              setShowReportEditModal(false);
-              
-              // データを設定
-              setReportEditBooking(testBooking);
-              
-              // 確実に遅延させる
-              setTimeout(() => {
-                // モーダルを表示
-                setShowReportEditModal(true);
-                
-                console.log("新版レポート編集モーダルを表示しました", {
-                  modal: true,
-                  booking: testBooking
-                });
-              }, 50);
-            }}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 text-lg shadow-lg"
-            size="lg"
-          >
-            ⚠️ 緊急テスト：新レポート編集ボタン ⚠️
-          </Button>
-        </div>
+      {/* デバッグ用説明 */}
+      <div className="mb-8 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+        <h2 className="text-lg font-semibold mb-2">レポート編集機能について</h2>
+        <p className="mb-2">授業レポートの編集/作成が以下の方法で利用できます：</p>
+        <ul className="list-disc pl-5 mb-4">
+          <li>カレンダーでレポート作成済みの授業をクリックすると、レポート詳細モーダルが開きます</li>
+          <li>レポート詳細モーダルに「レポートを編集」ボタンが常に表示されます</li>
+          <li>ボタンをクリックすると、レポート編集モーダルが開きます</li>
+          <li>過去の授業カードには「レポート編集」または「レポート作成」ボタンも表示されます</li>
+        </ul>
       </div>
       
       <div className="grid grid-cols-1 gap-6">
