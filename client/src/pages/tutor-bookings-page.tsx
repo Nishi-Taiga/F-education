@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isBefore, isToday } from "date-fns";
@@ -281,7 +281,7 @@ export default function TutorBookingsPage() {
   }, [user, navigate]);
   
   // コンポーネント間で共有する編集関数
-  const openReportEditModalFn = React.useCallback((booking: any) => {
+  const openReportEditModalFn = useCallback((booking: any) => {
     console.log("編集関数が呼び出されました", booking);
     
     if (!booking) {
@@ -886,13 +886,16 @@ export default function TutorBookingsPage() {
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
           }}
           onClose={() => setShowReportViewModal(false)}
-          onEdit={tempEditReportCallback || function() {
-            console.log("新しいランタイム編集関数が使用されました", selectedBooking);
+          onEdit={() => {
+            console.log("レポート表示モーダルから編集ボタンが押されました", selectedBooking);
             
             if (!selectedBooking) {
               console.error("編集するための選択された予約がありません");
               return;
             }
+            
+            // レポート表示モーダルを閉じる
+            setShowReportViewModal(false);
             
             // レポート編集用のデータを準備
             const reportEditData: ExtendedBooking = {
@@ -916,9 +919,14 @@ export default function TutorBookingsPage() {
             // デバッグログを追加
             console.log("編集するレポートデータ:", reportEditData);
             
-            // 編集用データをセットして編集モーダルを表示
+            // 編集用データをセットして編集モーダルを表示（少し遅延させる）
             setReportEditBooking(reportEditData);
-            setShowReportEditModal(true);
+            
+            // モーダルが確実に閉じた後に編集モーダルを表示
+            setTimeout(() => {
+              setShowReportEditModal(true);
+              console.log("レポート編集モーダルを表示しました");
+            }, 200);
           }}
         />
       )}
