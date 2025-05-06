@@ -28,12 +28,14 @@ interface ReportViewModalProps {
   isOpen: boolean;
   booking: BookingForReport;
   onClose: () => void;
+  onEdit?: () => void;  // 編集ボタンクリック時のコールバック
 }
 
 export function ReportViewModal({
   isOpen,
   booking,
   onClose,
+  onEdit,
 }: ReportViewModalProps) {
   // 日付をフォーマット（無効な日付値のエラー処理を追加）
   let formattedDate = "日付不明";
@@ -192,7 +194,22 @@ export function ReportViewModal({
           </div>
         </div>
         
-        <DialogFooter className="mt-4">
+        <DialogFooter className="mt-4 gap-2 flex">
+          {/* 編集ボタンがある場合のみ表示 */}
+          {onEdit && (
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                onClose(); // モーダルを閉じる
+                // 少し遅延を持たせて編集モーダルを表示
+                setTimeout(() => {
+                  onEdit();
+                }, 100);
+              }}
+            >
+              レポートを編集
+            </Button>
+          )}
           <Button onClick={onClose}>閉じる</Button>
         </DialogFooter>
       </DialogContent>
