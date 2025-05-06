@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
 import { ja } from "date-fns/locale";
+import { useMutation } from "@tanstack/react-query";
 import { DialogTitle, DialogDescription, DialogHeader, DialogFooter, DialogContent, Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { User, CalendarDays, BookOpen, Loader2, AlertTriangle } from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLessonReportByBookingId, useCreateLessonReport, useUpdateLessonReport } from "@/hooks/use-lesson-reports";
 import type { Booking } from "@shared/schema";
@@ -51,31 +53,31 @@ export function ReportEditModal({
     console.error("Invalid date format:", booking.date);
   }
 
-  // モーダルが開かれたときに既存のレポート内容を解析して各フィールドに設定する
+  // 新しいAPIを使用してレッスンレポートを取得
+  const { data: lessonReport, isLoading: isLoadingReport } = useLessonReportByBookingId(
+    isOpen ? booking?.id : null
+  );
+  
+  // モーダルが開かれたときに既存のレポート内容を設定する
   useEffect(() => {
     if (isOpen) {
       console.log("ReportEditModal - モーダルが開かれました。予約情報:", booking);
       
-      // reportContentの状態を詳細にログ出力
-      console.log("レポート内容の詳細:", {
-        hasContent: !!booking.reportContent,
-        contentType: typeof booking.reportContent,
-        contentLength: booking.reportContent ? booking.reportContent.length : 0,
-        contentValue: booking.reportContent
-      });
-      
-      // レポート内容の解析
-      if (booking.reportContent) {
+      if (lessonReport) {
+        // 新しいレッスンレポートデータがある場合はそれを使用
+        console.log("レッスンレポートデータが見つかりました:", lessonReport);
+        setUnitContent(lessonReport.unitContent || "");
+        setMessageContent(lessonReport.messageContent || "");
+        setGoalContent(lessonReport.goalContent || "");
+      } else if (booking.reportContent) {
+        // 従来の予約レポートデータがある場合は解析して使用（旧データ互換性のため）
+        console.log("従来の予約レポートデータを解析します:", booking.reportContent);
         if (booking.reportContent.includes('【単元】')) {
           // 新フォーマットの場合
           try {
-            console.log("新フォーマットのレポートを解析します");
             const unitPart = booking.reportContent.split('【単元】')[1].split('【伝言事項】')[0].trim();
             const messagePart = booking.reportContent.split('【伝言事項】')[1].split('【来週までの目標(課題)】')[0].trim();
             const goalPart = booking.reportContent.split('【来週までの目標(課題)】')[1].trim();
-            
-            console.log("パースしたコンテンツ:", { unitPart, messagePart, goalPart });
-            
             setUnitContent(unitPart);
             setMessageContent(messagePart);
             setGoalContent(goalPart);
@@ -88,30 +90,70 @@ export function ReportEditModal({
           }
         } else {
           // 古いフォーマットの場合
-          console.log("古いフォーマットのレポートを解析します");
           const parts = booking.reportContent.split("\n");
           setUnitContent(parts.length >= 1 ? parts[0] : "");
           setMessageContent(parts.length >= 2 ? parts[1] : "");
           setGoalContent(parts.length >= 3 ? parts[2] : "");
         }
       } else {
-        console.log("レポート内容がありません、フィールドをクリアします");
         // レポート内容がない場合は空にする
+        console.log("レポート内容がありません、フィールドをクリアします");
         setUnitContent("");
         setMessageContent("");
         setGoalContent("");
       }
     }
-  }, [isOpen, booking]); // isOpenとbookingの両方の変更を監視
+  }, [isOpen, booking, lessonReport]); // isOpen, booking, lessonReportの変更を監視
 
-  // レポート保存のミューテーション
-  const saveReportMutation = useMutation({
-    mutationFn: async () => {
-      // 入力チェック
-      if (!unitContent.trim() && !messageContent.trim() && !goalContent.trim()) {
-        throw new Error("少なくとも1つの項目を入力してください");
+  // 新しいレッスンレポートAPI用のミューテーション
+  const createReportMutation = useCreateLessonReport();
+  const updateReportMutation = useUpdateLessonReport();
+
+  // フォーム送信処理
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // 入力チェック
+    if (!unitContent.trim() && !messageContent.trim() && !goalContent.trim()) {
+      toast({
+        title: "エラー",
+        description: "少なくとも1つの項目を入力してください",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    
+    try {
+      // レポートデータを準備
+      const reportData = {
+        bookingId: booking.id,
+        studentId: booking.studentId,
+        tutorId: booking.tutorId, // 講師IDは必須
+        unitContent,
+        messageContent,
+        goalContent,
+        status: "completed"
+      };
+
+      // 既存のレポートを更新するか新規作成するか
+      if (lessonReport) {
+        // 既存のレポートを更新
+        await updateReportMutation.mutateAsync({ 
+          id: lessonReport.id,
+          data: {
+            unitContent,
+            messageContent,
+            goalContent
+          }
+        });
+      } else {
+        // 新規レポートを作成
+        await createReportMutation.mutateAsync(reportData);
       }
-
+      
+      // 成功した場合、旧フォーマットの予約データも更新（互換性のため）
       const response = await fetch(`/api/bookings/${booking.id}/report`, {
         method: "POST",
         headers: {
@@ -124,43 +166,27 @@ export function ReportEditModal({
         }),
       });
 
+      // 予約データの更新に失敗しても進む（レポートデータが正常に保存されていれば良い）
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "レポートの保存に失敗しました");
+        console.warn("旧フォーマットのレポートデータの更新に失敗しました。新フォーマットのみ更新されています。");
       }
-
-      return await response.json();
-    },
-    onMutate: () => {
-      setIsSaving(true);
-    },
-    onSuccess: () => {
-      toast({
-        title: "レポートを更新しました",
-        description: "レポート内容が正常に保存されました",
-      });
 
       // データを再取得してUIを更新
       queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       
-      setIsSaving(false);
+      // モーダルを閉じる
       if (onSuccess) onSuccess();
       onClose();
-    },
-    onError: (error) => {
+    } catch (error: any) {
       toast({
-        title: "エラー",
-        description: error instanceof Error ? error.message : "レポートの保存に失敗しました",
+        title: "レポート保存エラー",
+        description: error.message || "レポートの保存に失敗しました",
         variant: "destructive",
       });
+    } finally {
       setIsSaving(false);
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveReportMutation.mutate();
+    }
   };
 
   return (
@@ -198,13 +224,15 @@ export function ReportEditModal({
             </div>
           </div>
           
-          {/* 警告メッセージ */}
-          <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-md flex items-start">
-            <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
-            <p className="text-sm text-yellow-700">
-              このレポートは既に保存されています。編集内容は上書き保存されます。
-            </p>
-          </div>
+          {/* 警告メッセージ - 既存のレポートがある場合のみ表示 */}
+          {(lessonReport || booking.reportContent) && (
+            <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-md flex items-start">
+              <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
+              <p className="text-sm text-yellow-700">
+                このレポートは既に保存されています。編集内容は上書き保存されます。
+              </p>
+            </div>
+          )}
 
           {/* レポート編集フォーム */}
           <div className="space-y-4">
