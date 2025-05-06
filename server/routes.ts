@@ -1606,32 +1606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // レッスンレポート関連のエンドポイント
-  // 特定の予約に紐づくレポートを取得
-  app.get("/api/lesson-reports/booking/:bookingId", async (req, res) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "認証が必要です" });
-      }
-      
-      const bookingId = parseInt(req.params.bookingId);
-      if (isNaN(bookingId)) {
-        return res.status(400).json({ message: "不正な予約IDです" });
-      }
-      
-      // レッスンレポートを取得
-      const report = await storage.getLessonReportByBookingId(bookingId);
-      
-      if (!report) {
-        return res.status(404).json({ message: "レポートが見つかりません" });
-      }
-      
-      res.status(200).json(report);
-    } catch (error) {
-      console.error("レポート取得エラー:", error);
-      res.status(500).json({ message: "レポート取得中にエラーが発生しました" });
-    }
-  });
+  // レッスンレポート関連のエンドポイント - 特定の予約に紐づくレポートを取得
   
   // 講師のすべてのレポートを取得
   app.get("/api/lesson-reports/tutor/:tutorId?", async (req, res) => {
