@@ -6,20 +6,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Booking } from "@shared/schema";
 import { FileText, User, Calendar, Clock, BookOpen, MapPin, Phone, History, Edit } from "lucide-react";
 import { format } from "date-fns";
 
+// 内部型定義を使用して柔軟性を確保
+interface BookingForModal {
+  id: number;
+  userId: number;
+  tutorId: number;
+  studentId: number | null;
+  tutorShiftId?: number;
+  date: string;
+  timeSlot: string;
+  subject: string | null;
+  status: string | null;
+  reportStatus?: string | null;
+  reportContent?: string | null;
+  createdAt: string | Date;
+  studentName?: string;
+  tutorName?: string;
+  openEditAfterClose?: boolean;
+  previousReport?: {
+    date: string;
+    content: string;
+  } | null;
+}
+
 interface BookingDetailModalProps {
   isOpen: boolean;
-  booking: Booking & { 
-    studentName?: string;
-    tutorName?: string;
-    previousReport?: {
-      date: string;
-      content: string;
-    } | null;
-  };
+  booking: BookingForModal;
   onClose: () => void;
   onCreateReport?: () => void;
   onViewReport?: () => void;

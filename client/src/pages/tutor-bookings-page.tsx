@@ -563,8 +563,20 @@ export default function TutorBookingsPage() {
         <BookingDetailModal
           isOpen={showBookingDetailModal}
           booking={{
-            ...selectedBooking,
-            studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId)
+            id: selectedBooking.id,
+            userId: selectedBooking.userId,
+            tutorId: selectedBooking.tutorId,
+            studentId: selectedBooking.studentId,
+            tutorShiftId: selectedBooking.tutorShiftId || 0,
+            date: selectedBooking.date,
+            timeSlot: selectedBooking.timeSlot,
+            subject: selectedBooking.subject,
+            status: selectedBooking.status,
+            reportStatus: selectedBooking.reportStatus || null,
+            reportContent: selectedBooking.reportContent || null,
+            createdAt: selectedBooking.createdAt,
+            studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId),
+            openEditAfterClose: selectedBooking.openEditAfterClose
           }}
           studentDetails={studentDetails}
           onClose={() => {
@@ -673,7 +685,18 @@ export default function TutorBookingsPage() {
         <ReportViewModal
           isOpen={showReportViewModal}
           booking={{
-            ...selectedBooking,
+            id: selectedBooking.id,
+            userId: selectedBooking.userId,
+            tutorId: selectedBooking.tutorId,
+            studentId: selectedBooking.studentId,
+            tutorShiftId: selectedBooking.tutorShiftId || 0,
+            date: selectedBooking.date,
+            timeSlot: selectedBooking.timeSlot,
+            subject: selectedBooking.subject,
+            status: selectedBooking.status,
+            reportStatus: selectedBooking.reportStatus || null,
+            reportContent: selectedBooking.reportContent || null,
+            createdAt: selectedBooking.createdAt,
             studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId),
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
           }}
@@ -682,16 +705,26 @@ export default function TutorBookingsPage() {
       )}
       
       {/* レポート編集モーダル - 専用の状態変数を使用 */}
-      {showReportEditModal && (
+      {showReportEditModal && reportEditBooking && (
         <ReportEditModal
           isOpen={showReportEditModal}
           booking={{
-            ...(reportEditBooking || selectedBooking),
-            // 明示的にreportContentを設定しないとmodalが開いた時に正しく反映されない場合がある
-            reportContent: reportEditBooking?.reportContent || selectedBooking?.reportContent || "",
-            studentName: reportEditBooking?.studentName || 
-                        selectedBooking?.studentName || 
-                        getStudentName(reportEditBooking?.studentId || selectedBooking?.studentId || null),
+            id: reportEditBooking.id,
+            userId: reportEditBooking.userId,
+            tutorId: reportEditBooking.tutorId,
+            studentId: reportEditBooking.studentId,
+            tutorShiftId: reportEditBooking.tutorShiftId || 0,
+            date: reportEditBooking.date,
+            timeSlot: reportEditBooking.timeSlot,
+            subject: reportEditBooking.subject,
+            status: reportEditBooking.status,
+            // 明示的にreportStatusとreportContentを設定
+            reportStatus: reportEditBooking.reportStatus || null,
+            reportContent: reportEditBooking.reportContent || "",
+            createdAt: reportEditBooking.createdAt,
+            // 追加情報
+            studentName: reportEditBooking.studentName || 
+                        getStudentName(reportEditBooking.studentId),
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
           }}
           onClose={() => {
