@@ -201,7 +201,7 @@ export function ReportEditModal({
         });
       }
       // 優先度2: APIで取得したlessonReportを使用
-      else if (lessonReport && 'id' in lessonReport) {
+      else if (lessonReport && lessonReport.id) {
         // 既存のレポートを更新
         console.log(`APIで取得したlessonReportのID ${lessonReport.id} を使用して更新します`);
         await updateReportMutation.mutateAsync({ 

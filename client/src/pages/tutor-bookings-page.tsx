@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isBefore, isToday } from "date-fns";
 import { ja } from "date-fns/locale";
 import { CalendarIcon, Loader2 } from "lucide-react";
@@ -66,6 +66,7 @@ type ExtendedBooking = Omit<Booking, "createdAt"> & {
 export default function TutorBookingsPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date(),
   );
@@ -1263,7 +1264,21 @@ export default function TutorBookingsPage() {
           }}
           onSuccess={() => {
             // レポート編集が成功したら予約情報を再取得
-            // 自動的にinvalidateQueriesで再取得されるので、ここでは何もしない
+            // レッスンレポートのキャッシュをクリア
+            queryClient.invalidateQueries({ queryKey: ["/api/lesson-reports"] });
+            
+            // 予約情報のキャッシュをクリア
+            queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] });
+            
+            // 特定の予約のキャッシュをクリア
+            if (reportEditBooking && reportEditBooking.id) {
+              queryClient.invalidateQueries({ queryKey: [`/api/bookings/${reportEditBooking.id}`] });
+            }
+            
+            // レポートキャッシュをクリア
+            setReportCache({});
+            
+            console.log("レポート編集成功 - キャッシュを無効化しました");
           }}
         />
       )}
