@@ -180,6 +180,8 @@ export const lessonReports = pgTable("lesson_reports", {
   bookingId: integer("booking_id").notNull().references(() => bookings.id),
   tutorId: integer("tutor_id").notNull().references(() => tutors.id),
   studentId: integer("student_id").references(() => students.id),
+  date: text("date"), // 授業日 (YYYY-MM-DD形式)
+  timeSlot: text("time_slot"), // 授業時間枠 (例: "16:00-17:30")
   unitContent: text("unit_content").notNull(), // 単元内容
   messageContent: text("message_content"), // 伝言事項
   goalContent: text("goal_content"), // 来週までの目標(課題)

@@ -65,11 +65,13 @@ async function migrateReports() {
       // レポートステータスの設定
       const status = booking.reportStatus === "completed" ? "completed" : "draft";
       
-      // 新しいレッスンレポートを作成
+      // 新しいレッスンレポートを作成（日付と時間情報を追加）
       await db.insert(lessonReports).values({
         bookingId: booking.id,
         tutorId: booking.tutorId,
         studentId: booking.studentId,
+        date: booking.date,           // 授業日情報を追加
+        timeSlot: booking.timeSlot,   // 授業時間情報を追加
         unitContent,
         messageContent,
         goalContent,
