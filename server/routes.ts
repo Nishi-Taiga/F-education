@@ -2,7 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
-import { insertBookingSchema, insertLessonReportSchema, timeSlots, type Student, type LessonReport } from "@shared/schema";
+import { db } from "./db";
+import { insertBookingSchema, insertLessonReportSchema, timeSlots, type Student, type LessonReport, bookings } from "@shared/schema";
 import { emailService } from "./email-service";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
@@ -1224,7 +1225,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Tutor profile not found" });
       }
       
+      console.log(`講師ID: ${tutor.id} の予約を取得します`);
       const bookings = await storage.getBookingsByTutorId(tutor.id);
+      console.log(`取得された予約データ: ${JSON.stringify(bookings)}`);
+      
+      if (!bookings || bookings.length === 0) {
+        console.log("講師の予約が見つかりませんでした");
+        // テスト用のダミー予約を作成
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(today.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
+        // データベースを確認
+        console.log("データベース内の全予約を確認します...");
+        try {
+          const allBookings = await db.query.bookings.findMany();
+          console.log(`全予約データ: ${JSON.stringify(allBookings)}`);
+        } catch (err) {
+          console.error("データベース検索エラー:", err);
+        }
+      }
       
       // 生徒名を付加した予約情報を作成
       const bookingsWithStudentInfo = await Promise.all(
@@ -1247,7 +1269,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(bookingsWithStudentInfo);
     } catch (error) {
-      res.status(400).json({ message: "Failed to fetch tutor bookings", error });
+      console.error("講師の予約取得エラー:", error);
+      res.status(400).json({ message: "Failed to fetch tutor bookings", error: String(error) });
     }
   });
 
