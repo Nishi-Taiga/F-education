@@ -886,47 +886,31 @@ export default function TutorBookingsPage() {
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
           }}
           onClose={() => setShowReportViewModal(false)}
-          onEdit={() => {
-            console.log("レポート表示モーダルから編集ボタンが押されました", selectedBooking);
-            
-            if (!selectedBooking) {
-              console.error("編集するための選択された予約がありません");
-              return;
-            }
+          onEdit={function editHandler() {
+            console.log("レポート表示モーダルから編集ボタンが押されました（名前付き関数）", selectedBooking);
             
             // レポート表示モーダルを閉じる
             setShowReportViewModal(false);
             
-            // レポート編集用のデータを準備
-            const reportEditData: ExtendedBooking = {
-              id: selectedBooking.id,
-              userId: selectedBooking.userId,
-              tutorId: selectedBooking.tutorId,
-              studentId: selectedBooking.studentId,
-              tutorShiftId: selectedBooking.tutorShiftId || 0,
-              date: selectedBooking.date,
-              timeSlot: selectedBooking.timeSlot,
-              subject: selectedBooking.subject || '',
-              status: selectedBooking.status || '',
+            if (!selectedBooking) {
+              console.error("選択された予約データがありません");
+              return;
+            }
+            
+            // 編集用データをセット
+            setReportEditBooking({
+              ...selectedBooking,
               reportStatus: selectedBooking.reportStatus || null,
               reportContent: selectedBooking.reportContent || '',
-              createdAt: typeof selectedBooking.createdAt === 'object' 
-                ? selectedBooking.createdAt.toISOString() 
-                : selectedBooking.createdAt,
-              studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId)
-            };
+              subject: selectedBooking.subject || '',
+              status: selectedBooking.status || ''
+            });
             
-            // デバッグログを追加
-            console.log("編集するレポートデータ:", reportEditData);
-            
-            // 編集用データをセットして編集モーダルを表示（少し遅延させる）
-            setReportEditBooking(reportEditData);
-            
-            // モーダルが確実に閉じた後に編集モーダルを表示
+            // 確実にモーダルが閉じた後に編集モーダルを表示
             setTimeout(() => {
+              console.log("編集モーダルを表示します");
               setShowReportEditModal(true);
-              console.log("レポート編集モーダルを表示しました");
-            }, 200);
+            }, 300);
           }}
         />
       )}
