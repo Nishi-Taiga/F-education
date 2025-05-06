@@ -858,8 +858,13 @@ export default function TutorBookingsPage() {
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
           }}
           onClose={() => setShowReportViewModal(false)}
-          onEdit={() => {
-            console.log("レポート編集ボタンがクリックされました", selectedBooking);
+          onEdit={function() {
+            console.log("レポート編集ボタンがクリックされました - 明示的なfunction定義", selectedBooking);
+            
+            if (!selectedBooking) {
+              console.error("編集するための選択された予約がありません");
+              return;
+            }
             
             // レポート編集用のデータを準備
             const reportEditData: ExtendedBooking = {
@@ -879,6 +884,9 @@ export default function TutorBookingsPage() {
                 : selectedBooking.createdAt,
               studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId)
             };
+            
+            // デバッグログを追加
+            console.log("編集するレポートデータ:", reportEditData);
             
             // 編集用データをセットして編集モーダルを表示
             setReportEditBooking(reportEditData);

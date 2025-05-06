@@ -37,6 +37,10 @@ export function ReportViewModal({
   onClose,
   onEdit,
 }: ReportViewModalProps) {
+  // デバッグ情報の出力
+  console.log("ReportViewModal: onEdit prop exists:", !!onEdit);
+  console.log("ReportViewModal: booking reportStatus:", booking?.reportStatus);
+  
   // 日付をフォーマット（無効な日付値のエラー処理を追加）
   let formattedDate = "日付不明";
   try {
@@ -195,15 +199,22 @@ export function ReportViewModal({
         </div>
         
         <DialogFooter className="mt-4 gap-2 flex">
-          {/* 編集ボタンがある場合のみ表示 */}
-          {onEdit && (
+          {/* 編集ボタンの表示（デバッグ出力付き） */}
+          {console.log("DialogFooter内 - onEdit存在:", typeof onEdit === 'function')}
+          
+          {/* 編集ボタンの条件を修正：明示的に関数かどうかをチェック */}
+          {typeof onEdit === 'function' && (
             <Button 
               variant="outline" 
               onClick={() => {
+                console.log("編集ボタンクリック");
                 onClose(); // モーダルを閉じる
                 // 少し遅延を持たせて編集モーダルを表示
                 setTimeout(() => {
-                  onEdit();
+                  if (typeof onEdit === 'function') {
+                    console.log("編集コールバック実行");
+                    onEdit();
+                  }
                 }, 100);
               }}
             >
