@@ -66,7 +66,57 @@ export default function TutorBookingsPage() {
     return (
       <div 
         className={`p-4 border rounded-lg ${isPast ? "bg-muted/50" : ""} hover:bg-gray-50 cursor-pointer`}
-        onClick={() => handleBookingClick(booking)}
+        onClick={async () => {
+          // レポート作成済みかどうかチェック
+          if (hasReport && booking.reportContent) {
+            console.log("レポート作成済みの予約がクリックされました - 詳細取得してからレポート表示");
+            
+            try {
+              // 予約の詳細情報を取得（生徒情報や前回のレポートも含む）
+              const response = await fetch(`/api/bookings/${booking.id}`);
+              if (response.ok) {
+                const bookingDetails = await response.json();
+                
+                // 詳細データを設定
+                const enhancedBookingDetails = {
+                  ...bookingDetails,
+                  studentName: bookingDetails.studentName || getStudentName(bookingDetails.studentId),
+                  tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
+                };
+                
+                // 選択された予約とレポート編集用データを設定
+                setSelectedBooking(enhancedBookingDetails);
+                setReportEditBooking(enhancedBookingDetails);
+                
+                // 詳細情報を表示
+                console.log("詳細データ取得成功:", enhancedBookingDetails);
+                
+                // 生徒詳細情報があれば設定
+                if (bookingDetails.studentDetails) {
+                  setStudentDetails(bookingDetails.studentDetails);
+                }
+                
+                // レポート詳細モーダルを表示
+                setShowReportViewModal(true);
+              } else {
+                // 詳細が取得できない場合は、基本情報のみで表示
+                console.log("詳細情報取得失敗 - 基本情報のみ表示");
+                setSelectedBooking(booking);
+                setReportEditBooking({...booking});
+                setShowReportViewModal(true);
+              }
+            } catch (error) {
+              console.error("予約詳細取得エラー:", error);
+              // エラー時も基本情報で表示
+              setSelectedBooking(booking);
+              setReportEditBooking({...booking});
+              setShowReportViewModal(true);
+            }
+          } else {
+            // 通常の処理
+            handleBookingClick(booking);
+          }
+        }}
       >
         <div className="flex justify-between items-start">
           <div>
@@ -407,6 +457,8 @@ export default function TutorBookingsPage() {
       };
       setReportEditBooking(errorReportEditData);
     }
+    
+    // 予約詳細情報の基本的な処理（共通）
     
     // レポート作成済みかどうかチェック - selectedBookingが更新されたあとに実行
     const isCompletedWithReport = 
