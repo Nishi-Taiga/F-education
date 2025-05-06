@@ -92,6 +92,12 @@ export function ReportEditModal({
     isOpen ? booking?.id : null
   );
   
+  // レッスンレポートの型安全なアクセス用のヘルパー関数
+  const getReportField = (report: any, field: string, defaultValue: string = ""): string => {
+    if (!report) return defaultValue;
+    return (report[field] as string) || defaultValue;
+  };
+  
   // モーダルが開かれたときに既存のレポート内容を設定する
   useEffect(() => {
     if (isOpen) {
@@ -100,17 +106,17 @@ export function ReportEditModal({
       // 1. まず直接渡されたbooking.lessonReportを優先（既にロードされているデータ）
       if (booking.lessonReport) {
         console.log("予約オブジェクト内のlessonReportデータを使用します:", booking.lessonReport);
-        setUnitContent(booking.lessonReport.unitContent || "");
-        setMessageContent(booking.lessonReport.messageContent || "");
-        setGoalContent(booking.lessonReport.goalContent || "");
+        setUnitContent(getReportField(booking.lessonReport, 'unitContent'));
+        setMessageContent(getReportField(booking.lessonReport, 'messageContent'));
+        setGoalContent(getReportField(booking.lessonReport, 'goalContent'));
       }
       // 2. 次にAPIで取得したlessonReportを使用（大抵はこれが最新）
       else if (lessonReport) {
         // 新しいレッスンレポートデータがある場合はそれを使用
         console.log("APIから取得したレッスンレポートデータを使用します:", lessonReport);
-        setUnitContent(lessonReport.unitContent || "");
-        setMessageContent(lessonReport.messageContent || "");
-        setGoalContent(lessonReport.goalContent || "");
+        setUnitContent(getReportField(lessonReport, 'unitContent'));
+        setMessageContent(getReportField(lessonReport, 'messageContent'));
+        setGoalContent(getReportField(lessonReport, 'goalContent'));
       } 
       // 3. 最後に従来のreportContentを使用（後方互換性のため）
       else if (booking.reportContent) {
@@ -183,10 +189,10 @@ export function ReportEditModal({
       console.log("レポート保存処理を開始します");
       
       // 優先度1: booking.lessonReportが存在する場合はそのIDを使用
-      if (booking.lessonReport) {
+      if (booking.lessonReport?.id) {
         console.log(`booking.lessonReportのID ${booking.lessonReport.id} を使用して更新します`);
         await updateReportMutation.mutateAsync({ 
-          id: booking.lessonReport.id,
+          reportId: booking.lessonReport.id,
           data: {
             unitContent,
             messageContent,
@@ -195,11 +201,11 @@ export function ReportEditModal({
         });
       }
       // 優先度2: APIで取得したlessonReportを使用
-      else if (lessonReport) {
+      else if (lessonReport && 'id' in lessonReport) {
         // 既存のレポートを更新
         console.log(`APIで取得したlessonReportのID ${lessonReport.id} を使用して更新します`);
         await updateReportMutation.mutateAsync({ 
-          id: lessonReport.id,
+          reportId: lessonReport.id,
           data: {
             unitContent,
             messageContent,
