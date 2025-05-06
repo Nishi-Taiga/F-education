@@ -477,6 +477,8 @@ export default function TutorBookingsPage() {
           ? booking.createdAt.toISOString()
           : booking.createdAt,
       studentName: booking.studentName || getStudentName(booking.studentId),
+      // lessonReportがある場合はそれも含める
+      lessonReport: booking.lessonReport || null
     };
 
     // レポート表示モーダルを確実に閉じる
@@ -1040,6 +1042,8 @@ export default function TutorBookingsPage() {
               selectedBooking.studentName ||
               getStudentName(selectedBooking.studentId),
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName,
+            // 重要: レポートデータがあれば追加
+            lessonReport: selectedBooking.lessonReport || null,
           }}
           onClose={() => setShowReportViewModal(false)}
           onEdit={() => {
@@ -1088,6 +1092,8 @@ export default function TutorBookingsPage() {
               reportEditBooking.studentName ||
               getStudentName(reportEditBooking.studentId),
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName,
+            // レッスンレポート情報も渡す
+            lessonReport: reportEditBooking.lessonReport || null,
           }}
           onClose={() => {
             setShowReportEditModal(false);

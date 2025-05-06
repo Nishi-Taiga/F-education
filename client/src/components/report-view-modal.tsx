@@ -261,11 +261,31 @@ export function ReportViewModal({
             return null;
           })()}
           
-          {/* 常に編集ボタンを表示（グローバル関数も使用） */}
+          {/* 常に編集ボタンを表示（レポートの内容を持ってレポート編集モーダルへ） */}
           <Button 
             variant="outline" 
             onClick={() => {
-              console.log("編集ボタンクリック - シンプルアプローチ");
+              console.log("編集ボタンクリック - レポートデータで編集モーダルを開く");
+              
+              // 編集用のデータを準備
+              const editData = {
+                ...booking,
+                // レポート内容を正しく設定
+                lessonReport: booking.lessonReport || {
+                  // reportContentから解析したデータをlessonReportとして設定
+                  id: 0, // バックエンドが既存のレポートIDを使用
+                  bookingId: booking.id,
+                  tutorId: booking.tutorId,
+                  studentId: booking.studentId,
+                  unitContent: unit,
+                  messageContent: message,
+                  goalContent: goal,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  date: booking.date,
+                  timeSlot: booking.timeSlot
+                }
+              };
               
               // モーダル閉じる処理を先に行う
               onClose();
@@ -279,8 +299,8 @@ export function ReportViewModal({
                 } 
                 // バックアップ: グローバル関数を使用
                 else if (window.openReportEditModal) {
-                  console.log("グローバル編集関数を使用します", booking);
-                  window.openReportEditModal(booking);
+                  console.log("グローバル編集関数を使用します（レポートデータ付き）", editData);
+                  window.openReportEditModal(editData);
                 }
                 else {
                   console.error("編集コールバックが設定されていません");
