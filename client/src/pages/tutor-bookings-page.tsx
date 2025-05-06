@@ -151,6 +151,14 @@ export default function TutorBookingsPage() {
   // レポート情報をキャッシュする
   const [reportCache, setReportCache] = useState<{[key: number]: any}>({});
   
+  // 生徒IDから生徒名を取得する関数
+  const getStudentName = (studentId: number | null): string | undefined => {
+    if (!studentId || !students) return undefined;
+    const student = students.find((s: any) => s.id === studentId);
+    if (!student) return undefined;
+    return `${student.lastName} ${student.firstName}`;
+  };
+  
   // レポートを取得する関数（キャッシュを利用）
   const getReportForBooking = (bookingId: number): any => {
     // キャッシュにあればそれを返す
@@ -737,14 +745,6 @@ export default function TutorBookingsPage() {
   };
 
   const bookingDates = getBookingDates();
-
-  // 生徒IDから生徒名を取得する関数
-  const getStudentName = (studentId: number | null): string | undefined => {
-    if (!studentId || !students) return undefined;
-    const student = students.find((s: any) => s.id === studentId);
-    if (!student) return undefined;
-    return `${student.lastName} ${student.firstName}`;
-  };
   
   // 既にレッスンレポート情報の取得はuseQuery内でcacheに保存されているので削除
 
