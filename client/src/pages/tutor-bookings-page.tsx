@@ -67,6 +67,41 @@ export default function TutorBookingsPage() {
   const [tempEditReportCallback, setTempEditReportCallback] = useState<
     (() => void) | null
   >(null);
+  // レポート情報をキャッシュする
+  const [reportCache, setReportCache] = useState<{[key: number]: any}>({});
+  
+  // レポートを取得する関数（キャッシュを利用）
+  const getReportForBooking = (bookingId: number): any => {
+    // キャッシュにあればそれを返す
+    if (reportCache[bookingId]) {
+      return reportCache[bookingId];
+    }
+    
+    // レッスンレポートの取得をリクエスト
+    fetch(`/api/lesson-reports/booking/${bookingId}`)
+      .then(response => {
+        if (response.status === 404) return null;
+        if (response.ok) return response.json();
+        throw new Error('レポート情報の取得に失敗しました');
+      })
+      .then(report => {
+        if (report) {
+          // キャッシュに保存
+          setReportCache(prev => ({
+            ...prev,
+            [bookingId]: report
+          }));
+        }
+        return report;
+      })
+      .catch(error => {
+        console.error("レポート取得エラー:", error);
+        return null;
+      });
+    
+    // 非同期処理の結果を待たずに現時点でのキャッシュ状態を返す
+    return reportCache[bookingId] || null;
+  };
 
   // 予約カードコンポーネント - コンポーネントを内部で定義し直して必要な状態と関数にアクセスできるようにする
   function BookingCard({
@@ -373,6 +408,40 @@ export default function TutorBookingsPage() {
     },
     retry: false,
   });
+  
+  // レッスンレポート情報を一括取得（講師IDに紐づくレポート）
+  const { data: lessonReports } = useQuery({
+    queryKey: ["/api/lesson-reports/tutor", tutorProfile?.id],
+    queryFn: async () => {
+      try {
+        if (!tutorProfile?.id) {
+          return [];
+        }
+        const response = await fetch(`/api/lesson-reports/tutor/${tutorProfile.id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch lesson reports");
+        }
+        
+        const reports = await response.json();
+        
+        // レポートをbookingIdでインデックス化してキャッシュに保存
+        const reportsByBookingId = {};
+        reports.forEach(report => {
+          reportsByBookingId[report.bookingId] = report;
+        });
+        
+        // キャッシュに一括保存
+        setReportCache(reportsByBookingId);
+        
+        return reports;
+      } catch (error) {
+        console.error("Error fetching lesson reports:", error);
+        return [];
+      }
+    },
+    retry: false,
+    enabled: !!tutorProfile?.id,
+  });
 
   // 講師でない場合はリダイレクト
   useEffect(() => {
@@ -519,28 +588,7 @@ export default function TutorBookingsPage() {
     return `${student.lastName} ${student.firstName}`;
   };
   
-  // レポート情報を取得
-  const { data: lessonReports = [] } = useQuery({
-    queryKey: ["/api/lesson-reports/tutor"],
-    queryFn: async () => {
-      try {
-        const response = await fetch("/api/lesson-reports/tutor");
-        if (!response.ok) {
-          throw new Error("Failed to fetch lesson reports");
-        }
-        return await response.json();
-      } catch (error) {
-        console.error("Error fetching lesson reports:", error);
-        return [];
-      }
-    },
-    enabled: !!tutorProfile,
-  });
-
-  // 予約IDからレポート情報を取得する関数
-  const getReportForBooking = (bookingId: number) => {
-    return lessonReports.find((report: any) => report.bookingId === bookingId);
-  };
+  // 既にレッスンレポート情報の取得はuseQuery内でcacheに保存されているので削除
 
   // 予約カードがクリックされたときの処理
   const handleBookingClick = async (booking: ExtendedBooking) => {
@@ -668,8 +716,8 @@ export default function TutorBookingsPage() {
     // レポート作成状況のチェック - lesson_reportsテーブルから確認
     const isCompletedWithReport = !!report;
 
-    // レポートが作成済み && 内容があれば直接レポート詳細モーダルを表示
-    if (isCompletedWithReport && booking.reportContent) {
+    // レポートが作成済みなら直接レポート詳細モーダルを表示
+    if (isCompletedWithReport) {
       console.log(
         "レポート作成済みのため、直接レポート詳細モーダルを表示します",
       );
