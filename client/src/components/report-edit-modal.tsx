@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { format, parse } from "date-fns";
 import { ja } from "date-fns/locale";
 import { DialogTitle, DialogDescription, DialogHeader, DialogFooter, DialogContent, Dialog } from "@/components/ui/dialog";
@@ -7,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { User, CalendarDays, BookOpen, Loader2, AlertTriangle } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLessonReportByBookingId, useCreateLessonReport, useUpdateLessonReport } from "@/hooks/use-lesson-reports";
 import type { Booking } from "@shared/schema";
 
 interface ReportEditModalProps {
