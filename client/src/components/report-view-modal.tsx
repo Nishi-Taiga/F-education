@@ -111,6 +111,14 @@ export function ReportViewModal({
     }
   }
 
+  // デバッグ用：ステータス情報
+  console.log("レポートステータス詳細:", {
+    reportStatus: booking?.reportStatus,
+    isCompleted: booking?.reportStatus === "completed" || (booking?.reportStatus && booking?.reportStatus.startsWith('completed:')),
+    hasEditCallback: typeof onEdit === 'function',
+    isPastLesson: true, // 簡易化：過去のレッスンとして扱う
+  });
+  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
@@ -223,7 +231,7 @@ export function ReportViewModal({
                 // 少し遅延を入れてからコールバックを実行
                 setTimeout(() => {
                   onEdit();
-                }, 100);
+                }, 200); // 遅延を長くして確実に反映されるようにする
               } else {
                 console.error("編集コールバックが設定されていません");
                 onClose();
