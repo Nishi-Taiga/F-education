@@ -366,8 +366,8 @@ export default function TutorBookingsPage() {
     setTimeout(() => {
       console.log("編集モーダルを表示します", reportEditData);
       setShowReportEditModal(true);
-    }, 100);
-  }, []);
+    }, 300); // タイミングを伸ばして確実に実行されるようにする
+  }, [getStudentName]);
 
   // グローバルオブジェクトに関数を設定（コンポーネント間での共有用）
   useEffect(() => {
@@ -921,37 +921,21 @@ export default function TutorBookingsPage() {
           onEdit={() => {
             console.log("レポート表示モーダルから編集ボタンが押されました");
             
-            // 保存されたコールバック関数があれば実行する
-            if (tempEditReportCallback) {
-              console.log("保存されたコールバック関数を実行します");
-              tempEditReportCallback();
-              return;
-            }
-            
-            // 以下はバックアップとして残しておく
-            console.log("バックアップ編集処理を実行");
-            
-            // レポート表示モーダルを閉じる
+            // 確実にレポート表示モーダルを閉じる
             setShowReportViewModal(false);
 
+            // selectedBookingのデータチェック
             if (!selectedBooking) {
               console.error("選択された予約データがありません");
               return;
             }
-
-            // 編集用データをセット
-            setReportEditBooking({
-              ...selectedBooking,
-              reportStatus: selectedBooking.reportStatus || null,
-              reportContent: selectedBooking.reportContent || "",
-              subject: selectedBooking.subject || "",
-              status: selectedBooking.status || "",
-            });
-
-            // 確実にモーダルが閉じた後に編集モーダルを表示
+            
+            // 共通関数を使用して編集モーダルを開く（一番安全な方法）
             setTimeout(() => {
-              console.log("編集モーダルを表示します");
-              setShowReportEditModal(true);
+              console.log("編集モーダルを表示するための共通関数を実行");
+              
+              // openReportEditModalFnを直接実行（これによりデータの一貫性を担保）
+              openReportEditModalFn(selectedBooking);
             }, 300);
           }}
         />

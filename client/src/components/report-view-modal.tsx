@@ -207,7 +207,7 @@ export function ReportViewModal({
         </div>
         
         <DialogFooter className="mt-4 gap-2 flex">
-          {/* 編集ボタンが存在するか確認 */}
+          {/* デバッグ情報 */}
           {(() => {
             // このIIFEはReactNodeを返すため型エラーを解消
             const hasEditFunction = typeof onEdit === 'function';
@@ -215,26 +215,34 @@ export function ReportViewModal({
             return null;
           })()}
           
-          {/* 常に編集ボタンを表示 */}
+          {/* 常に編集ボタンを表示（グローバル関数も使用） */}
           <Button 
             variant="outline" 
             onClick={() => {
               console.log("編集ボタンクリック - シンプルアプローチ");
               
-              // 親から渡されたコールバックを実行
+              // モーダル閉じる処理を先に行う
+              onClose();
+              
+              // まず親から渡されたコールバックを実行
               if (typeof onEdit === 'function') {
-                console.log("編集コールバックを実行します - バージョン2");
-                
-                // モーダル閉じる処理を先に行う
-                onClose();
+                console.log("親から渡された編集コールバックを実行します");
                 
                 // 少し遅延を入れてからコールバックを実行
                 setTimeout(() => {
                   onEdit();
-                }, 200); // 遅延を長くして確実に反映されるようにする
-              } else {
+                }, 300); // 遅延を長くして確実に反映されるようにする
+              } 
+              // バックアップ: グローバル関数を使用
+              else if (typeof window.openReportEditModal === 'function') {
+                console.log("グローバル編集関数を使用します");
+                setTimeout(() => {
+                  // @ts-ignore - グローバル関数のアクセス
+                  window.openReportEditModal(booking);
+                }, 300);
+              }
+              else {
                 console.error("編集コールバックが設定されていません");
-                onClose();
               }
             }}
           >
