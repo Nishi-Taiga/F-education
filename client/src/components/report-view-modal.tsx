@@ -263,7 +263,7 @@ export function ReportViewModal({
           
           {/* 常に編集ボタンを表示（レポートの内容を持ってレポート編集モーダルへ） */}
           <Button 
-            variant="outline" 
+            variant="default" 
             onClick={() => {
               console.log("編集ボタンクリック - レポートデータで編集モーダルを開く");
               
@@ -343,7 +343,12 @@ export function ReportViewModal({
           >
             レポートを編集
           </Button>
-          <Button onClick={onClose}>閉じる</Button>
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+          >
+            閉じる
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

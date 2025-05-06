@@ -514,8 +514,8 @@ export default function TutorBookingsPage() {
         const reports = await response.json();
         
         // レポートをbookingIdでインデックス化してキャッシュに保存
-        const reportsByBookingId = {};
-        reports.forEach(report => {
+        const reportsByBookingId: Record<number, any> = {};
+        reports.forEach((report: any) => {
           reportsByBookingId[report.bookingId] = report;
         });
         
