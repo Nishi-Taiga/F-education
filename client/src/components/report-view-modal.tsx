@@ -270,26 +270,22 @@ export function ReportViewModal({
               // モーダル閉じる処理を先に行う
               onClose();
               
-              // まず親から渡されたコールバックを実行
-              if (typeof onEdit === 'function') {
-                console.log("親から渡された編集コールバックを実行します");
-                
-                // 少し遅延を入れてからコールバックを実行
-                setTimeout(() => {
+              // 少し遅延を入れてから親コールバックまたはグローバル関数を実行
+              setTimeout(() => {
+                // まず親から渡されたコールバックを実行
+                if (typeof onEdit === 'function') {
+                  console.log("親から渡された編集コールバックを実行します");
                   onEdit();
-                }, 300); // 遅延を長くして確実に反映されるようにする
-              } 
-              // バックアップ: グローバル関数を使用
-              else if (typeof window.openReportEditModal === 'function') {
-                console.log("グローバル編集関数を使用します");
-                setTimeout(() => {
-                  // @ts-ignore - グローバル関数のアクセス
+                } 
+                // バックアップ: グローバル関数を使用
+                else if (window.openReportEditModal) {
+                  console.log("グローバル編集関数を使用します", booking);
                   window.openReportEditModal(booking);
-                }, 300);
-              }
-              else {
-                console.error("編集コールバックが設定されていません");
-              }
+                }
+                else {
+                  console.error("編集コールバックが設定されていません");
+                }
+              }, 300); // 遅延を長くして確実に反映されるようにする
             }}
           >
             レポートを編集
