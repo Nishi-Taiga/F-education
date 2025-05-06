@@ -408,8 +408,19 @@ export default function TutorBookingsPage() {
       setReportEditBooking(errorReportEditData);
     }
     
-    // モーダルを表示
-    setShowBookingDetailModal(true);
+    // レポート作成済みかどうかチェック - selectedBookingが更新されたあとに実行
+    const isCompletedWithReport = 
+      booking.reportStatus === 'completed' || 
+      (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
+      
+    // レポートが作成済み && 内容があれば直接レポート詳細モーダルを表示
+    if (isCompletedWithReport && booking.reportContent) {
+      console.log("レポート作成済みのため、直接レポート詳細モーダルを表示します");
+      setShowReportViewModal(true);
+    } else {
+      // 通常の予約詳細モーダルを表示
+      setShowBookingDetailModal(true);
+    }
   };
   
   // 読み込み中の表示
