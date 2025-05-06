@@ -18,6 +18,7 @@ import { ReportViewModal } from "@/components/report-view-modal";
 import { ReportEditModal } from "@/components/report-edit-modal";
 
 // 予約情報の型定義 - レポート関連のフィールドを追加
+// 基本的な予約型
 type Booking = {
   id: number;
   userId: number;
@@ -31,6 +32,14 @@ type Booking = {
   reportStatus?: string | null;
   reportContent?: string | null;
   createdAt: string;
+  studentName?: string;
+  // レポート編集用の一時的なフラグ（非公式プロパティ）
+  openEditAfterClose?: boolean;
+};
+
+// カレンダーコンポーネント用の拡張された予約型
+type ExtendedBooking = Omit<Booking, 'createdAt'> & {
+  createdAt: string | Date;
   studentName?: string;
 };
 
@@ -287,7 +296,7 @@ export default function TutorBookingsPage() {
   };
   
   // 予約カードがクリックされたときの処理
-  const handleBookingClick = async (booking: Booking & { studentName?: string }) => {
+  const handleBookingClick = async (booking: ExtendedBooking) => {
     try {
       console.log("予約クリック:", booking);
       
@@ -546,49 +555,34 @@ export default function TutorBookingsPage() {
             studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId)
           }}
           studentDetails={studentDetails}
-          onClose={() => setShowBookingDetailModal(false)}
-          onViewReport={() => {
-            setShowBookingDetailModal(false);
-            setShowReportViewModal(true);
-          }}
-          // 講師アカウントではレポート編集を常に有効にする - インラインで実装して問題解決
-          onEditReport={() => {
-            console.log("レポート編集ボタンがクリックされました", selectedBooking);
-            // 選択された予約がない場合は処理を中止
-            if (!selectedBooking) {
-              console.error("レポート編集対象の予約が選択されていません");
-              return;
-            }
-            
-            // 詳細モーダルを閉じる
+          onClose={() => {
             setShowBookingDetailModal(false);
             
-            // 十分な遅延を持たせてから編集モーダルを開く
-            setTimeout(() => {
-              // 編集用の予約データを設定
-              setReportEditBooking({
+            // 詳細モーダルが閉じられたときに、編集ボタンがクリックされたのであれば
+            // 少し遅延してからレポート編集モーダルを開く
+            if (selectedBooking && selectedBooking.openEditAfterClose) {
+              // レポート編集用のデータを準備
+              const booking = {
                 ...selectedBooking,
-                id: selectedBooking.id,
-                userId: selectedBooking.userId,
-                tutorId: selectedBooking.tutorId,
-                studentId: selectedBooking.studentId,
-                tutorShiftId: selectedBooking.tutorShiftId || 0, 
-                date: selectedBooking.date,
-                timeSlot: selectedBooking.timeSlot,
-                subject: selectedBooking.subject || "",
-                status: selectedBooking.status || null,
-                createdAt: selectedBooking.createdAt,
                 reportStatus: selectedBooking.reportStatus || null,
                 reportContent: selectedBooking.reportContent || '',
                 studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId)
-              });
+              };
               
-              // レポート編集モーダルを表示
+              // 明示的にフラグをリセット
+              selectedBooking.openEditAfterClose = false;
+              
+              // データを設定して編集モーダルを開く
               setTimeout(() => {
+                setReportEditBooking(booking);
                 setShowReportEditModal(true);
-                console.log("レポート編集モーダルを表示します");
-              }, 50);
-            }, 200);
+                console.log("詳細モーダル閉じた後、レポート編集モーダルを表示");
+              }, 300);
+            }
+          }}
+          onViewReport={() => {
+            setShowBookingDetailModal(false);
+            setShowReportViewModal(true);
           }}
         />
       )}

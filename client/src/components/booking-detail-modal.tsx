@@ -248,22 +248,24 @@ export function BookingDetailModal({
           
 
           
-          {/* レポート編集ボタン - 講師用画面では常に表示する */}
+          {/* シンプルな新しいレポート編集ボタン */}
           {isPastLesson() && (
             <Button
               type="button"
               variant="outline"
               className="border-amber-600 text-amber-600 hover:bg-amber-50"
               onClick={() => {
-                console.log("編集ボタンがクリックされました");
-                // コールバックが存在する場合は実行
-                if (onEditReport) {
-                  onEditReport();
-                } else {
-                  console.error("編集コールバックが設定されていません");
-                  // エラーは表示するが、モーダルは閉じる
-                  onClose();
+                console.log("新しい編集ボタンがクリックされました");
+                
+                // booking オブジェクトにフラグを設定
+                if (booking) {
+                  // TypeScriptのプロパティ追加警告を回避するためにany型にキャスト
+                  (booking as any).openEditAfterClose = true;
+                  console.log("編集フラグを設定しました", booking);
                 }
+                
+                // モーダルを閉じる（閉じる際に親コンポーネントのonCloseハンドラーでフラグをチェック）
+                onClose();
               }}
             >
               <Edit className="mr-2 h-4 w-4" />
