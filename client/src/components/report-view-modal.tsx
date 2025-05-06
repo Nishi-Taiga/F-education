@@ -207,25 +207,37 @@ export function ReportViewModal({
             return null;
           })()}
           
-          {/* 編集ボタンの条件を修正：明示的に関数かどうかをチェック */}
-          {typeof onEdit === 'function' && (
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                console.log("編集ボタンクリック");
-                onClose(); // モーダルを閉じる
+          {/* 常に編集ボタンを表示 */}
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              console.log("編集ボタンクリック");
+              onClose(); // モーダルを閉じる
+              
+              // 必要な情報をコンソールに出力
+              console.log("編集ボタンクリック時の予約データ:", booking);
+              
+              // 親コンポーネントから渡されたコールバックがあれば使用
+              if (typeof onEdit === 'function') {
                 // 少し遅延を持たせて編集モーダルを表示
                 setTimeout(() => {
-                  if (typeof onEdit === 'function') {
-                    console.log("編集コールバック実行");
-                    onEdit();
-                  }
+                  console.log("編集コールバック実行");
+                  onEdit();
                 }, 100);
-              }}
-            >
-              レポートを編集
-            </Button>
-          )}
+              } else {
+                // コールバックがない場合はグローバルイベントを発行
+                console.log("編集コールバックがないためカスタムイベントを発行");
+                
+                // カスタムイベントを発行して親コンポーネントに通知
+                const event = new CustomEvent('reportEdit', { 
+                  detail: { booking } 
+                });
+                window.dispatchEvent(event);
+              }
+            }}
+          >
+            レポートを編集
+          </Button>
           <Button onClick={onClose}>閉じる</Button>
         </DialogFooter>
       </DialogContent>

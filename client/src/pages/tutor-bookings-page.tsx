@@ -280,6 +280,53 @@ export default function TutorBookingsPage() {
     }
   }, [user, navigate]);
   
+  // カスタムイベントリスナーの設定
+  useEffect(() => {
+    // レポート編集イベントを処理する関数
+    const handleReportEdit = (event: CustomEvent<{booking: any}>) => {
+      console.log("カスタムイベントがキャッチされました", event.detail);
+      
+      // 受け取ったデータに基づいてレポート編集モーダルを開く
+      if (event.detail && event.detail.booking) {
+        const booking = event.detail.booking;
+        
+        // 必要なデータを準備
+        const reportEditData: ExtendedBooking = {
+          id: booking.id,
+          userId: booking.userId,
+          tutorId: booking.tutorId,
+          studentId: booking.studentId,
+          tutorShiftId: booking.tutorShiftId || 0,
+          date: booking.date,
+          timeSlot: booking.timeSlot,
+          subject: booking.subject || '',
+          status: booking.status || '',
+          reportStatus: booking.reportStatus || null,
+          reportContent: booking.reportContent || '',
+          createdAt: typeof booking.createdAt === 'object' 
+            ? booking.createdAt.toISOString() 
+            : booking.createdAt,
+          studentName: booking.studentName || getStudentName(booking.studentId)
+        };
+        
+        // モーダルを設定して表示
+        setReportEditBooking(reportEditData);
+        // 少し遅らせて表示（レポート表示モーダルが完全に閉じてから）
+        setTimeout(() => {
+          setShowReportEditModal(true);
+        }, 100);
+      }
+    };
+
+    // イベントリスナーを追加
+    window.addEventListener('reportEdit', handleReportEdit as EventListener);
+    
+    // クリーンアップ関数
+    return () => {
+      window.removeEventListener('reportEdit', handleReportEdit as EventListener);
+    };
+  }, []);
+  
   // 今日以降の予約
   const upcomingBookings = bookings?.filter((booking: Booking) => {
     const bookingDate = parseISO(booking.date);
