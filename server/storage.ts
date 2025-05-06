@@ -833,10 +833,19 @@ export class DatabaseStorage implements IStorage {
   // レッスンレポート関連のメソッド
   async createLessonReport(report: InsertLessonReport): Promise<LessonReport> {
     const now = new Date();
-    // レポートを挿入
+    
+    // 対応する予約から日付と時間情報を取得
+    const booking = await this.getBookingById(report.bookingId);
+    if (!booking) {
+      throw new Error("対応する予約が見つかりません");
+    }
+    
+    // レポートを挿入（日付と時間情報を予約から取得して設定）
     const [lessonReport] = await db.insert(lessonReports)
       .values({
         ...report,
+        date: booking.date,           // 予約の日付情報をセット
+        timeSlot: booking.timeSlot,   // 予約の時間情報をセット
         createdAt: now,
         updatedAt: now
       })
@@ -844,15 +853,12 @@ export class DatabaseStorage implements IStorage {
     
     // 対応する予約のreportStatusも更新する (レガシー互換性のため)
     if (lessonReport) {
-      const booking = await this.getBookingById(report.bookingId);
-      if (booking) {
-        await db.update(bookings)
-          .set({
-            reportStatus: `completed:${now.toISOString()}`,
-            reportContent: this.formatReportContentFromLessonReport(lessonReport)
-          })
-          .where(eq(bookings.id, report.bookingId));
-      }
+      await db.update(bookings)
+        .set({
+          reportStatus: `completed:${now.toISOString()}`,
+          reportContent: this.formatReportContentFromLessonReport(lessonReport)
+        })
+        .where(eq(bookings.id, report.bookingId));
     }
     
     return lessonReport;
@@ -866,17 +872,41 @@ export class DatabaseStorage implements IStorage {
   async updateLessonReport(id: number, reportUpdate: Partial<InsertLessonReport>): Promise<LessonReport> {
     const now = new Date();
     
+    // 既存のレポートを取得
+    const [existingReport] = await db.select()
+      .from(lessonReports)
+      .where(eq(lessonReports.id, id));
+    
+    if (!existingReport) {
+      throw new Error("Lesson report not found");
+    }
+    
+    // 必要に応じて日付と時間情報を取得・更新
+    let dateInfo = existingReport.date;
+    let timeSlot = existingReport.timeSlot;
+    
+    // 日付や時間情報が無い場合、予約から取得
+    if (!dateInfo || !timeSlot) {
+      const booking = await this.getBookingById(existingReport.bookingId);
+      if (booking) {
+        dateInfo = booking.date;
+        timeSlot = booking.timeSlot;
+      }
+    }
+    
     // レポートを更新
     const [updatedReport] = await db.update(lessonReports)
       .set({
         ...reportUpdate,
+        date: dateInfo,           // 日付情報を維持または更新
+        timeSlot: timeSlot,       // 時間情報を維持または更新
         updatedAt: now
       })
       .where(eq(lessonReports.id, id))
       .returning();
     
     if (!updatedReport) {
-      throw new Error("Lesson report not found");
+      throw new Error("Lesson report update failed");
     }
     
     // 対応する予約のreportContentも更新する (レガシー互換性のため)
