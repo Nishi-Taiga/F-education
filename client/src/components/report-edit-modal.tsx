@@ -10,11 +10,28 @@ import { User, CalendarDays, BookOpen, Loader2, AlertTriangle } from "lucide-rea
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLessonReportByBookingId, useCreateLessonReport, useUpdateLessonReport } from "@/hooks/use-lesson-reports";
-import type { Booking } from "@shared/schema";
+// 内部型定義を使用して柔軟性を確保
+interface BookingForReport {
+  id: number;
+  userId: number;
+  tutorId: number;
+  studentId: number | null;
+  tutorShiftId?: number;
+  date: string;
+  timeSlot: string;
+  subject: string | null;
+  status: string | null;
+  reportStatus?: string | null;
+  reportContent?: string | null;
+  createdAt: string | Date;
+  studentName?: string;
+  tutorName?: string;
+  openEditAfterClose?: boolean;
+}
 
 interface ReportEditModalProps {
   isOpen: boolean;
-  booking: Booking & { studentName?: string; tutorName?: string };
+  booking: BookingForReport;
   onClose: () => void;
   onSuccess?: () => void;
 }

@@ -47,11 +47,11 @@ export default function TutorBookingsPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedBooking, setSelectedBooking] = useState<any>();
+  const [selectedBooking, setSelectedBooking] = useState<ExtendedBooking | undefined>();
   const [showBookingDetailModal, setShowBookingDetailModal] = useState(false);
   const [showReportViewModal, setShowReportViewModal] = useState(false);
   const [showReportEditModal, setShowReportEditModal] = useState(false);
-  const [reportEditBooking, setReportEditBooking] = useState<Booking | null>(null);
+  const [reportEditBooking, setReportEditBooking] = useState<ExtendedBooking | null>(null);
   const [studentDetails, setStudentDetails] = useState<any>(null);
   
   // 予約カードコンポーネント - コンポーネントを内部で定義し直して必要な状態と関数にアクセスできるようにする
@@ -355,13 +355,19 @@ export default function TutorBookingsPage() {
         setSelectedBooking(booking);
         
         // レポート編集用のデータも同様に設定
-        setReportEditBooking({
+        // createdAtが日付型の場合は文字列に変換する
+        const reportEditData: ExtendedBooking = {
           ...booking,
           reportStatus: booking.reportStatus || null,
           reportContent: booking.reportContent || '',
           tutorShiftId: booking.tutorShiftId || 0,
-          status: booking.status || null
-        });
+          status: booking.status || null,
+          // 型の不一致を避けるため明示的に文字列型を使用
+          createdAt: typeof booking.createdAt === 'object' 
+            ? booking.createdAt.toISOString() 
+            : booking.createdAt
+        };
+        setReportEditBooking(reportEditData);
         
         // 生徒情報を個別に取得
         if (booking.studentId) {
@@ -387,13 +393,19 @@ export default function TutorBookingsPage() {
       setStudentDetails(null);
       
       // エラー時もレポート編集用データを設定しておく
-      setReportEditBooking({
+      // createdAtが日付型の場合は文字列に変換する
+      const errorReportEditData: ExtendedBooking = {
         ...booking,
         reportStatus: booking.reportStatus || null,
         reportContent: booking.reportContent || '',
         tutorShiftId: booking.tutorShiftId || 0,
-        status: booking.status || null
-      });
+        status: booking.status || null,
+        // 型の不一致を避けるため明示的に文字列型を使用
+        createdAt: typeof booking.createdAt === 'object' 
+          ? booking.createdAt.toISOString() 
+          : booking.createdAt
+      };
+      setReportEditBooking(errorReportEditData);
     }
     
     // モーダルを表示

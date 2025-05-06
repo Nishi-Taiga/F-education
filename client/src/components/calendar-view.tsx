@@ -6,10 +6,27 @@ import {
   eachDayOfInterval, isSameMonth, isToday, isBefore, getDay,
   addDays, subDays
 } from "date-fns";
-import { type Booking } from "@shared/schema";
+// 基本的な予約型（tutor-bookings-pageと一致させる）
+type Booking = {
+  id: number;
+  userId: number;
+  tutorId: number;
+  studentId: number | null;
+  tutorShiftId?: number;
+  date: string;
+  timeSlot: string;
+  subject: string | null;
+  status: string | null;
+  reportStatus?: string | null;
+  reportContent?: string | null;
+  createdAt: string;
+  studentName?: string;
+  openEditAfterClose?: boolean;
+};
 
-// 予約情報に生徒名を追加するための拡張型
-type ExtendedBooking = Booking & {
+// カレンダーコンポーネント用の拡張された予約型
+type ExtendedBooking = Omit<Booking, 'createdAt'> & {
+  createdAt: string | Date;
   studentName?: string;
 };
 
