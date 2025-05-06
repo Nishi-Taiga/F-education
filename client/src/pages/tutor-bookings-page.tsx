@@ -1205,7 +1205,7 @@ export default function TutorBookingsPage() {
           onEdit={() => {
             console.log("レポート表示モーダルから編集ボタンが押されました");
             
-            // 確実にレポート表示モーダルを閉じる
+            // モーダルをすぐに閉じる
             setShowReportViewModal(false);
 
             // selectedBookingのデータチェック
@@ -1214,13 +1214,23 @@ export default function TutorBookingsPage() {
               return;
             }
             
-            // 共通関数を使用して編集モーダルを開く（一番安全な方法）
+            // レポート編集モーダルを表示する準備
+            console.log("編集モーダルを表示するための処理を開始します");
+            
+            // reportEditBookingを直接設定
+            const reportData = {
+              ...selectedBooking,
+              lessonReport: selectedBooking.lessonReport || null
+            };
+            
+            // データをセット
+            setReportEditBooking(reportData);
+            
+            // 少し遅延させてからモーダルを表示（React のレンダリングサイクルを考慮）
             setTimeout(() => {
-              console.log("編集モーダルを表示するための共通関数を実行");
-              
-              // openReportEditModalFnを直接実行（これによりデータの一貫性を担保）
-              openReportEditModalFn(selectedBooking);
-            }, 300);
+              console.log("直接編集モーダルを表示します");
+              setShowReportEditModal(true);
+            }, 100);
           }}
         />
       )}

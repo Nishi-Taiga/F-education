@@ -290,10 +290,34 @@ export function ReportViewModal({
               // モーダル閉じる処理を先に行う
               onClose();
               
-              // 少し遅延を入れてから親コールバックまたはグローバル関数を実行
+              // 親コンポーネントから渡されたonEdit関数があれば優先して使用
+              if (typeof onEdit === 'function') {
+                console.log("親から渡された編集コールバックを実行します");
+                onEdit();
+                return; // 親コンポーネントのコールバックを使用した場合は以降の処理を行わない
+              }
+              
+              // 少し遅延を入れてから代替メカニズムを実行
               setTimeout(() => {
                 try {
                   console.log("レポート編集モーダルを開く処理を開始します", editData);
+                  
+                  // 方法1: グローバル関数を使用（優先度最高）
+                  if ((window as any).openReportEditModal) {
+                    console.log("グローバル編集関数を使用します", editData);
+                    (window as any).openReportEditModal(editData);
+                    return;
+                  }
+                  
+                  // 方法2: window経由で直接状態を設定
+                  if ((window as any).setReportEditData) {
+                    console.log("window.setReportEditDataを実行します");
+                    (window as any).setReportEditData(editData);
+                    return;
+                  }
+                  
+                  // 方法3: URLパラメータ方式（最も信頼性が高いが、ページ遷移が発生）
+                  console.log("URLパラメータ方式を使用します");
                   
                   // モーダルを閉じる前にレポートデータをセッションストレージに保存
                   try {
@@ -303,39 +327,18 @@ export function ReportViewModal({
                     console.error("セッションストレージへの保存に失敗", err);
                   }
                   
-                  // タイムアウト値を1秒に設定 - ページ全体にリダイレクト
-                  setTimeout(() => {
-                    // 強制的にtutor-bookings-pageに遷移し、編集モードフラグを付与
-                    window.location.href = '/tutor/bookings?editReport=' + editData.id;
-                    console.log("編集ページにリダイレクトします");
-                  }, 100);
-                  
-                  // バックアップ: 旧メカニズムも維持
-                  
                   // グローバル変数も設定（バックアップ）
                   (window as any).REPORT_EDIT_DATA = editData;
                   (window as any).REPORT_EDIT_MODAL_SHOULD_OPEN = true;
-                  console.log("グローバル変数を設定しました: REPORT_EDIT_DATA & REPORT_EDIT_MODAL_SHOULD_OPEN");
+                  console.log("グローバル変数を設定しました");
                   
-                  // 親から渡されたコールバックを実行（バックアップ）
-                  if (typeof onEdit === 'function') {
-                    console.log("親から渡された編集コールバックを実行します");
-                    onEdit();
-                  } 
-                  // グローバル関数を使用（バックアップ）
-                  else if ((window as any).openReportEditModal) {
-                    console.log("グローバル編集関数を使用します（レポートデータ付き）", editData);
-                    (window as any).openReportEditModal(editData);
-                  }
-                  // window経由で直接状態を設定（バックアップ）
-                  else if ((window as any).setReportEditData) {
-                    (window as any).setReportEditData(editData);
-                    console.log("window.setReportEditDataを実行しました");
-                  }
+                  // ページ遷移
+                  window.location.href = '/tutor/bookings?editReport=' + editData.id;
+                  console.log("編集ページにリダイレクトします");
                 } catch (err) {
                   console.error("レポート編集を開く処理でエラーが発生しました", err);
                 }
-              }, 300); // 遅延を長くして確実に反映されるようにする
+              }, 100); // 短い遅延でより応答性を高める
             }}
           >
             レポートを編集
