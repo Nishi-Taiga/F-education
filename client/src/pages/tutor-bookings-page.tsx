@@ -461,16 +461,43 @@ export default function TutorBookingsPage() {
     enabled: !!user && user.role === "tutor",
   });
 
-  // 予約情報の取得
+  // 予約情報の取得 - 一般的な予約取得APIを使用
   const { data: bookings, isLoading: isLoadingBookings } = useQuery({
-    queryKey: ["/api/tutor/bookings"],
+    queryKey: ["/api/bookings", tutorProfile?.id],
     queryFn: async () => {
       try {
-        const response = await fetch("/api/tutor/bookings");
+        // ログイン中のユーザー（講師）の予約を取得
+        const response = await fetch("/api/bookings");
         if (!response.ok) {
           throw new Error("Failed to fetch tutor bookings");
         }
-        return await response.json();
+        const data = await response.json();
+        
+        // 生徒名を取得
+        const bookingsWithStudentInfo = await Promise.all(
+          data.map(async (booking: any) => {
+            let studentName = undefined;
+            
+            if (booking.studentId) {
+              try {
+                const studentResponse = await fetch(`/api/students/${booking.studentId}`);
+                if (studentResponse.ok) {
+                  const student = await studentResponse.json();
+                  studentName = `${student.lastName} ${student.firstName}`;
+                }
+              } catch (err) {
+                console.error("Error fetching student info:", err);
+              }
+            }
+            
+            return {
+              ...booking,
+              studentName
+            };
+          })
+        );
+        
+        return bookingsWithStudentInfo;
       } catch (error) {
         console.error("Error fetching tutor bookings:", error);
         throw error;
