@@ -109,7 +109,7 @@ export function ReportViewModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>レッスンレポート</DialogTitle>
+          <DialogTitle>授業レポート</DialogTitle>
           <DialogDescription>
             {formattedDate} {booking.timeSlot}
           </DialogDescription>
