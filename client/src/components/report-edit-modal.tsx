@@ -234,6 +234,7 @@ export function ReportEditModal({
       // データを再取得してUIを更新
       queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lesson-reports"] });
       
       toast({
         title: "保存完了",
@@ -241,15 +242,27 @@ export function ReportEditModal({
         variant: "default",
       });
 
-      // マイページにリダイレクト（保存成功後）
+      // マイページにリダイレクトする前にデータ再取得を待つ
       setTimeout(() => {
-        // 現在のモーダルを閉じる
-        if (onSuccess) onSuccess();
-        onClose();
-        
-        // マイページへ移動
-        setLocation("/");
-      }, 1000);
+        // データが確実に更新されるまで待つ
+        Promise.all([
+          queryClient.refetchQueries({ queryKey: ["/api/tutor/bookings"] }),
+          queryClient.refetchQueries({ queryKey: ["/api/bookings"] })
+        ]).then(() => {
+          // 現在のモーダルを閉じる
+          if (onSuccess) onSuccess();
+          onClose();
+          
+          // マイページへ移動
+          setLocation("/");
+        }).catch(error => {
+          console.error("データ再取得エラー:", error);
+          // エラーが発生してもマイページに移動
+          if (onSuccess) onSuccess();
+          onClose();
+          setLocation("/");
+        });
+      }, 500);
     } catch (error: any) {
       toast({
         title: "レポート保存エラー",

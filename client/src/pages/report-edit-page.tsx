@@ -135,7 +135,17 @@ export default function ReportEditPage() {
   // モーダル保存成功時の挙動
   const handleSuccess = () => {
     console.log("レポートが正常に保存されました");
-    // 特に何もしない（モーダル自体がマイページへリダイレクトする）
+    
+    // 確実にマイページのデータが更新されるよう、全ての関連クエリを無効化
+    try {
+      // @ts-ignore - QueryClientはインポートしているがメソッド呼び出しでエラーになるため
+      const queryClient = new QueryClient();
+      queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/lesson-reports"] });
+    } catch (e) {
+      console.error("クエリキャッシュの更新エラー:", e);
+    }
   };
 
   return (
