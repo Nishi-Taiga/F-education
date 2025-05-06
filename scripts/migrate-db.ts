@@ -1,5 +1,5 @@
 import { pool, db } from "../server/db";
-import { students, users, tutors, tutorShifts, bookings, studentTickets } from "../shared/schema";
+import { students, users, tutors, tutorShifts, bookings, studentTickets, lessonReports } from "../shared/schema";
 import { sql } from "drizzle-orm";
 
 async function createTables() {
@@ -20,6 +20,27 @@ async function createTables() {
     `);
 
     console.log("student_tickets テーブルが正常に作成されました");
+
+    // lesson_reports テーブルの作成
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS "lesson_reports" (
+        "id" SERIAL PRIMARY KEY,
+        "booking_id" INTEGER NOT NULL,
+        "tutor_id" INTEGER NOT NULL,
+        "student_id" INTEGER,
+        "unit_content" TEXT NOT NULL,
+        "message_content" TEXT,
+        "goal_content" TEXT,
+        "status" TEXT NOT NULL DEFAULT 'completed',
+        "created_at" TIMESTAMP DEFAULT NOW() NOT NULL,
+        "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL,
+        FOREIGN KEY ("booking_id") REFERENCES "bookings" ("id"),
+        FOREIGN KEY ("tutor_id") REFERENCES "tutors" ("id"),
+        FOREIGN KEY ("student_id") REFERENCES "students" ("id")
+      );
+    `);
+
+    console.log("lesson_reports テーブルが正常に作成されました");
 
     console.log("データベースマイグレーションが完了しました");
   } catch (error) {
