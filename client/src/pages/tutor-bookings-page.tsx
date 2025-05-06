@@ -280,10 +280,9 @@ export default function TutorBookingsPage() {
     }
   }, [user, navigate]);
   
-  // グローバルなレポート編集関数（コンポーネント間で共有するため変数として公開）
-  // @ts-ignore - windowに追加のプロパティを設定
-  window.openReportEditModal = (booking: any) => {
-    console.log("グローバル関数: openReportEditModal が呼び出されました", booking);
+  // コンポーネント間で共有する編集関数
+  const openReportEditModalFn = React.useCallback((booking: any) => {
+    console.log("編集関数が呼び出されました", booking);
     
     if (!booking) {
       console.error("レポート編集対象の予約データがありません");
@@ -317,10 +316,22 @@ export default function TutorBookingsPage() {
     
     // 最も確実な方法: UIリフレッシュを待ってから実行（React の状態更新後）
     setTimeout(() => {
-      console.log("編集モーダルを表示します");
+      console.log("編集モーダルを表示します", reportEditData);
       setShowReportEditModal(true);
     }, 100);
-  };
+  }, []);
+  
+  // グローバルオブジェクトに関数を設定（コンポーネント間での共有用）
+  useEffect(() => {
+    // @ts-ignore - windowに追加のプロパティを設定
+    window.openReportEditModal = openReportEditModalFn;
+    
+    // クリーンアップ
+    return () => {
+      // @ts-ignore - windowからプロパティを削除
+      delete window.openReportEditModal;
+    };
+  }, [openReportEditModalFn]);
   
   // 今日以降の予約
   const upcomingBookings = bookings?.filter((booking: Booking) => {

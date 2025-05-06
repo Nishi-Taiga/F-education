@@ -211,32 +211,43 @@ export function ReportViewModal({
           <Button 
             variant="outline" 
             onClick={() => {
-              console.log("編集ボタンクリック");
+              console.log("編集ボタンクリック - 直接コールバック");
               
               // 必要な情報をコンソールに出力
               console.log("編集ボタンクリック時の予約データ:", booking);
               
-              // グローバル関数を使用して編集モーダルを直接開く
+              // 親から渡されたコールバックを実行（これが優先）
+              if (typeof onEdit === 'function') {
+                console.log("編集コールバック実行 - 直接実行");
+                // ボタンがクリックされたら必ず実行する
+                onEdit();
+                // 編集モーダルが開いたら表示モーダルを閉じる
+                setTimeout(() => {
+                  console.log("レポート表示モーダルを閉じます");
+                  onClose();
+                }, 100);
+                return; // ここで処理を終了
+              }
+              
+              console.error("編集コールバックが設定されていません");
+              
+              // コールバックがなければグローバル関数を試す（フォールバック）
               // @ts-ignore - windowに追加のプロパティを設定
               if (typeof window.openReportEditModal === 'function') {
                 // @ts-ignore - windowに追加のプロパティを使用
                 window.openReportEditModal(booking);
                 console.log("グローバル関数経由で編集モーダルを開きます");
+                
+                // 編集モーダルが開いたら表示モーダルを閉じる
+                setTimeout(() => {
+                  console.log("レポート表示モーダルを閉じます");
+                  onClose();
+                }, 100);
               } else {
-                console.error("グローバル編集関数が見つかりません");
-              }
-
-              // 親コンポーネントから渡されたコールバックがあれば、それも実行する
-              if (typeof onEdit === 'function') {
-                console.log("編集コールバック実行");
-                onEdit();
-              }
-              
-              // モーダルを閉じる
-              setTimeout(() => {
-                console.log("レポート表示モーダルを閉じます");
+                // 何も方法がなければ単にモーダルを閉じる
+                console.error("編集機能が見つかりません");
                 onClose();
-              }, 50);
+              }
             }}
           >
             レポートを編集
