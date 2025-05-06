@@ -147,12 +147,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // lesson_reportsテーブルから授業レポート情報を取得
+      const lessonReport = await storage.getLessonReportByBookingId(bookingId);
+      
+      // reportStatusとreportContentを更新
+      let reportStatus = booking.reportStatus;
+      let reportContent = booking.reportContent;
+      
+      // lesson_reportsテーブルにデータがあれば、そちらを優先して使用
+      if (lessonReport) {
+        reportStatus = "completed:" + lessonReport.createdAt.toISOString();
+        
+        // レポート内容をフォーマット
+        reportContent = `【単元】\n${lessonReport.unitContent || ""}\n\n【伝言事項】\n${lessonReport.messageContent || ""}\n\n【来週までの目標(課題)】\n${lessonReport.goalContent || ""}`;
+        
+        console.log("lesson_reportsから取得したレポート:", lessonReport);
+      }
+      
       res.json({
         ...booking,
+        reportStatus,
+        reportContent,
         studentName,
         tutorName,
         studentDetails,
-        previousReport
+        previousReport,
+        lessonReport // 生のレポートデータも含める
       });
     } catch (error) {
       res.status(400).json({ message: "Failed to get booking details", error });

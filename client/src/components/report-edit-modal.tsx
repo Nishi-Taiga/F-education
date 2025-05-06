@@ -27,6 +27,19 @@ interface BookingForReport {
   studentName?: string;
   tutorName?: string;
   openEditAfterClose?: boolean;
+  // lesson_reportsテーブルから取得したデータ
+  lessonReport?: {
+    id: number;
+    bookingId: number;
+    tutorId: number;
+    studentId: number | null;
+    unitContent: string;
+    messageContent: string | null;
+    goalContent: string | null;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
 }
 
 interface ReportEditModalProps {
@@ -80,13 +93,23 @@ export function ReportEditModal({
     if (isOpen) {
       console.log("ReportEditModal - モーダルが開かれました。予約情報:", booking);
       
-      if (lessonReport) {
+      // 1. まず直接渡されたbooking.lessonReportを優先（既にロードされているデータ）
+      if (booking.lessonReport) {
+        console.log("予約オブジェクト内のlessonReportデータを使用します:", booking.lessonReport);
+        setUnitContent(booking.lessonReport.unitContent || "");
+        setMessageContent(booking.lessonReport.messageContent || "");
+        setGoalContent(booking.lessonReport.goalContent || "");
+      }
+      // 2. 次にAPIで取得したlessonReportを使用（大抵はこれが最新）
+      else if (lessonReport) {
         // 新しいレッスンレポートデータがある場合はそれを使用
-        console.log("レッスンレポートデータが見つかりました:", lessonReport);
+        console.log("APIから取得したレッスンレポートデータを使用します:", lessonReport);
         setUnitContent(lessonReport.unitContent || "");
         setMessageContent(lessonReport.messageContent || "");
         setGoalContent(lessonReport.goalContent || "");
-      } else if (booking.reportContent) {
+      } 
+      // 3. 最後に従来のreportContentを使用（後方互換性のため）
+      else if (booking.reportContent) {
         // 従来の予約レポートデータがある場合は解析して使用（旧データ互換性のため）
         console.log("従来の予約レポートデータを解析します:", booking.reportContent);
         if (booking.reportContent.includes('【単元】')) {
@@ -154,9 +177,24 @@ export function ReportEditModal({
         status: "completed"
       };
 
-      // 既存のレポートを更新するか新規作成するか
-      if (lessonReport) {
+      console.log("レポート保存処理を開始します");
+      
+      // 優先度1: booking.lessonReportが存在する場合はそのIDを使用
+      if (booking.lessonReport) {
+        console.log(`booking.lessonReportのID ${booking.lessonReport.id} を使用して更新します`);
+        await updateReportMutation.mutateAsync({ 
+          id: booking.lessonReport.id,
+          data: {
+            unitContent,
+            messageContent,
+            goalContent
+          }
+        });
+      }
+      // 優先度2: APIで取得したlessonReportを使用
+      else if (lessonReport) {
         // 既存のレポートを更新
+        console.log(`APIで取得したlessonReportのID ${lessonReport.id} を使用して更新します`);
         await updateReportMutation.mutateAsync({ 
           id: lessonReport.id,
           data: {
@@ -167,10 +205,12 @@ export function ReportEditModal({
         });
       } else {
         // 新規レポートを作成
+        console.log("新規レポートを作成します");
         await createReportMutation.mutateAsync(reportData);
       }
       
       // 成功した場合、旧フォーマットの予約データも更新（互換性のため）
+      console.log("旧形式のデータも更新します");
       const response = await fetch(`/api/bookings/${booking.id}/report`, {
         method: "POST",
         headers: {

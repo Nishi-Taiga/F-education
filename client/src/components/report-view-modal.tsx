@@ -22,6 +22,21 @@ interface BookingForReport {
   studentName?: string;
   tutorName?: string;
   openEditAfterClose?: boolean;
+  // lesson_reportsテーブルから取得したデータ
+  lessonReport?: {
+    id: number;
+    bookingId: number;
+    tutorId: number;
+    studentId: number | null;
+    unitContent: string;
+    messageContent: string | null;
+    goalContent: string | null;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+    date?: string | null;
+    timeSlot?: string | null;
+  } | null;
 }
 
 interface ReportViewModalProps {
@@ -54,11 +69,34 @@ export function ReportViewModal({
     console.error("Invalid date format:", booking.date);
   }
   
-  // レポート作成日時を取得（新フォーマット: "completed:2023-05-03T12:34:56.789Z"）
+  // レポート作成日時を取得
   let reportDate: Date | null = null;
   let reportDateStr = "";
   
-  if (booking.reportStatus && booking.reportStatus.startsWith('completed:')) {
+  // lessonReportからレポート日時を取得
+  if (booking.lessonReport && booking.lessonReport.createdAt) {
+    try {
+      reportDate = new Date(booking.lessonReport.createdAt);
+      
+      // 有効な日付かチェック
+      if (!isNaN(reportDate.getTime())) {
+        // 何日前かを表示
+        reportDateStr = formatDistanceToNow(reportDate, { locale: ja, addSuffix: true });
+        
+        // 日本時間に変換してフォーマット
+        const japanTime = new Date(reportDate.getTime() + (9 * 60 * 60 * 1000));
+        const fullDateStr = format(japanTime, "yyyy年M月d日 H:mm", { locale: ja });
+        reportDateStr = `${reportDateStr} (${fullDateStr})`;
+      } else {
+        reportDateStr = "日時不明";
+      }
+    } catch (e) {
+      console.error("Invalid report date format:", booking.lessonReport.createdAt);
+      reportDateStr = "日時不明";
+    }
+  } 
+  // 後方互換性のため、reportStatusからも日時を取得
+  else if (booking.reportStatus && booking.reportStatus.startsWith('completed:')) {
     try {
       // タイムスタンプ部分を抽出
       const timestamp = booking.reportStatus.split('completed:')[1];
@@ -82,12 +120,21 @@ export function ReportViewModal({
     }
   }
   
-  // レポート内容を分解（新フォーマット: 【単元】【伝言事項】【来週までの目標(課題)】）
+  // lesson_reportsテーブルからデータを取得して表示
   let unit = "";
   let message = "";
   let goal = "";
   
-  if (booking.reportContent) {
+  // lessonReportオブジェクトが存在する場合は直接そこからデータを取得
+  if (booking.lessonReport) {
+    console.log("レポートをlessonReportから取得します:", booking.lessonReport);
+    unit = booking.lessonReport.unitContent || "";
+    message = booking.lessonReport.messageContent || "";
+    goal = booking.lessonReport.goalContent || "";
+  } 
+  // 後方互換性のため、lessonReportがない場合は従来のreportContentを使用
+  else if (booking.reportContent) {
+    console.log("レポートをreportContentから取得します（旧形式）");
     if (booking.reportContent.includes('【単元】')) {
       // 新フォーマット
       try {
