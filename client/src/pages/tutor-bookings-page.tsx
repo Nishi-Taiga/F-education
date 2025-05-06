@@ -1214,8 +1214,8 @@ export default function TutorBookingsPage() {
               return;
             }
             
-            // レポート編集モーダルを表示する準備
-            console.log("編集モーダルを表示するための処理を開始します");
+            // 直接かつ即座にレポート編集モーダルを表示
+            console.log("直接編集モーダルを表示します");
             
             // reportEditBookingを直接設定
             const reportData = {
@@ -1223,14 +1223,9 @@ export default function TutorBookingsPage() {
               lessonReport: selectedBooking.lessonReport || null
             };
             
-            // データをセット
+            // 状態を一度に更新
             setReportEditBooking(reportData);
-            
-            // 少し遅延させてからモーダルを表示（React のレンダリングサイクルを考慮）
-            setTimeout(() => {
-              console.log("直接編集モーダルを表示します");
-              setShowReportEditModal(true);
-            }, 100);
+            setShowReportEditModal(true);
           }}
         />
       )}

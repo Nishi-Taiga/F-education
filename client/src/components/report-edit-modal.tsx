@@ -10,6 +10,7 @@ import { User, CalendarDays, BookOpen, Loader2, AlertTriangle } from "lucide-rea
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLessonReportByBookingId, useCreateLessonReport, useUpdateLessonReport } from "@/hooks/use-lesson-reports";
+import { useLocation } from "wouter";
 
 // 内部型定義を使用して柔軟性を確保
 interface BookingForReport {
@@ -67,6 +68,7 @@ export function ReportEditModal({
     }
   }, [isOpen, booking]);
   const { toast } = useToast();
+  const [, setLocation] = useLocation(); // wouter hook
   const [unitContent, setUnitContent] = useState("");
   const [messageContent, setMessageContent] = useState("");
   const [goalContent, setGoalContent] = useState("");
@@ -233,9 +235,21 @@ export function ReportEditModal({
       queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       
-      // モーダルを閉じる
-      if (onSuccess) onSuccess();
-      onClose();
+      toast({
+        title: "保存完了",
+        description: "レポートを保存しました。マイページに戻ります。",
+        variant: "default",
+      });
+
+      // マイページにリダイレクト（保存成功後）
+      setTimeout(() => {
+        // 現在のモーダルを閉じる
+        if (onSuccess) onSuccess();
+        onClose();
+        
+        // マイページへ移動
+        setLocation("/");
+      }, 1000);
     } catch (error: any) {
       toast({
         title: "レポート保存エラー",
