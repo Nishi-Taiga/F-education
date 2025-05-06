@@ -78,6 +78,73 @@ export default function TutorBookingsPage() {
   const [reportEditBooking, setReportEditBooking] =
     useState<ExtendedBooking | null>(null);
   const [studentDetails, setStudentDetails] = useState<any>(null);
+  
+  // ページタイトルを設定し、URLパラメータを確認
+  useEffect(() => {
+    document.title = "講師予約管理";
+    
+    // URLからクエリパラメータを取得
+    const params = new URLSearchParams(window.location.search);
+    const editReportId = params.get('editReport');
+    
+    if (editReportId) {
+      console.log("URLパラメータからレポート編集指示を検出:", editReportId);
+      
+      // セッションストレージからデータを取得
+      try {
+        const storedData = sessionStorage.getItem('EDIT_REPORT_DATA');
+        if (storedData) {
+          const reportData = JSON.parse(storedData);
+          console.log("セッションストレージからレポートデータを取得:", reportData);
+          
+          // 編集モーダル用のデータを設定
+          setReportEditBooking(reportData);
+          
+          // モーダルを表示
+          setTimeout(() => {
+            setShowReportEditModal(true);
+            console.log("レポート編集モーダルを表示しました（URLパラメータ経由）");
+            
+            // URLからパラメータを削除（履歴を汚さないため）
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // セッションストレージをクリア
+            sessionStorage.removeItem('EDIT_REPORT_DATA');
+          }, 500);
+        } else {
+          console.log("セッションストレージにレポートデータがありません - APIで取得を試みます");
+          
+          // IDから予約データを取得して編集モーダルを開く
+          fetch(`/api/bookings/${editReportId}`)
+            .then(response => response.json())
+            .then(bookingData => {
+              console.log("APIから予約データを取得:", bookingData);
+              
+              // 編集モーダル用のデータを設定
+              setReportEditBooking(bookingData);
+              
+              // モーダルを表示
+              setTimeout(() => {
+                setShowReportEditModal(true);
+                console.log("レポート編集モーダルを表示しました（API取得データ）");
+                
+                // URLからパラメータを削除
+                window.history.replaceState({}, document.title, window.location.pathname);
+              }, 500);
+            })
+            .catch(error => {
+              console.error("予約データの取得に失敗:", error);
+              // URLからパラメータを削除
+              window.history.replaceState({}, document.title, window.location.pathname);
+            });
+        }
+      } catch (error) {
+        console.error("セッションストレージからのデータ取得に失敗:", error);
+        // URLからパラメータを削除
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, []);
   const [tempEditReportCallback, setTempEditReportCallback] = useState<
     (() => void) | null
   >(null);

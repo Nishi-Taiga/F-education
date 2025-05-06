@@ -295,38 +295,42 @@ export function ReportViewModal({
                 try {
                   console.log("レポート編集モーダルを開く処理を開始します", editData);
                   
-                  // 最も直接的なアプローチ（最優先）: グローバル変数に状態を設定する
+                  // モーダルを閉じる前にレポートデータをセッションストレージに保存
+                  try {
+                    sessionStorage.setItem('EDIT_REPORT_DATA', JSON.stringify(editData));
+                    console.log("レポートデータをセッションストレージに保存しました");
+                  } catch (err) {
+                    console.error("セッションストレージへの保存に失敗", err);
+                  }
+                  
+                  // タイムアウト値を1秒に設定 - ページ全体にリダイレクト
+                  setTimeout(() => {
+                    // 強制的にtutor-bookings-pageに遷移し、編集モードフラグを付与
+                    window.location.href = '/tutor/bookings?editReport=' + editData.id;
+                    console.log("編集ページにリダイレクトします");
+                  }, 100);
+                  
+                  // バックアップ: 旧メカニズムも維持
+                  
+                  // グローバル変数も設定（バックアップ）
                   (window as any).REPORT_EDIT_DATA = editData;
                   (window as any).REPORT_EDIT_MODAL_SHOULD_OPEN = true;
                   console.log("グローバル変数を設定しました: REPORT_EDIT_DATA & REPORT_EDIT_MODAL_SHOULD_OPEN");
                   
-                  // まず親から渡されたコールバックを実行
+                  // 親から渡されたコールバックを実行（バックアップ）
                   if (typeof onEdit === 'function') {
                     console.log("親から渡された編集コールバックを実行します");
                     onEdit();
                   } 
-                  // バックアップ: グローバル関数を使用
+                  // グローバル関数を使用（バックアップ）
                   else if ((window as any).openReportEditModal) {
                     console.log("グローバル編集関数を使用します（レポートデータ付き）", editData);
                     (window as any).openReportEditModal(editData);
                   }
-                  // 代替手段1: window経由で直接状態を設定
+                  // window経由で直接状態を設定（バックアップ）
                   else if ((window as any).setReportEditData) {
                     (window as any).setReportEditData(editData);
                     console.log("window.setReportEditDataを実行しました");
-                  }
-                  // 代替手段2: イベントを発火
-                  else {
-                    console.log("代替手段を使用: イベントを発行");
-                    try {
-                      const event = new CustomEvent('openReportEdit', { 
-                        detail: { booking: editData } 
-                      });
-                      window.dispatchEvent(event);
-                      console.log("openReportEditイベントを発行しました");
-                    } catch (err) {
-                      console.error("イベント発行に失敗", err);
-                    }
                   }
                 } catch (err) {
                   console.error("レポート編集を開く処理でエラーが発生しました", err);
