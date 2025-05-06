@@ -25,7 +25,10 @@ export default function ReportEditPage() {
   const [modalOpen, setModalOpen] = useState(false);
   
   // レポートIDがある場合はレポートを取得
-  const { data: reportData, isLoading: isLoadingReport } = useLessonReportById(reportId);
+  // レポートデータの取得 - 型安全にするために条件付きでIDをnullに
+  const { data: reportData, isLoading: isLoadingReport } = useLessonReportById(
+    reportId ? parseInt(reportId) : null
+  );
   
   useEffect(() => {
     // 初期データ取得を試みる
@@ -58,7 +61,7 @@ export default function ReportEditPage() {
         if (!storedBookingData && (reportId || bookingId)) {
           console.log("APIから予約データを取得します");
           
-          if (reportId && reportData) {
+          if (reportId && reportData && typeof reportData === 'object' && 'bookingId' in reportData && reportData.bookingId) {
             // レポートIDからAPIで予約データを取得
             const response = await fetch(`/api/bookings/${reportData.bookingId}`);
             if (response.ok) {

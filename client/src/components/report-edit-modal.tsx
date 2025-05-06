@@ -89,7 +89,7 @@ export function ReportEditModal({
 
   // 新しいAPIを使用してレッスンレポートを取得
   const { data: lessonReport, isLoading: isLoadingReport } = useLessonReportByBookingId(
-    isOpen ? booking?.id : null
+    isOpen && booking && booking.id ? booking.id : null
   );
   
   // レッスンレポートの型安全なアクセス用のヘルパー関数
@@ -201,11 +201,11 @@ export function ReportEditModal({
         });
       }
       // 優先度2: APIで取得したlessonReportを使用
-      else if (lessonReport && lessonReport.id) {
+      else if (lessonReport && typeof lessonReport === 'object' && 'id' in lessonReport && lessonReport.id) {
         // 既存のレポートを更新
         console.log(`APIで取得したlessonReportのID ${lessonReport.id} を使用して更新します`);
         await updateReportMutation.mutateAsync({ 
-          reportId: lessonReport.id,
+          reportId: lessonReport.id as number,
           data: {
             unitContent,
             messageContent,
