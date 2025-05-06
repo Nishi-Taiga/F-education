@@ -564,7 +564,48 @@ export default function TutorBookingsPage() {
               key={`calendar-bookings-${bookingsWithStudentNames.length}`} // 強制再描画のためのkey
               showLegend={true} // 講師用は凡例を表示
               interactive={true} // インタラクティブにする
-              onBookingClick={handleBookingClick} // 予約クリック時のハンドラを追加
+              onBookingClick={(booking) => {
+                console.log("カレンダーから予約がクリックされました:", booking);
+                // レポートが作成済みかどうかチェック
+                const hasReport = booking.reportStatus === 'completed' || 
+                  (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
+                  
+                if (hasReport && booking.reportContent) {
+                  console.log("レポート作成済みの予約 - 直接レポート表示モーダルを開きます");
+                  // API呼び出しで詳細情報を取得
+                  fetch(`/api/bookings/${booking.id}`)
+                    .then(response => {
+                      if (response.ok) return response.json();
+                      throw new Error("Failed to fetch booking details");
+                    })
+                    .then(bookingDetails => {
+                      // 詳細情報を設定
+                      const enhancedBooking = {
+                        ...bookingDetails,
+                        studentName: bookingDetails.studentName || getStudentName(bookingDetails.studentId),
+                        tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
+                      };
+                      
+                      // 生徒詳細情報があれば設定
+                      if (bookingDetails.studentDetails) {
+                        setStudentDetails(bookingDetails.studentDetails);
+                      }
+                      
+                      // 状態を更新してモーダルを表示
+                      setSelectedBooking(enhancedBooking);
+                      setReportEditBooking(enhancedBooking);
+                      setShowReportViewModal(true);
+                    })
+                    .catch(error => {
+                      console.error("詳細情報取得エラー:", error);
+                      // エラー発生時は通常のハンドラにフォールバック
+                      handleBookingClick(booking);
+                    });
+                } else {
+                  // 通常のハンドラを実行
+                  handleBookingClick(booking);
+                }
+              }} // 直接インラインで実装
               bookings={bookingsWithStudentNames}
             />
           </CardContent>
