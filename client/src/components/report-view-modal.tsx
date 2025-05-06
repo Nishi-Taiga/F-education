@@ -1,4 +1,3 @@
-import { type Booking } from "@shared/schema";
 import { format, parse, formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import { DialogTitle, DialogDescription, DialogHeader, DialogFooter, DialogContent, Dialog } from "@/components/ui/dialog";
@@ -6,9 +5,28 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { User, CalendarDays, BookOpen, ChevronRight, Calendar, Clock } from "lucide-react";
 
+// 内部型定義を使用して柔軟性を確保
+interface BookingForReport {
+  id: number;
+  userId: number;
+  tutorId: number;
+  studentId: number | null;
+  tutorShiftId?: number;
+  date: string;
+  timeSlot: string;
+  subject: string | null;
+  status: string | null;
+  reportStatus?: string | null;
+  reportContent?: string | null;
+  createdAt: string | Date;
+  studentName?: string;
+  tutorName?: string;
+  openEditAfterClose?: boolean;
+}
+
 interface ReportViewModalProps {
   isOpen: boolean;
-  booking: Booking & { studentName?: string; tutorName?: string };
+  booking: BookingForReport;
   onClose: () => void;
 }
 
