@@ -295,29 +295,29 @@ export function ReportViewModal({
                 try {
                   console.log("レポート編集モーダルを開く処理を開始します", editData);
                   
+                  // 最も直接的なアプローチ（最優先）: グローバル変数に状態を設定する
+                  (window as any).REPORT_EDIT_DATA = editData;
+                  (window as any).REPORT_EDIT_MODAL_SHOULD_OPEN = true;
+                  console.log("グローバル変数を設定しました: REPORT_EDIT_DATA & REPORT_EDIT_MODAL_SHOULD_OPEN");
+                  
                   // まず親から渡されたコールバックを実行
                   if (typeof onEdit === 'function') {
                     console.log("親から渡された編集コールバックを実行します");
                     onEdit();
                   } 
                   // バックアップ: グローバル関数を使用
-                  else if (window.openReportEditModal) {
+                  else if ((window as any).openReportEditModal) {
                     console.log("グローバル編集関数を使用します（レポートデータ付き）", editData);
-                    window.openReportEditModal(editData);
+                    (window as any).openReportEditModal(editData);
                   }
+                  // 代替手段1: window経由で直接状態を設定
+                  else if ((window as any).setReportEditData) {
+                    (window as any).setReportEditData(editData);
+                    console.log("window.setReportEditDataを実行しました");
+                  }
+                  // 代替手段2: イベントを発火
                   else {
-                    console.log("代替手段を使用: 直接モーダルを開くためのイベントを発行");
-                    // 代替手段1: ReportEditModal要素を直接操作（シンプルな方法）
-                    try {
-                      const editModalElement = document.getElementById('report-edit-modal');
-                      if (editModalElement) {
-                        (editModalElement as any).openWithData(editData);
-                      }
-                    } catch (err) {
-                      console.error("モーダル要素の直接操作に失敗", err);
-                    }
-                    
-                    // 代替手段2: イベントを発火して他のコンポーネントに通知
+                    console.log("代替手段を使用: イベントを発行");
                     try {
                       const event = new CustomEvent('openReportEdit', { 
                         detail: { booking: editData } 
@@ -326,16 +326,6 @@ export function ReportViewModal({
                       console.log("openReportEditイベントを発行しました");
                     } catch (err) {
                       console.error("イベント発行に失敗", err);
-                    }
-                    
-                    // 代替手段3: window経由で直接状態を設定（最終手段）
-                    try {
-                      if ((window as any).setReportEditData) {
-                        (window as any).setReportEditData(editData);
-                        console.log("window.setReportEditDataを実行しました");
-                      }
-                    } catch (err) {
-                      console.error("window.setReportEditData実行失敗", err);
                     }
                   }
                 } catch (err) {

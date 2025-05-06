@@ -552,6 +552,48 @@ export default function TutorBookingsPage() {
       window.removeEventListener('openReportEdit', handleOpenReportEditEvent as any);
     };
   }, []);
+  
+  // グローバル変数を監視するためのコードを追加
+  useEffect(() => {
+    // 100ms毎にグローバル変数をチェック
+    const intervalId = setInterval(() => {
+      try {
+        if ((window as any).REPORT_EDIT_MODAL_SHOULD_OPEN) {
+          console.log("グローバル変数が変更されました - レポート編集モーダルを開きます");
+          if ((window as any).REPORT_EDIT_DATA) {
+            const data = (window as any).REPORT_EDIT_DATA;
+            console.log("グローバル変数のデータを使用します", data);
+            // 編集用データを設定
+            setReportEditBooking(data);
+            
+            // 少し遅延を入れてから編集モーダルを表示
+            setTimeout(() => {
+              setShowReportEditModal(true);
+              console.log("レポート編集モーダルを表示しました");
+            }, 100);
+          } else {
+            // データがない場合は選択中の予約を使用
+            console.log("グローバル変数のデータがないため、選択中の予約を使用します", selectedBooking);
+            if (selectedBooking) {
+              setReportEditBooking(selectedBooking);
+              setTimeout(() => {
+                setShowReportEditModal(true);
+                console.log("レポート編集モーダルを表示しました（選択中の予約を使用）");
+              }, 100);
+            }
+          }
+          
+          // 使い終わったらリセット
+          (window as any).REPORT_EDIT_MODAL_SHOULD_OPEN = false;
+          (window as any).REPORT_EDIT_DATA = null;
+        }
+      } catch (e) {
+        console.error("グローバル変数チェック中にエラーが発生しました:", e);
+      }
+    }, 100);
+    
+    return () => clearInterval(intervalId);
+  }, [selectedBooking]);
 
   // 今日以降の予約
   const upcomingBookings =

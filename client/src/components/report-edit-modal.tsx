@@ -10,6 +10,7 @@ import { User, CalendarDays, BookOpen, Loader2, AlertTriangle } from "lucide-rea
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLessonReportByBookingId, useCreateLessonReport, useUpdateLessonReport } from "@/hooks/use-lesson-reports";
+
 // 内部型定義を使用して柔軟性を確保
 interface BookingForReport {
   id: number;
@@ -246,13 +247,30 @@ export function ReportEditModal({
     }
   };
 
+  // グローバル変数を購読して変更があれば反映する
+  useEffect(() => {
+    // グローバル変数をチェックする関数
+    const checkGlobalVars = () => {
+      if ((window as any).REPORT_EDIT_MODAL_SHOULD_OPEN) {
+        console.log("グローバル変数REPORT_EDIT_MODAL_SHOULD_OPENが検出されました");
+        (window as any).REPORT_EDIT_MODAL_SHOULD_OPEN = false;
+        // このコンポーネントは既に開いているので何もしない
+      }
+    };
+
+    // 初回実行
+    checkGlobalVars();
+
+    // 定期的にチェック
+    const interval = setInterval(checkGlobalVars, 500);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
-    <Dialog 
-      open={isOpen} 
-      onOpenChange={(open) => !open && onClose()}
-      // id属性を追加して直接アクセス可能にする
-      id="report-edit-modal"
-    >
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>レポート編集</DialogTitle>
