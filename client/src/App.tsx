@@ -12,7 +12,6 @@ import SettingsPage from "@/pages/settings-page";
 import ProfileSetupPage from "@/pages/profile-setup-page";
 import TutorProfilePage from "@/pages/tutor-profile-page";
 import TutorSchedulePage from "@/pages/tutor-schedule-page";
-import TutorBookingsPage from "@/pages/tutor-bookings-page";
 import ReportListPage from "@/pages/report-list-page";
 import DebugPage from "@/pages/debug-page";
 import { ProtectedRoute } from "./lib/protected-route";
@@ -31,7 +30,6 @@ function Router() {
       {/* 講師関連のルート */}
       <ProtectedRoute path="/tutor/profile" component={TutorProfilePage} />
       <ProtectedRoute path="/tutor/schedule" component={TutorSchedulePage} />
-      <ProtectedRoute path="/tutor/bookings" component={TutorBookingsPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/debug" component={DebugPage} />
       <Route component={NotFound} />
