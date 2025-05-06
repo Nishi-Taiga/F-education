@@ -280,59 +280,47 @@ export default function TutorBookingsPage() {
     }
   }, [user, navigate]);
   
-  // カスタムイベントリスナーの設定
-  useEffect(() => {
-    // レポート編集イベントを処理する関数
-    const handleReportEdit = (event: CustomEvent<{booking: any}>) => {
-      console.log("カスタムイベントがキャッチされました", event.detail);
-      
-      // 受け取ったデータに基づいてレポート編集モーダルを開く
-      if (event.detail && event.detail.booking) {
-        const booking = event.detail.booking;
-        
-        console.log("カスタムイベントからレポート編集を開始します", booking);
-        
-        // 必要なデータを準備
-        const reportEditData: ExtendedBooking = {
-          id: booking.id,
-          userId: booking.userId,
-          tutorId: booking.tutorId,
-          studentId: booking.studentId,
-          tutorShiftId: booking.tutorShiftId || 0,
-          date: booking.date,
-          timeSlot: booking.timeSlot,
-          subject: booking.subject || '',
-          status: booking.status || '',
-          reportStatus: booking.reportStatus || null,
-          reportContent: booking.reportContent || '',
-          createdAt: typeof booking.createdAt === 'object' 
-            ? booking.createdAt.toISOString() 
-            : booking.createdAt,
-          studentName: booking.studentName || getStudentName(booking.studentId)
-        };
-        
-        // レポート表示モーダルを確実に閉じる
-        setShowReportViewModal(false);
-        
-        // モーダルを設定して表示
-        setReportEditBooking(reportEditData);
-        
-        // 十分な時間を取ってレポート表示モーダルが完全に閉じてから表示
-        setTimeout(() => {
-          console.log("編集モーダルを表示します");
-          setShowReportEditModal(true);
-        }, 400);
-      }
-    };
-
-    // イベントリスナーを追加
-    window.addEventListener('reportEdit', handleReportEdit as EventListener);
+  // グローバルなレポート編集関数（コンポーネント間で共有するため変数として公開）
+  // @ts-ignore - windowに追加のプロパティを設定
+  window.openReportEditModal = (booking: any) => {
+    console.log("グローバル関数: openReportEditModal が呼び出されました", booking);
     
-    // クリーンアップ関数
-    return () => {
-      window.removeEventListener('reportEdit', handleReportEdit as EventListener);
+    if (!booking) {
+      console.error("レポート編集対象の予約データがありません");
+      return;
+    }
+    
+    // 必要なデータを準備
+    const reportEditData: ExtendedBooking = {
+      id: booking.id,
+      userId: booking.userId,
+      tutorId: booking.tutorId,
+      studentId: booking.studentId,
+      tutorShiftId: booking.tutorShiftId || 0,
+      date: booking.date,
+      timeSlot: booking.timeSlot,
+      subject: booking.subject || '',
+      status: booking.status || '',
+      reportStatus: booking.reportStatus || null,
+      reportContent: booking.reportContent || '',
+      createdAt: typeof booking.createdAt === 'object' 
+        ? booking.createdAt.toISOString() 
+        : booking.createdAt,
+      studentName: booking.studentName || getStudentName(booking.studentId)
     };
-  }, [students]);
+    
+    // レポート表示モーダルを確実に閉じる
+    setShowReportViewModal(false);
+    
+    // モーダルを設定して表示
+    setReportEditBooking(reportEditData);
+    
+    // 最も確実な方法: UIリフレッシュを待ってから実行（React の状態更新後）
+    setTimeout(() => {
+      console.log("編集モーダルを表示します");
+      setShowReportEditModal(true);
+    }, 100);
+  };
   
   // 今日以降の予約
   const upcomingBookings = bookings?.filter((booking: Booking) => {

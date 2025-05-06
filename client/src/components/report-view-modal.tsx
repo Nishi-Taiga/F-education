@@ -216,24 +216,25 @@ export function ReportViewModal({
               // 必要な情報をコンソールに出力
               console.log("編集ボタンクリック時の予約データ:", booking);
               
-              // 重要: 先にカスタムイベントを発行してから、モーダルを閉じる
-              console.log("EditReport: レポート編集イベントを発行します");
-              
-              // カスタムイベントを発行して親コンポーネントに通知
-              const event = new CustomEvent('reportEdit', { 
-                detail: { booking } 
-              });
-              window.dispatchEvent(event);
-              
+              // グローバル関数を使用して編集モーダルを直接開く
+              // @ts-ignore - windowに追加のプロパティを設定
+              if (typeof window.openReportEditModal === 'function') {
+                // @ts-ignore - windowに追加のプロパティを使用
+                window.openReportEditModal(booking);
+                console.log("グローバル関数経由で編集モーダルを開きます");
+              } else {
+                console.error("グローバル編集関数が見つかりません");
+              }
+
               // 親コンポーネントから渡されたコールバックがあれば、それも実行する
               if (typeof onEdit === 'function') {
                 console.log("編集コールバック実行");
                 onEdit();
               }
               
-              // モーダルを閉じる（イベント処理の後）
+              // モーダルを閉じる
               setTimeout(() => {
-                console.log("モーダルを閉じます");
+                console.log("レポート表示モーダルを閉じます");
                 onClose();
               }, 50);
             }}
