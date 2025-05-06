@@ -923,12 +923,30 @@ export class DatabaseStorage implements IStorage {
     return updatedReport;
   }
   
+  async getLessonReportById(id: number): Promise<LessonReport | undefined> {
+    try {
+      const [report] = await db.select()
+        .from(lessonReports)
+        .where(eq(lessonReports.id, id));
+      
+      return report;
+    } catch (error) {
+      console.error("Error getting lesson report by ID:", error);
+      return undefined;
+    }
+  }
+
   async getLessonReportByBookingId(bookingId: number): Promise<LessonReport | undefined> {
-    const [report] = await db.select()
-      .from(lessonReports)
-      .where(eq(lessonReports.bookingId, bookingId));
-    
-    return report;
+    try {
+      const [report] = await db.select()
+        .from(lessonReports)
+        .where(eq(lessonReports.bookingId, bookingId));
+      
+      return report;
+    } catch (error) {
+      console.error("Error getting lesson report by booking ID:", error);
+      return undefined;
+    }
   }
   
   async getLessonReportsByTutorId(tutorId: number): Promise<LessonReport[]> {
