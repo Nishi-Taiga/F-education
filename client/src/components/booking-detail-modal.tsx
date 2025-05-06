@@ -166,16 +166,7 @@ export function BookingDetailModal({
             </div>
           )}
           
-          {/* 電話番号 - 講師用のみ表示 */}
-          {studentDetails?.phone && (
-            <div className="flex items-start">
-              <Phone className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-              <div>
-                <p className="font-medium text-gray-900">電話番号</p>
-                <p className="text-sm text-gray-600">{studentDetails.phone}</p>
-              </div>
-            </div>
-          )}
+          {/* 電話番号表示を削除 */}
           
           {/* デバッグ情報を非表示に */}
           
@@ -254,29 +245,38 @@ export function BookingDetailModal({
         </div>
         
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          {showCreateReportButton && (
+          {/* レポート表示ボタン - レポート作成済みの場合のみ表示 */}
+          {isCompletedWithReport && onViewReport && (
             <Button
               type="button"
               variant="default"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={onCreateReport}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={onViewReport}
             >
               <FileText className="mr-2 h-4 w-4" />
-              レポート作成
+              レポート確認
             </Button>
           )}
           
-
-          
-          {/* シンプルな新しいレポート編集ボタン */}
+          {/* 統合されたレポート作成/編集ボタン - 過去のレッスンのみ表示 */}
           {isPastLesson() && (
             <Button
               type="button"
-              variant="outline"
-              className="border-amber-600 text-amber-600 hover:bg-amber-50"
+              variant={isCompletedWithReport ? "outline" : "default"}
+              className={isCompletedWithReport ? 
+                "border-amber-600 text-amber-600 hover:bg-amber-50" : 
+                "bg-blue-600 hover:bg-blue-700 text-white"
+              }
               onClick={() => {
-                console.log("新しい編集ボタンがクリックされました");
+                console.log("統合されたレポートボタンがクリックされました");
                 
+                // レポート未作成で作成コールバックがある場合
+                if (!isCompletedWithReport && onCreateReport) {
+                  onCreateReport();
+                  return;
+                }
+                
+                // 以下は編集処理
                 // 編集機能が有効な場合は直接onEditReportを呼び出す
                 if (onEditReport) {
                   console.log("レポート編集関数を直接呼び出します");
@@ -298,7 +298,7 @@ export function BookingDetailModal({
                 }
               }}
             >
-              <Edit className="mr-2 h-4 w-4" />
+              {isCompletedWithReport ? <Edit className="mr-2 h-4 w-4" /> : <FileText className="mr-2 h-4 w-4" />}
               {isCompletedWithReport ? "レポート編集" : "レポート作成"}
             </Button>
           )}
