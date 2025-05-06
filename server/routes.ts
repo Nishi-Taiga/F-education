@@ -1907,6 +1907,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // レッスンレポート関連のエンドポイント
+  // レポートIDで特定のレポートを取得
+  app.get("/api/lesson-reports/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const reportId = parseInt(req.params.id);
+    
+    if (isNaN(reportId)) {
+      return res.status(400).json({ message: "無効なレポートIDです" });
+    }
+    
+    try {
+      // レポートを取得
+      const report = await storage.getLessonReportById(reportId);
+      
+      if (!report) {
+        return res.status(404).json({ message: "レポートが見つかりません" });
+      }
+      
+      // 権限チェック: 自分の予約または担当する授業のレポートのみアクセス可能
+      const userId = req.user!.id;
+      const userRole = req.user!.role;
+      
+      // 予約情報を取得して詳細な権限チェックを行う
+      const booking = await storage.getBookingById(report.bookingId);
+      if (!booking) {
+        return res.status(404).json({ message: "関連する予約が見つかりません" });
+      }
+      
+      if (userRole === 'tutor') {
+        const tutorProfile = await storage.getTutorByUserId(userId);
+        if (!tutorProfile || report.tutorId !== tutorProfile.id) {
+          return res.status(403).json({ message: "このレポートへのアクセス権限がありません" });
+        }
+      } else {
+        // 生徒または保護者の場合は自分の予約のみアクセス可能
+        if (booking.userId !== userId && (!req.user!.studentId || booking.studentId !== req.user!.studentId)) {
+          return res.status(403).json({ message: "このレポートへのアクセス権限がありません" });
+        }
+      }
+      
+      res.json(report);
+    } catch (error) {
+      console.error("レポート取得エラー:", error);
+      res.status(500).json({ message: "レッスンレポートの取得に失敗しました", error: error.message });
+    }
+  });
+  
   // 特定の予約に関連するレポートを取得
   app.get("/api/lesson-reports/booking/:bookingId", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
