@@ -199,8 +199,13 @@ export function ReportViewModal({
         </div>
         
         <DialogFooter className="mt-4 gap-2 flex">
-          {/* 編集ボタンの表示（デバッグ出力付き） */}
-          {console.log("DialogFooter内 - onEdit存在:", typeof onEdit === 'function')}
+          {/* 編集ボタンが存在するか確認 */}
+          {(() => {
+            // このIIFEはReactNodeを返すため型エラーを解消
+            const hasEditFunction = typeof onEdit === 'function';
+            console.log("DialogFooter内 - onEdit存在:", hasEditFunction);
+            return null;
+          })()}
           
           {/* 編集ボタンの条件を修正：明示的に関数かどうかをチェック */}
           {typeof onEdit === 'function' && (

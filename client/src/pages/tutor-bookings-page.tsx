@@ -53,6 +53,7 @@ export default function TutorBookingsPage() {
   const [showReportEditModal, setShowReportEditModal] = useState(false);
   const [reportEditBooking, setReportEditBooking] = useState<ExtendedBooking | null>(null);
   const [studentDetails, setStudentDetails] = useState<any>(null);
+  const [tempEditReportCallback, setTempEditReportCallback] = useState<(() => void) | null>(null);
   
   // 予約カードコンポーネント - コンポーネントを内部で定義し直して必要な状態と関数にアクセスできるようにする
   function BookingCard({ booking, isPast = false }: { booking: Booking; isPast?: boolean }) {
@@ -95,6 +96,17 @@ export default function TutorBookingsPage() {
                 if (bookingDetails.studentDetails) {
                   setStudentDetails(bookingDetails.studentDetails);
                 }
+                
+                // 直接コールバック関数を変数に保存して、デバッグ目的で状態を確認
+                const editReportCallback = function() {
+                  console.log("BookingCard内でのレポート編集コールバック実行", enhancedBookingDetails);
+                  setShowReportViewModal(false);
+                  setReportEditBooking(enhancedBookingDetails);
+                  setShowReportEditModal(true);
+                };
+                
+                // 編集フラグとコールバックをセット
+                setTempEditReportCallback(editReportCallback);
                 
                 // レポート詳細モーダルを表示
                 setShowReportViewModal(true);
@@ -858,8 +870,8 @@ export default function TutorBookingsPage() {
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
           }}
           onClose={() => setShowReportViewModal(false)}
-          onEdit={function() {
-            console.log("レポート編集ボタンがクリックされました - 明示的なfunction定義", selectedBooking);
+          onEdit={tempEditReportCallback || function() {
+            console.log("新しいランタイム編集関数が使用されました", selectedBooking);
             
             if (!selectedBooking) {
               console.error("編集するための選択された予約がありません");
