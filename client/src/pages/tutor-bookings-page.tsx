@@ -14,10 +14,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { BookingDetailModal } from "@/components/booking-detail-modal";
 import { CalendarView } from "@/components/calendar-view";
+import { Calendar } from "@/components/ui/calendar";
 import { ReportViewModal } from "@/components/report-view-modal";
 import { ReportEditModal } from "@/components/report-edit-modal";
 
@@ -37,12 +39,14 @@ type Booking = {
   reportContent?: string | null;
   createdAt: string;
   studentName?: string;
+  openEditAfterClose?: boolean; // 編集ボタンがクリックされたフラグ
 };
 
 // カレンダーコンポーネント用の拡張された予約型
 type ExtendedBooking = Omit<Booking, "createdAt"> & {
   createdAt: string | Date;
   studentName?: string;
+  openEditAfterClose?: boolean;
 };
 
 export default function TutorBookingsPage() {
@@ -914,12 +918,19 @@ export default function TutorBookingsPage() {
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName,
           }}
           onClose={() => setShowReportViewModal(false)}
-          onEdit={function editHandler() {
-            console.log(
-              "レポート表示モーダルから編集ボタンが押されました（名前付き関数）",
-              selectedBooking,
-            );
-
+          onEdit={() => {
+            console.log("レポート表示モーダルから編集ボタンが押されました");
+            
+            // 保存されたコールバック関数があれば実行する
+            if (tempEditReportCallback) {
+              console.log("保存されたコールバック関数を実行します");
+              tempEditReportCallback();
+              return;
+            }
+            
+            // 以下はバックアップとして残しておく
+            console.log("バックアップ編集処理を実行");
+            
             // レポート表示モーダルを閉じる
             setShowReportViewModal(false);
 
