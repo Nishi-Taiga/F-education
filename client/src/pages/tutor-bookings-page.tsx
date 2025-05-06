@@ -858,6 +858,32 @@ export default function TutorBookingsPage() {
             tutorName: tutorProfile?.lastName + " " + tutorProfile?.firstName
           }}
           onClose={() => setShowReportViewModal(false)}
+          onEdit={() => {
+            console.log("レポート編集ボタンがクリックされました", selectedBooking);
+            
+            // レポート編集用のデータを準備
+            const reportEditData: ExtendedBooking = {
+              id: selectedBooking.id,
+              userId: selectedBooking.userId,
+              tutorId: selectedBooking.tutorId,
+              studentId: selectedBooking.studentId,
+              tutorShiftId: selectedBooking.tutorShiftId || 0,
+              date: selectedBooking.date,
+              timeSlot: selectedBooking.timeSlot,
+              subject: selectedBooking.subject || '',
+              status: selectedBooking.status || '',
+              reportStatus: selectedBooking.reportStatus || null,
+              reportContent: selectedBooking.reportContent || '',
+              createdAt: typeof selectedBooking.createdAt === 'object' 
+                ? selectedBooking.createdAt.toISOString() 
+                : selectedBooking.createdAt,
+              studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId)
+            };
+            
+            // 編集用データをセットして編集モーダルを表示
+            setReportEditBooking(reportEditData);
+            setShowReportEditModal(true);
+          }}
         />
       )}
       
