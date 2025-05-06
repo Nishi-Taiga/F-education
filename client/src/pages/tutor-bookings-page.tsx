@@ -47,6 +47,20 @@ type ExtendedBooking = Omit<Booking, "createdAt"> & {
   createdAt: string | Date;
   studentName?: string;
   openEditAfterClose?: boolean;
+  // lesson_reportsテーブルから取得したデータ
+  lessonReport?: {
+    id: number;
+    bookingId: number;
+    tutorId: number;
+    studentId: number | null;
+    unitContent: string;
+    messageContent: string | null;
+    goalContent: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    date?: string | null;
+    timeSlot?: string | null;
+  } | null;
 };
 
 export default function TutorBookingsPage() {
@@ -499,10 +513,23 @@ export default function TutorBookingsPage() {
     // @ts-ignore - windowに追加のプロパティを設定
     window.openReportEditModal = openReportEditModalFn;
 
+    // カスタムイベントリスナーの設定（代替手段として）
+    const handleOpenReportEditEvent = (event: CustomEvent) => {
+      console.log("カスタムイベント openReportEdit を受信:", event.detail);
+      if (event.detail && event.detail.booking) {
+        openReportEditModalFn(event.detail.booking);
+      }
+    };
+
+    // イベントリスナーを追加（TypeScriptの型エラーを回避するためにanyを使用）
+    window.addEventListener('openReportEdit', handleOpenReportEditEvent as any);
+
     // クリーンアップ
     return () => {
       // @ts-ignore - windowからプロパティを削除
       delete window.openReportEditModal;
+      // イベントリスナーも削除
+      window.removeEventListener('openReportEdit', handleOpenReportEditEvent as any);
     };
   }, [openReportEditModalFn]);
 

@@ -292,18 +292,27 @@ export function ReportViewModal({
               
               // 少し遅延を入れてから親コールバックまたはグローバル関数を実行
               setTimeout(() => {
-                // まず親から渡されたコールバックを実行
-                if (typeof onEdit === 'function') {
-                  console.log("親から渡された編集コールバックを実行します");
-                  onEdit();
-                } 
-                // バックアップ: グローバル関数を使用
-                else if (window.openReportEditModal) {
-                  console.log("グローバル編集関数を使用します（レポートデータ付き）", editData);
-                  window.openReportEditModal(editData);
-                }
-                else {
-                  console.error("編集コールバックが設定されていません");
+                try {
+                  // まず親から渡されたコールバックを実行
+                  if (typeof onEdit === 'function') {
+                    console.log("親から渡された編集コールバックを実行します");
+                    onEdit();
+                  } 
+                  // バックアップ: グローバル関数を使用
+                  else if (window.openReportEditModal) {
+                    console.log("グローバル編集関数を使用します（レポートデータ付き）", editData);
+                    window.openReportEditModal(editData);
+                  }
+                  else {
+                    console.error("編集コールバックが設定されていません - 直接モーダルを開きます");
+                    // 代替手段: イベントを発火して他のコンポーネントに通知
+                    const event = new CustomEvent('openReportEdit', { 
+                      detail: { booking: editData } 
+                    });
+                    window.dispatchEvent(event);
+                  }
+                } catch (err) {
+                  console.error("レポート編集を開く処理でエラーが発生しました", err);
                 }
               }, 300); // 遅延を長くして確実に反映されるようにする
             }}
