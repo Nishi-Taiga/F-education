@@ -446,7 +446,7 @@ export default function TutorBookingsPage() {
               console.log("新レポート編集テストボタンがクリックされました");
               
               // テスト用のデータ
-              const testBooking = {
+              const testBooking: ExtendedBooking = {
                 id: 999,
                 userId: 3,
                 tutorId: 2,
@@ -585,11 +585,23 @@ export default function TutorBookingsPage() {
             // 詳細モーダルが閉じられたときに、編集ボタンがクリックされたのであれば
             // 少し遅延してからレポート編集モーダルを開く
             if (selectedBooking && selectedBooking.openEditAfterClose) {
-              // レポート編集用のデータを準備
-              const booking = {
-                ...selectedBooking,
+              // レポート編集用のデータを準備 - 明示的に全プロパティを設定
+              const reportEditData: ExtendedBooking = {
+                id: selectedBooking.id,
+                userId: selectedBooking.userId,
+                tutorId: selectedBooking.tutorId,
+                studentId: selectedBooking.studentId,
+                tutorShiftId: selectedBooking.tutorShiftId || 0,
+                date: selectedBooking.date,
+                timeSlot: selectedBooking.timeSlot,
+                subject: selectedBooking.subject,
+                status: selectedBooking.status,
                 reportStatus: selectedBooking.reportStatus || null,
                 reportContent: selectedBooking.reportContent || '',
+                // 型の不一致を避けるため明示的に文字列型を使用
+                createdAt: typeof selectedBooking.createdAt === 'object' 
+                  ? selectedBooking.createdAt.toISOString() 
+                  : selectedBooking.createdAt,
                 studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId)
               };
               
@@ -598,9 +610,9 @@ export default function TutorBookingsPage() {
               
               // データを設定して編集モーダルを開く
               setTimeout(() => {
-                setReportEditBooking(booking);
+                setReportEditBooking(reportEditData);
                 setShowReportEditModal(true);
-                console.log("詳細モーダル閉じた後、レポート編集モーダルを表示");
+                console.log("詳細モーダル閉じた後、レポート編集モーダルを表示", reportEditData);
               }, 300);
             }
           }}
@@ -629,14 +641,23 @@ export default function TutorBookingsPage() {
                 
                 // 編集用の予約データを設定
                 // reportContentがあることを確認し、明示的に設定
-                setReportEditBooking({
-                  ...bookingData,
+                const realBookingData: ExtendedBooking = {
                   id: bookingData.id,
+                  userId: bookingData.userId,
+                  tutorId: bookingData.tutorId,
+                  studentId: bookingData.studentId,
+                  tutorShiftId: bookingData.tutorShiftId || 0,
+                  date: bookingData.date,
+                  timeSlot: bookingData.timeSlot,
+                  subject: bookingData.subject,
+                  status: bookingData.status,
                   reportStatus: bookingData.reportStatus || "completed",
                   reportContent: bookingData.reportContent || 
                     "【単元】\nテスト\n\n【伝言事項】\nテスト\n\n【来週までの目標(課題)】\nテスト",
+                  createdAt: bookingData.createdAt,
                   studentName: bookingData.studentName || "テスト 花子"
-                });
+                };
+                setReportEditBooking(realBookingData);
                 
                 // 少し遅延させてからモーダルを表示
                 setTimeout(() => {
@@ -646,7 +667,7 @@ export default function TutorBookingsPage() {
               } else {
                 console.error("テスト用予約データの取得に失敗しました");
                 // 取得に失敗した場合はハードコードされたデータを使用
-                const testBooking = {
+                const testBooking: ExtendedBooking = {
                   id: 7,
                   userId: 3,
                   tutorId: 2,
