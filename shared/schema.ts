@@ -185,7 +185,6 @@ export const lessonReports = pgTable("lesson_reports", {
   unitContent: text("unit_content").notNull(), // 単元内容
   messageContent: text("message_content"), // 伝言事項
   goalContent: text("goal_content"), // 来週までの目標(課題)
-  status: text("status").default("completed").notNull(), // "completed", "draft"
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

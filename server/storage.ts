@@ -197,7 +197,6 @@ export class MemStorage implements IStorage {
       unitContent: report.unitContent,
       messageContent: report.messageContent || null,
       goalContent: report.goalContent || null,
-      status: report.status || "completed",
       createdAt: now,
       updatedAt: now
     };
@@ -235,7 +234,6 @@ export class MemStorage implements IStorage {
       unitContent: reportUpdate.unitContent !== undefined ? reportUpdate.unitContent : existingReport.unitContent,
       messageContent: reportUpdate.messageContent !== undefined ? reportUpdate.messageContent : existingReport.messageContent,
       goalContent: reportUpdate.goalContent !== undefined ? reportUpdate.goalContent : existingReport.goalContent,
-      status: reportUpdate.status || existingReport.status,
       updatedAt: now
     };
     

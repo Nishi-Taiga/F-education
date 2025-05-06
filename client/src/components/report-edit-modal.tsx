@@ -173,8 +173,7 @@ export function ReportEditModal({
         tutorId: booking.tutorId, // 講師IDは必須
         unitContent,
         messageContent,
-        goalContent,
-        status: "completed"
+        goalContent
       };
 
       console.log("レポート保存処理を開始します");
