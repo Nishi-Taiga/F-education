@@ -78,10 +78,13 @@ export function BookingDetailModal({
   // 'pending'または未設定（null）の場合はレポート未作成
   const isCompletedNoReport = booking.reportStatus === 'pending' || booking.reportStatus === null;
   
+  // 編集コールバックの存在を明示的に確認（型チェック）
+  const hasEditCallback = typeof onEditReport === 'function';
+
   console.log("レポートステータス詳細:", {
     reportStatus: booking.reportStatus,
     isCompleted: isCompletedWithReport,
-    hasEditCallback: Boolean(onEditReport),
+    hasEditCallback: hasEditCallback,
     isPastLesson: isPastLesson()
   });
   
@@ -92,7 +95,7 @@ export function BookingDetailModal({
     reportStatus: booking.reportStatus,
     hasReportContent: Boolean(booking.reportContent),
     isCompletedWithReport: isCompletedWithReport,
-    hasEditCallback: Boolean(onEditReport),
+    hasEditCallback: hasEditCallback,
     onEditReportType: typeof onEditReport
   });
   
@@ -272,15 +275,25 @@ export function BookingDetailModal({
               onClick={() => {
                 console.log("新しい編集ボタンがクリックされました");
                 
-                // booking オブジェクトにフラグを設定
-                if (booking) {
-                  // TypeScriptのプロパティ追加警告を回避するためにany型にキャスト
-                  (booking as any).openEditAfterClose = true;
-                  console.log("編集フラグを設定しました", booking);
+                // 編集機能が有効な場合は直接onEditReportを呼び出す
+                if (onEditReport) {
+                  console.log("レポート編集関数を直接呼び出します");
+                  onClose();
+                  // 少し遅延させて実行
+                  setTimeout(() => {
+                    onEditReport();
+                  }, 100);
+                } else {
+                  console.log("編集コールバックが未定義です - フラグ方式に切り替えます");
+                  // booking オブジェクトにフラグを設定
+                  if (booking) {
+                    // TypeScriptのプロパティ追加警告を回避するためにany型にキャスト
+                    (booking as any).openEditAfterClose = true;
+                    console.log("編集フラグを設定しました", booking);
+                  }
+                  // モーダルを閉じる（閉じる際に親コンポーネントのonCloseハンドラーでフラグをチェック）
+                  onClose();
                 }
-                
-                // モーダルを閉じる（閉じる際に親コンポーネントのonCloseハンドラーでフラグをチェック）
-                onClose();
               }}
             >
               <Edit className="mr-2 h-4 w-4" />

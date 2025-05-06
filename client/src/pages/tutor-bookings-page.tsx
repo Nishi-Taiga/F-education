@@ -585,6 +585,7 @@ export default function TutorBookingsPage() {
             // 詳細モーダルが閉じられたときに、編集ボタンがクリックされたのであれば
             // 少し遅延してからレポート編集モーダルを開く
             if (selectedBooking && selectedBooking.openEditAfterClose) {
+              console.log("フラグによるレポート編集処理を実行します");
               // レポート編集用のデータを準備 - 明示的に全プロパティを設定
               const reportEditData: ExtendedBooking = {
                 id: selectedBooking.id,
@@ -615,6 +616,37 @@ export default function TutorBookingsPage() {
                 console.log("詳細モーダル閉じた後、レポート編集モーダルを表示", reportEditData);
               }, 300);
             }
+          }}
+          onEditReport={() => {
+            // 直接コールバック方式
+            console.log("onEditReport コールバックが呼び出されました");
+            
+            if (!selectedBooking) return;
+            
+            // レポート編集用のデータを準備 - 明示的に全プロパティを設定
+            const reportEditData: ExtendedBooking = {
+              id: selectedBooking.id,
+              userId: selectedBooking.userId,
+              tutorId: selectedBooking.tutorId,
+              studentId: selectedBooking.studentId,
+              tutorShiftId: selectedBooking.tutorShiftId || 0,
+              date: selectedBooking.date,
+              timeSlot: selectedBooking.timeSlot,
+              subject: selectedBooking.subject,
+              status: selectedBooking.status,
+              reportStatus: selectedBooking.reportStatus || null,
+              reportContent: selectedBooking.reportContent || '',
+              // 型の不一致を避けるため明示的に文字列型を使用
+              createdAt: typeof selectedBooking.createdAt === 'object' 
+                ? selectedBooking.createdAt.toISOString() 
+                : selectedBooking.createdAt,
+              studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId)
+            };
+            
+            // データを設定して編集モーダルを開く
+            setReportEditBooking(reportEditData);
+            setShowReportEditModal(true);
+            console.log("レポート編集モーダルを表示（コールバック方式）", reportEditData);
           }}
           onViewReport={() => {
             setShowBookingDetailModal(false);
