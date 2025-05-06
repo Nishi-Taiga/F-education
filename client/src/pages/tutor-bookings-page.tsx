@@ -553,38 +553,42 @@ export default function TutorBookingsPage() {
           }}
           // 講師アカウントではレポート編集を常に有効にする - インラインで実装して問題解決
           onEditReport={() => {
-            console.log("インライン：レポート編集モーダルを開きます");
+            console.log("レポート編集ボタンがクリックされました", selectedBooking);
             // 選択された予約がない場合は処理を中止
             if (!selectedBooking) {
               console.error("レポート編集対象の予約が選択されていません");
               return;
             }
             
-            // 編集用の予約データを設定
-            setReportEditBooking({
-              ...selectedBooking,
-              id: selectedBooking.id,
-              userId: selectedBooking.userId,
-              tutorId: selectedBooking.tutorId,
-              studentId: selectedBooking.studentId,
-              tutorShiftId: selectedBooking.tutorShiftId || 0, 
-              date: selectedBooking.date,
-              timeSlot: selectedBooking.timeSlot,
-              subject: selectedBooking.subject || "",
-              status: selectedBooking.status || null,
-              createdAt: selectedBooking.createdAt,
-              reportStatus: selectedBooking.reportStatus || null,
-              reportContent: selectedBooking.reportContent || ''
-            });
-            
-            // モーダルを閉じる
+            // 詳細モーダルを閉じる
             setShowBookingDetailModal(false);
             
-            // 少し遅延させてモーダルを表示
+            // 十分な遅延を持たせてから編集モーダルを開く
             setTimeout(() => {
-              setShowReportEditModal(true);
-              console.log("レポート編集モーダルが表示されました");
-            }, 100);
+              // 編集用の予約データを設定
+              setReportEditBooking({
+                ...selectedBooking,
+                id: selectedBooking.id,
+                userId: selectedBooking.userId,
+                tutorId: selectedBooking.tutorId,
+                studentId: selectedBooking.studentId,
+                tutorShiftId: selectedBooking.tutorShiftId || 0, 
+                date: selectedBooking.date,
+                timeSlot: selectedBooking.timeSlot,
+                subject: selectedBooking.subject || "",
+                status: selectedBooking.status || null,
+                createdAt: selectedBooking.createdAt,
+                reportStatus: selectedBooking.reportStatus || null,
+                reportContent: selectedBooking.reportContent || '',
+                studentName: selectedBooking.studentName || getStudentName(selectedBooking.studentId)
+              });
+              
+              // レポート編集モーダルを表示
+              setTimeout(() => {
+                setShowReportEditModal(true);
+                console.log("レポート編集モーダルを表示します");
+              }, 50);
+            }, 200);
           }}
         />
       )}
