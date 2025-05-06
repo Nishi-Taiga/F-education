@@ -571,7 +571,7 @@ export default function TutorBookingsPage() {
                   (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
                   
                 if (hasReport && booking.reportContent) {
-                  console.log("レポート作成済みの予約 - 直接レポート表示モーダルを開きます");
+                  console.log("レポート作成済みの予約 - 直接授業レポート表示モーダルを開きます");
                   // API呼び出しで詳細情報を取得
                   fetch(`/api/bookings/${booking.id}`)
                     .then(response => {
@@ -591,7 +591,7 @@ export default function TutorBookingsPage() {
                         setStudentDetails(bookingDetails.studentDetails);
                       }
                       
-                      // 状態を更新してモーダルを表示
+                      // 状態を更新して授業レポートモーダルを表示
                       setSelectedBooking(enhancedBooking);
                       setReportEditBooking(enhancedBooking);
                       setShowReportViewModal(true);
