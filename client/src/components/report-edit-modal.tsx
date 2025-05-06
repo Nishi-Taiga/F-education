@@ -237,37 +237,60 @@ export function ReportEditModal({
         console.warn("旧フォーマットのレポートデータの更新に失敗しました。新フォーマットのみ更新されています。");
       }
 
-      // データを再取得してUIを更新
+      // より強力に全てのキャッシュをクリア
+      console.log("全てのキャッシュを無効化します");
+      
+      // 個別のキャッシュを無効化
       queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/lesson-reports"] });
       
+      // 個別の予約データのキャッシュもクリア
+      queryClient.invalidateQueries({ queryKey: [`/api/bookings/${booking.id}`] });
+      
+      // 個別のレポートデータのキャッシュもクリア
+      if (booking.lessonReport?.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/lesson-reports/${booking.lessonReport.id}`] });
+      }
+      
+      // さらに確実に、すべてのキャッシュを再取得する
       toast({
         title: "保存完了",
         description: "レポートを保存しました。マイページに戻ります。",
         variant: "default",
       });
 
-      // マイページにリダイレクトする前にデータ再取得を待つ
-      setTimeout(() => {
-        // データが確実に更新されるまで待つ
-        Promise.all([
+      // より確実にデータが更新されるよう、全てのクエリを再取得する
+      console.log("データの再取得を開始します");
+      
+      // すべてのデータを確実に再取得
+      try {
+        // まず先にonSuccessを呼び出して親コンポーネントにも通知
+        if (onSuccess) {
+          console.log("onSuccessコールバックを実行します");
+          onSuccess();
+        }
+        
+        // 再取得を開始し、完了を待つ
+        await Promise.all([
           queryClient.refetchQueries({ queryKey: ["/api/tutor/bookings"] }),
-          queryClient.refetchQueries({ queryKey: ["/api/bookings"] })
-        ]).then(() => {
-          // 現在のモーダルを閉じる
-          if (onSuccess) onSuccess();
-          onClose();
-          
-          // マイページへ移動
-          setLocation("/");
-        }).catch(error => {
-          console.error("データ再取得エラー:", error);
-          // エラーが発生してもマイページに移動
-          if (onSuccess) onSuccess();
-          onClose();
-          setLocation("/");
-        });
+          queryClient.refetchQueries({ queryKey: ["/api/bookings"] }),
+          queryClient.refetchQueries({ queryKey: ["/api/lesson-reports"] })
+        ]);
+        
+        console.log("データの再取得が完了しました");
+      } catch (error) {
+        console.error("データ再取得中にエラーが発生:", error);
+      }
+      
+      // モーダルを閉じる
+      onClose();
+      
+      // 0.5秒待ってからリダイレクト（データがUIに反映される時間を確保）
+      setTimeout(() => {
+        // マイページへ移動
+        console.log("マイページへリダイレクトします");
+        setLocation("/");
       }, 500);
     } catch (error: any) {
       toast({

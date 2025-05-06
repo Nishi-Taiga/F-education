@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useLessonReportById } from "@/hooks/use-lesson-reports";
 import { useSearchParams } from "@/hooks/use-search-params";
-import { QueryClient } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { ReportEditModal } from "@/components/report-edit-modal";
 
@@ -27,7 +27,7 @@ export default function ReportEditPage() {
   // レポートIDがある場合はレポートを取得
   // レポートデータの取得 - 型安全にするために条件付きでIDをnullに
   const { data: reportData, isLoading: isLoadingReport } = useLessonReportById(
-    reportId ? parseInt(reportId) : null
+    reportId ? reportId.toString() : null
   );
   
   useEffect(() => {
@@ -141,11 +141,20 @@ export default function ReportEditPage() {
     
     // 確実にマイページのデータが更新されるよう、全ての関連クエリを無効化
     try {
-      // @ts-ignore - QueryClientはインポートしているがメソッド呼び出しでエラーになるため
-      const queryClient = new QueryClient();
+      // 全てのキャッシュを無効化
       queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/lesson-reports"] });
+      
+      // 個別のレポートIDに対するキャッシュも無効化
+      if (reportId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/lesson-reports/${reportId}`] });
+      }
+      
+      // 個別の予約IDに対するキャッシュも無効化
+      if (bookingId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/bookings/${bookingId}`] });
+      }
     } catch (e) {
       console.error("クエリキャッシュの更新エラー:", e);
     }

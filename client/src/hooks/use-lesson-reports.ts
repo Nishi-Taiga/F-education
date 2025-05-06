@@ -3,7 +3,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 // レポートIDを使用して特定のレポートを取得するフック
-export function useLessonReportById(reportId: number | null) {
+export function useLessonReportById(reportId: string | number | null) {
   return useQuery({
     queryKey: [reportId ? `/api/lesson-reports/${reportId}` : null],
     enabled: !!reportId,
