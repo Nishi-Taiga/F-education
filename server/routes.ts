@@ -1226,23 +1226,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`講師ID: ${tutor.id} の予約を取得します`);
-      const bookings = await storage.getBookingsByTutorId(tutor.id);
-      console.log(`取得された予約データ: ${JSON.stringify(bookings)}`);
       
-      if (!bookings || bookings.length === 0) {
+      // 予約データを取得
+      let bookingsList = [];
+      try {
+        // storage経由で取得
+        bookingsList = await storage.getBookingsByTutorId(tutor.id);
+      } catch (dbErr) {
+        console.error("予約取得エラー:", dbErr);
+      }
+      
+      console.log(`取得された予約データ: ${JSON.stringify(bookingsList)}`);
+      
+      if (!bookingsList || bookingsList.length === 0) {
         console.log("講師の予約が見つかりませんでした");
-        // テスト用のダミー予約を作成
-        const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
-        const tomorrow = new Date();
-        tomorrow.setDate(today.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
         
-        // データベースを確認
-        console.log("データベース内の全予約を確認します...");
+        // データベース内の全予約を確認
         try {
+          console.log("データベース内の全予約を確認します...");
           const allBookings = await db.query.bookings.findMany();
-          console.log(`全予約データ: ${JSON.stringify(allBookings)}`);
+          console.log(`全予約データが見つかりました`);
+          
+          // tutorIdに問題があるか確認
+          console.log(`検索している講師ID: ${tutor.id}`);
+          const matchingBookings = allBookings.filter(b => b.tutorId === tutor.id);
+          console.log(`一致する予約が見つかりました`);
+          
+          if (matchingBookings.length > 0) {
+            console.log("一致する予約が見つかりましたが、クエリ結果に含まれていません");
+            bookingsList = matchingBookings;
+          }
         } catch (err) {
           console.error("データベース検索エラー:", err);
         }
@@ -1250,7 +1263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 生徒名を付加した予約情報を作成
       const bookingsWithStudentInfo = await Promise.all(
-        bookings.map(async (booking) => {
+        bookingsList.map(async (booking) => {
           let studentName = undefined;
           
           if (booking.studentId) {
@@ -1266,6 +1279,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
+      
+      console.log(`返却する予約データ (${bookingsWithStudentInfo.length}件)を準備しました`);
       
       res.json(bookingsWithStudentInfo);
     } catch (error) {
