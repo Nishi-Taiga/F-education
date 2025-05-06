@@ -1,152 +1,90 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { LessonReport, InsertLessonReport } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
-export function useLessonReportById(reportId: number | null | undefined) {
-  return useQuery<LessonReport | null>({
-    queryKey: ['/api/lesson-reports', reportId],
-    queryFn: async () => {
-      if (!reportId) return null;
-      try {
-        const response = await fetch(`/api/lesson-reports/${reportId}`);
-        if (response.status === 404) return null;
-        if (!response.ok) throw new Error('レポートの取得に失敗しました');
-        return await response.json();
-      } catch (error) {
-        console.error('レポート取得エラー:', error);
-        throw error;
-      }
-    },
-    enabled: !!reportId
+// レポートIDを使用して特定のレポートを取得するフック
+export function useLessonReportById(reportId: number | null) {
+  return useQuery({
+    queryKey: [reportId ? `/api/lesson-reports/${reportId}` : null],
+    enabled: !!reportId,
   });
 }
 
-export function useLessonReportByBookingId(bookingId: number | null | undefined) {
-  return useQuery<LessonReport | null>({
-    queryKey: ['/api/lesson-reports/booking', bookingId],
-    queryFn: async () => {
-      if (!bookingId) return null;
-      try {
-        const response = await fetch(`/api/lesson-reports/booking/${bookingId}`);
-        if (response.status === 404) return null;
-        if (!response.ok) throw new Error('レポートの取得に失敗しました');
-        return await response.json();
-      } catch (error) {
-        console.error('レポート取得エラー:', error);
-        throw error;
-      }
-    },
-    enabled: !!bookingId
+// 予約IDを使用してレポートを取得するフック
+export function useLessonReportByBookingId(bookingId: number | null) {
+  return useQuery({
+    queryKey: [bookingId ? `/api/lesson-reports/booking/${bookingId}` : null],
+    enabled: !!bookingId,
   });
 }
 
-export function useLessonReportsByStudentId(studentId: number | null | undefined) {
-  return useQuery<LessonReport[]>({
-    queryKey: ['/api/lesson-reports/student', studentId],
-    queryFn: async () => {
-      if (!studentId) return [];
-      try {
-        const response = await fetch(`/api/lesson-reports/student/${studentId}`);
-        if (!response.ok) throw new Error('レポート一覧の取得に失敗しました');
-        return await response.json();
-      } catch (error) {
-        console.error('レポート一覧取得エラー:', error);
-        throw error;
-      }
-    },
-    enabled: !!studentId
-  });
-}
-
+// 講師が担当している全レポートを取得するフック
 export function useTutorLessonReports() {
-  return useQuery<LessonReport[]>({
+  return useQuery({
     queryKey: ['/api/lesson-reports/tutor'],
-    queryFn: async () => {
-      try {
-        const response = await fetch('/api/lesson-reports/tutor');
-        if (!response.ok) throw new Error('講師のレポート一覧の取得に失敗しました');
-        return await response.json();
-      } catch (error) {
-        console.error('講師レポート一覧取得エラー:', error);
-        throw error;
-      }
-    }
   });
 }
 
+// 生徒の全レポートを取得するフック
+export function useStudentLessonReports(studentId: number | null) {
+  return useQuery({
+    queryKey: [studentId ? `/api/lesson-reports/student/${studentId}` : null],
+    enabled: !!studentId,
+  });
+}
+
+// レポートを作成するフック
 export function useCreateLessonReport() {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async (reportData: InsertLessonReport) => {
-      try {
-        const response = await apiRequest('POST', '/api/lesson-reports', reportData);
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'レポートの作成に失敗しました');
-        }
-        return await response.json();
-      } catch (error: any) {
-        console.error('レポート作成エラー:', error);
-        throw error;
-      }
+    mutationFn: async (reportData: any) => {
+      const res = await apiRequest("POST", "/api/lesson-reports", reportData);
+      return await res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
-        title: 'レポートを作成しました',
-        description: 'レッスンレポートを正常に保存しました。',
+        title: "授業レポートを作成しました",
+        description: "レポートが正常に保存されました",
       });
       
-      // 関連するクエリの無効化
-      queryClient.invalidateQueries({ queryKey: ['/api/lesson-reports/booking', data.bookingId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/lesson-reports/student', data.studentId] });
+      // キャッシュを更新
       queryClient.invalidateQueries({ queryKey: ['/api/lesson-reports/tutor'] });
     },
     onError: (error: Error) => {
       toast({
-        title: 'レポート作成エラー',
-        description: error.message,
-        variant: 'destructive',
+        title: "エラー",
+        description: `レポートの作成に失敗しました: ${error.message}`,
+        variant: "destructive",
       });
-    }
+    },
   });
 }
 
+// レポートを更新するフック
 export function useUpdateLessonReport() {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertLessonReport> }) => {
-      try {
-        const response = await apiRequest('PUT', `/api/lesson-reports/${id}`, data);
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'レポートの更新に失敗しました');
-        }
-        return await response.json();
-      } catch (error: any) {
-        console.error('レポート更新エラー:', error);
-        throw error;
-      }
+    mutationFn: async ({ reportId, data }: { reportId: number, data: any }) => {
+      const res = await apiRequest("PUT", `/api/lesson-reports/${reportId}`, data);
+      return await res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
-        title: 'レポートを更新しました',
-        description: 'レッスンレポートを正常に更新しました。',
+        title: "授業レポートを更新しました",
+        description: "レポートが正常に更新されました",
       });
       
-      // 関連するクエリの無効化
-      queryClient.invalidateQueries({ queryKey: ['/api/lesson-reports/booking', data.bookingId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/lesson-reports/student', data.studentId] });
+      // キャッシュを更新
       queryClient.invalidateQueries({ queryKey: ['/api/lesson-reports/tutor'] });
     },
     onError: (error: Error) => {
       toast({
-        title: 'レポート更新エラー',
-        description: error.message,
-        variant: 'destructive',
+        title: "エラー",
+        description: `レポートの更新に失敗しました: ${error.message}`,
+        variant: "destructive",
       });
-    }
+    },
   });
 }

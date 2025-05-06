@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { useSearchParams } from "@/hooks/use-search-params";
 import { useLessonReportById } from "@/hooks/use-lesson-reports";
+import { useSearchParams } from "@/hooks/use-search-params";
 import { QueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { ReportEditModal } from "@/components/report-edit-modal";

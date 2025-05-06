@@ -1,12 +1,12 @@
 import { useLocation } from "wouter";
 
-/**
- * URLの検索パラメータを取得するカスタムフック
- * wouter の useLocation を使用して現在のURLから検索パラメータを取得する
- * 
- * @returns URLSearchParams - 現在のURLの検索パラメータ
- */
+// URLのクエリパラメータを取得するカスタムフック
 export function useSearchParams(): URLSearchParams {
   const [location] = useLocation();
-  return new URLSearchParams(location.split('?')[1] || '');
+  
+  // 現在のURLからSearchParamsを生成
+  // 例: /products?page=1&sort=name からは 'page=1&sort=name' の部分を取得
+  const search = window.location.search;
+  
+  return new URLSearchParams(search);
 }
