@@ -154,7 +154,7 @@ export function ReportViewModal({
           {/* レポート内容 */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h4 className="text-sm font-semibold">レポート内容</h4>
+              <h4 className="text-sm font-semibold">授業レポート内容</h4>
               
               {reportDateStr && (
                 <div className="flex items-center text-xs text-gray-500">

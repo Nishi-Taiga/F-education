@@ -315,6 +315,34 @@ export default function HomePage() {
   // 予約カードまたはカレンダー上の予約がクリックされたときの処理
   const handleBookingClick = async (booking: Booking & { studentName?: string }) => {
     console.log("予約クリック:", booking);
+    
+    // レポートが作成済みかどうかチェック
+    const hasReport = booking.reportStatus === 'completed' || 
+      (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
+      
+    // レポートが存在する場合は直接レポートビューモーダルを表示
+    if (hasReport && booking.reportContent) {
+      console.log("レポート作成済みの予約 - 直接授業レポート表示モーダルを開きます");
+      
+      try {
+        // 予約の詳細情報を取得（生徒情報や前回のレポートも含む）
+        const response = await fetch(`/api/bookings/${booking.id}`);
+        if (response.ok) {
+          const bookingDetails = await response.json();
+          console.log("詳細情報取得成功:", bookingDetails);
+          
+          // レポート表示用の設定をして直接レポートモーダルを表示
+          setViewReportBooking(bookingDetails);
+          setShowReportViewDialog(true);
+          return;
+        }
+      } catch (error) {
+        console.error("詳細情報取得エラー:", error);
+        // エラー時はフォールバックとして通常の詳細表示
+      }
+    }
+    
+    // 通常の詳細表示処理（レポートがない場合や詳細取得に失敗した場合）
     try {
       // 予約の詳細情報を取得（生徒情報や前回のレポートも含む）
       const response = await fetch(`/api/bookings/${booking.id}`);
