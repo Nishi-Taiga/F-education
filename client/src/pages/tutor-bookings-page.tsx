@@ -510,8 +510,18 @@ export default function TutorBookingsPage() {
 
   // グローバルオブジェクトに関数を設定（コンポーネント間での共有用）
   useEffect(() => {
-    // @ts-ignore - windowに追加のプロパティを設定
-    window.openReportEditModal = openReportEditModalFn;
+    // 標準的なグローバル関数
+    (window as any).openReportEditModal = openReportEditModalFn;
+
+    // 直接モーダル状態を操作するための関数
+    (window as any).setReportEditData = (booking: ExtendedBooking) => {
+      console.log("window.setReportEditData が呼び出されました:", booking);
+      setReportEditBooking(booking);
+      setTimeout(() => {
+        setShowReportEditModal(true);
+        console.log("編集モーダルの表示フラグをtrueに設定しました");
+      }, 50);
+    };
 
     // カスタムイベントリスナーの設定（代替手段として）
     const handleOpenReportEditEvent = (event: CustomEvent) => {
@@ -528,7 +538,7 @@ export default function TutorBookingsPage() {
         setTimeout(() => {
           setShowReportEditModal(true);
           console.log("編集モーダル表示完了！");
-        }, 100);
+        }, 50);
       }
     };
 
@@ -537,12 +547,11 @@ export default function TutorBookingsPage() {
 
     // クリーンアップ
     return () => {
-      // @ts-ignore - windowからプロパティを削除
-      delete window.openReportEditModal;
-      // イベントリスナーも削除
+      delete (window as any).openReportEditModal;
+      delete (window as any).setReportEditData;
       window.removeEventListener('openReportEdit', handleOpenReportEditEvent as any);
     };
-  }, [openReportEditModalFn]);
+  }, []);
 
   // 今日以降の予約
   const upcomingBookings =

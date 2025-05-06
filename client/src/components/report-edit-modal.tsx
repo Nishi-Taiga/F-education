@@ -247,7 +247,12 @@ export function ReportEditModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => !open && onClose()}
+      // id属性を追加して直接アクセス可能にする
+      id="report-edit-modal"
+    >
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>レポート編集</DialogTitle>

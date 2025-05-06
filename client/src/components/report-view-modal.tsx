@@ -293,6 +293,8 @@ export function ReportViewModal({
               // 少し遅延を入れてから親コールバックまたはグローバル関数を実行
               setTimeout(() => {
                 try {
+                  console.log("レポート編集モーダルを開く処理を開始します", editData);
+                  
                   // まず親から渡されたコールバックを実行
                   if (typeof onEdit === 'function') {
                     console.log("親から渡された編集コールバックを実行します");
@@ -304,12 +306,37 @@ export function ReportViewModal({
                     window.openReportEditModal(editData);
                   }
                   else {
-                    console.error("編集コールバックが設定されていません - 直接モーダルを開きます");
-                    // 代替手段: イベントを発火して他のコンポーネントに通知
-                    const event = new CustomEvent('openReportEdit', { 
-                      detail: { booking: editData } 
-                    });
-                    window.dispatchEvent(event);
+                    console.log("代替手段を使用: 直接モーダルを開くためのイベントを発行");
+                    // 代替手段1: ReportEditModal要素を直接操作（シンプルな方法）
+                    try {
+                      const editModalElement = document.getElementById('report-edit-modal');
+                      if (editModalElement) {
+                        (editModalElement as any).openWithData(editData);
+                      }
+                    } catch (err) {
+                      console.error("モーダル要素の直接操作に失敗", err);
+                    }
+                    
+                    // 代替手段2: イベントを発火して他のコンポーネントに通知
+                    try {
+                      const event = new CustomEvent('openReportEdit', { 
+                        detail: { booking: editData } 
+                      });
+                      window.dispatchEvent(event);
+                      console.log("openReportEditイベントを発行しました");
+                    } catch (err) {
+                      console.error("イベント発行に失敗", err);
+                    }
+                    
+                    // 代替手段3: window経由で直接状態を設定（最終手段）
+                    try {
+                      if ((window as any).setReportEditData) {
+                        (window as any).setReportEditData(editData);
+                        console.log("window.setReportEditDataを実行しました");
+                      }
+                    } catch (err) {
+                      console.error("window.setReportEditData実行失敗", err);
+                    }
                   }
                 } catch (err) {
                   console.error("レポート編集を開く処理でエラーが発生しました", err);
