@@ -267,78 +267,65 @@ export function ReportViewModal({
             onClick={() => {
               console.log("編集ボタンクリック - レポートデータで編集モーダルを開く");
               
-              // 編集用のデータを準備
-              const editData = {
-                ...booking,
-                // レポート内容を正しく設定
-                lessonReport: booking.lessonReport || {
-                  // reportContentから解析したデータをlessonReportとして設定
-                  id: 0, // バックエンドが既存のレポートIDを使用
-                  bookingId: booking.id,
-                  tutorId: booking.tutorId,
-                  studentId: booking.studentId,
-                  unitContent: unit,
-                  messageContent: message,
-                  goalContent: goal,
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                  date: booking.date,
-                  timeSlot: booking.timeSlot
-                }
-              };
+              // レポートIDまたは予約IDを取得
+              const reportId = booking.lessonReport?.id;
+              const bookingId = booking.id;
               
-              // モーダル閉じる処理を先に行う
+              // URLパラメータを構築
+              const params = new URLSearchParams();
+              
+              if (reportId) {
+                // 既存のレポートIDがある場合はそれを使用
+                params.set('reportId', reportId.toString());
+                console.log(`レポートID ${reportId} を使用して編集画面に移動します`);
+              } else {
+                // レポートがまだ存在しない場合は予約IDを使用
+                params.set('bookingId', bookingId.toString());
+                
+                // レポートデータが解析された場合、その内容も保存
+                if (unit || message || goal) {
+                  const initialData = {
+                    unitContent: unit,
+                    messageContent: message,
+                    goalContent: goal
+                  };
+                  try {
+                    sessionStorage.setItem('INITIAL_REPORT_DATA', JSON.stringify(initialData));
+                  } catch (err) {
+                    console.error("初期レポートデータのセッションストレージ保存に失敗", err);
+                  }
+                }
+                
+                console.log(`予約ID ${bookingId} を使用して編集画面に移動します`);
+              }
+              
+              // 予約情報をセッションストレージに保存（編集画面で必要な情報を提供するため）
+              try {
+                const bookingData = {
+                  id: booking.id,
+                  date: booking.date,
+                  timeSlot: booking.timeSlot,
+                  subject: booking.subject,
+                  studentId: booking.studentId,
+                  studentName: booking.studentName,
+                  tutorId: booking.tutorId
+                };
+                sessionStorage.setItem('EDIT_BOOKING_DATA', JSON.stringify(bookingData));
+              } catch (err) {
+                console.error("予約データのセッションストレージ保存に失敗", err);
+              }
+              
+              // まずモーダルを閉じる
               onClose();
               
-              // 親コンポーネントから渡されたonEdit関数があれば優先して使用
+              // 親から渡されたコールバックがあれば実行
               if (typeof onEdit === 'function') {
                 console.log("親から渡された編集コールバックを実行します");
                 onEdit();
-                return; // 親コンポーネントのコールバックを使用した場合は以降の処理を行わない
               }
               
-              // 少し遅延を入れてから代替メカニズムを実行
-              setTimeout(() => {
-                try {
-                  console.log("レポート編集モーダルを開く処理を開始します", editData);
-                  
-                  // 方法1: グローバル関数を使用（優先度最高）
-                  if ((window as any).openReportEditModal) {
-                    console.log("グローバル編集関数を使用します", editData);
-                    (window as any).openReportEditModal(editData);
-                    return;
-                  }
-                  
-                  // 方法2: window経由で直接状態を設定
-                  if ((window as any).setReportEditData) {
-                    console.log("window.setReportEditDataを実行します");
-                    (window as any).setReportEditData(editData);
-                    return;
-                  }
-                  
-                  // 方法3: URLパラメータ方式（最も信頼性が高いが、ページ遷移が発生）
-                  console.log("URLパラメータ方式を使用します");
-                  
-                  // モーダルを閉じる前にレポートデータをセッションストレージに保存
-                  try {
-                    sessionStorage.setItem('EDIT_REPORT_DATA', JSON.stringify(editData));
-                    console.log("レポートデータをセッションストレージに保存しました");
-                  } catch (err) {
-                    console.error("セッションストレージへの保存に失敗", err);
-                  }
-                  
-                  // グローバル変数も設定（バックアップ）
-                  (window as any).REPORT_EDIT_DATA = editData;
-                  (window as any).REPORT_EDIT_MODAL_SHOULD_OPEN = true;
-                  console.log("グローバル変数を設定しました");
-                  
-                  // ページ遷移
-                  window.location.href = '/tutor/bookings?editReport=' + editData.id;
-                  console.log("編集ページにリダイレクトします");
-                } catch (err) {
-                  console.error("レポート編集を開く処理でエラーが発生しました", err);
-                }
-              }, 100); // 短い遅延でより応答性を高める
+              // 専用の編集ページへ遷移
+              window.location.href = `/report-edit?${params.toString()}`;
             }}
           >
             レポートを編集

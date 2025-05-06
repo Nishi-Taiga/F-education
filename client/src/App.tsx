@@ -13,6 +13,7 @@ import ProfileSetupPage from "@/pages/profile-setup-page";
 import TutorProfilePage from "@/pages/tutor-profile-page";
 import TutorSchedulePage from "@/pages/tutor-schedule-page";
 import ReportListPage from "@/pages/report-list-page";
+import ReportEditPage from "@/pages/report-edit-page";
 import DebugPage from "@/pages/debug-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
@@ -30,6 +31,8 @@ function Router() {
       {/* 講師関連のルート */}
       <ProtectedRoute path="/tutor/profile" component={TutorProfilePage} />
       <ProtectedRoute path="/tutor/schedule" component={TutorSchedulePage} />
+      {/* レポート編集画面 */}
+      <ProtectedRoute path="/report-edit" component={ReportEditPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/debug" component={DebugPage} />
       <Route component={NotFound} />
