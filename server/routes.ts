@@ -1606,6 +1606,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // レッスンレポート関連のエンドポイント
+  // 特定の予約に紐づくレポートを取得
+  app.get("/api/lesson-reports/booking/:bookingId", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "認証が必要です" });
+      }
+      
+      const bookingId = parseInt(req.params.bookingId);
+      if (isNaN(bookingId)) {
+        return res.status(400).json({ message: "不正な予約IDです" });
+      }
+      
+      // レッスンレポートを取得
+      const report = await storage.getLessonReportByBookingId(bookingId);
+      
+      if (!report) {
+        return res.status(404).json({ message: "レポートが見つかりません" });
+      }
+      
+      res.status(200).json(report);
+    } catch (error) {
+      console.error("レポート取得エラー:", error);
+      res.status(500).json({ message: "レポート取得中にエラーが発生しました" });
+    }
+  });
+  
+  // 講師のすべてのレポートを取得
+  app.get("/api/lesson-reports/tutor/:tutorId?", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "認証が必要です" });
+      }
+      
+      const userId = req.user!.id;
+      
+      // 講師情報を取得
+      const tutor = await storage.getTutorByUserId(userId);
+      if (!tutor) {
+        return res.status(403).json({ message: "講師情報が見つかりません" });
+      }
+      
+      // URLパラメータのtutorIdが指定されている場合はそれを使用
+      // そうでない場合は認証済みユーザーの講師IDを使用
+      const targetTutorId = req.params.tutorId ? parseInt(req.params.tutorId) : tutor.id;
+      
+      // tutorIdが数値でない場合はエラー
+      if (isNaN(targetTutorId)) {
+        return res.status(400).json({ message: "不正な講師IDです" });
+      }
+      
+      // 自分以外の講師のレポートを取得しようとした場合は拒否
+      if (targetTutorId !== tutor.id) {
+        return res.status(403).json({ message: "他の講師のレポートを閲覧する権限がありません" });
+      }
+      
+      // レッスンレポート一覧を取得
+      const reports = await storage.getLessonReportsByTutorId(targetTutorId);
+      
+      res.status(200).json(reports);
+    } catch (error) {
+      console.error("レポート一覧取得エラー:", error);
+      res.status(500).json({ message: "レポート一覧取得中にエラーが発生しました" });
+    }
+  });
+  
+  // 生徒のすべてのレポートを取得
+  app.get("/api/lesson-reports/student/:studentId", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "認証が必要です" });
+      }
+      
+      const userId = req.user!.id;
+      const studentId = parseInt(req.params.studentId);
+      
+      if (isNaN(studentId)) {
+        return res.status(400).json({ message: "不正な生徒IDです" });
+      }
+      
+      // 生徒情報を取得して権限チェック
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "生徒が見つかりません" });
+      }
+      
+      // 親ユーザーまたは講師のみアクセス可能
+      if (student.userId !== userId) {
+        // 講師の場合は担当する生徒のレポートのみ閲覧可能
+        const tutor = await storage.getTutorByUserId(userId);
+        if (!tutor) {
+          return res.status(403).json({ message: "このレポートを閲覧する権限がありません" });
+        }
+        
+        // さらなる権限チェックが必要な場合はここに追加
+      }
+      
+      // レッスンレポート一覧を取得
+      const reports = await storage.getLessonReportsByStudentId(studentId);
+      
+      res.status(200).json(reports);
+    } catch (error) {
+      console.error("生徒レポート一覧取得エラー:", error);
+      res.status(500).json({ message: "生徒レポート一覧取得中にエラーが発生しました" });
+    }
+  });
+  
+  // レッスンレポートを新規作成または更新
+  app.post("/api/lesson-reports", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "認証が必要です" });
+      }
+      
+      const userId = req.user!.id;
+      const { bookingId, unitContent, messageContent, goalContent, id } = req.body;
+      
+      if (!bookingId || isNaN(parseInt(bookingId))) {
+        return res.status(400).json({ message: "不正な予約IDです" });
+      }
+      
+      // 最低でも1つのフィールドに内容があるか確認
+      if ((!unitContent || unitContent.trim() === '') && 
+          (!messageContent || messageContent.trim() === '') && 
+          (!goalContent || goalContent.trim() === '')) {
+        return res.status(400).json({ message: "少なくとも1つのフィールドに内容を入力してください" });
+      }
+      
+      // 予約情報を取得
+      const booking = await storage.getBookingById(parseInt(bookingId));
+      if (!booking) {
+        return res.status(404).json({ message: "予約が見つかりません" });
+      }
+      
+      // 講師情報を取得
+      const tutor = await storage.getTutorByUserId(userId);
+      if (!tutor) {
+        return res.status(403).json({ message: "講師情報が見つかりません" });
+      }
+      
+      // 予約が講師のものか確認（講師のみがレポートを作成可能）
+      if (booking.tutorId !== tutor.id) {
+        return res.status(403).json({ message: "この予約のレポートを作成する権限がありません" });
+      }
+      
+      let result;
+      
+      // idが指定されていれば更新、そうでなければ新規作成
+      if (id) {
+        // 更新処理
+        result = await storage.updateLessonReport(parseInt(id), {
+          unitContent,
+          messageContent,
+          goalContent
+        });
+      } else {
+        // 既存のレポートを確認
+        const existingReport = await storage.getLessonReportByBookingId(parseInt(bookingId));
+        
+        if (existingReport) {
+          // 既に存在する場合は更新
+          result = await storage.updateLessonReport(existingReport.id, {
+            unitContent,
+            messageContent,
+            goalContent
+          });
+        } else {
+          // 新規作成
+          result = await storage.createLessonReport({
+            tutorId: tutor.id,
+            studentId: booking.studentId,
+            bookingId: parseInt(bookingId),
+            unitContent,
+            messageContent,
+            goalContent,
+            date: booking.date,
+            timeSlot: booking.timeSlot
+          });
+        }
+      }
+      
+      res.status(200).json({
+        message: "レッスンレポートが正常に保存されました",
+        report: result
+      });
+    } catch (error) {
+      console.error("レッスンレポート保存エラー:", error);
+      res.status(500).json({ message: "レッスンレポート保存中にエラーが発生しました" });
+    }
+  });
+
   // テスト用データ作成エンドポイント（開発環境でのみ使用）
   app.get("/api/test/create-test-booking", async (req, res) => {
     try {
