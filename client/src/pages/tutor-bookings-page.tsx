@@ -81,17 +81,17 @@ export default function TutorBookingsPage() {
       locale: ja,
     });
 
-    // レポート状態を確認（'completed'または'completed:'で始まる場合はレポート作成済み）
-    const hasReport =
-      booking.reportStatus === "completed" ||
-      (booking.reportStatus && booking.reportStatus.startsWith("completed:"));
+    // レポート情報を取得 - lessonReportsテーブルを参照
+    const report = getReportForBooking(booking.id);
+    // レポート作成状況のチェック - lesson_reportsテーブルから確認
+    const hasReport = !!report;
 
     return (
       <div
         className={`p-4 border rounded-lg ${isPast ? "bg-muted/50" : ""} hover:bg-gray-50 cursor-pointer`}
         onClick={async () => {
-          // レポート作成済みかどうかチェック
-          if (hasReport && booking.reportContent) {
+          // レポート作成済みか確認
+          if (hasReport) {
             console.log(
               "レポート作成済みの予約がクリックされました - 詳細取得してからレポート表示",
             );
@@ -230,23 +230,77 @@ export default function TutorBookingsPage() {
                   booking,
                 );
 
-                // レポート編集用のデータを設定
-                setReportEditBooking({
-                  ...booking,
-                  id: booking.id,
-                  userId: booking.userId,
-                  tutorId: booking.tutorId,
-                  studentId: booking.studentId,
-                  tutorShiftId: booking.tutorShiftId || 0,
-                  date: booking.date,
-                  timeSlot: booking.timeSlot,
-                  subject: booking.subject || "",
-                  status: booking.status || null,
-                  createdAt: booking.createdAt,
-                  reportStatus: booking.reportStatus || null,
-                  reportContent: booking.reportContent || "",
-                  studentName: getStudentName(booking.studentId),
-                });
+                // まず予約情報の詳細を取得
+                fetch(`/api/bookings/${booking.id}`)
+                  .then(response => {
+                    if (response.ok) return response.json();
+                    throw new Error('予約詳細の取得に失敗しました');
+                  })
+                  .then(bookingDetails => {
+                    console.log("レポート編集用の予約詳細を取得しました", bookingDetails);
+                    
+                    // 次にlessonReportsテーブルからレポート情報を取得
+                    return fetch(`/api/lesson-reports/booking/${booking.id}`)
+                      .then(response => {
+                        // 404の場合はnullを返す（レポートが存在しない）
+                        if (response.status === 404) return { bookingDetails, lessonReport: null };
+                        if (response.ok) return response.json().then(lessonReport => ({ bookingDetails, lessonReport }));
+                        throw new Error('レポート情報の取得に失敗しました');
+                      });
+                  })
+                  .then(({ bookingDetails, lessonReport }) => {
+                    console.log("レポート情報:", lessonReport);
+                    
+                    // レポート編集用のデータを設定
+                    const enhancedBooking = {
+                      ...booking,
+                      id: booking.id,
+                      userId: booking.userId,
+                      tutorId: booking.tutorId,
+                      studentId: booking.studentId,
+                      tutorShiftId: booking.tutorShiftId || 0,
+                      date: booking.date,
+                      timeSlot: booking.timeSlot,
+                      subject: booking.subject || "",
+                      status: booking.status || null,
+                      createdAt: booking.createdAt,
+                      reportStatus: booking.reportStatus || null,
+                      reportContent: booking.reportContent || "",
+                      studentName: getStudentName(booking.studentId),
+                      // 新たにlessonReportデータを追加
+                      lessonReport: lessonReport
+                    };
+                    
+                    setReportEditBooking(enhancedBooking);
+                    
+                    // 編集モーダルを表示
+                    setTimeout(() => {
+                      setShowReportEditModal(true);
+                    }, 50);
+                  })
+                  .catch(error => {
+                    console.error("レポート編集データの取得エラー:", error);
+                    // エラー時は基本情報だけで編集モーダルを表示
+                    const basicBooking = {
+                      ...booking,
+                      id: booking.id,
+                      userId: booking.userId,
+                      tutorId: booking.tutorId,
+                      studentId: booking.studentId,
+                      tutorShiftId: booking.tutorShiftId || 0,
+                      date: booking.date,
+                      timeSlot: booking.timeSlot,
+                      subject: booking.subject || "",
+                      status: booking.status || null,
+                      createdAt: booking.createdAt,
+                      reportStatus: booking.reportStatus || null,
+                      reportContent: booking.reportContent || "",
+                      studentName: getStudentName(booking.studentId)
+                    };
+                    
+                    setReportEditBooking(basicBooking);
+                    setShowReportEditModal(true);
+                  });
 
                 // 編集モーダルを表示
                 setTimeout(() => {
@@ -464,6 +518,29 @@ export default function TutorBookingsPage() {
     if (!student) return undefined;
     return `${student.lastName} ${student.firstName}`;
   };
+  
+  // レポート情報を取得
+  const { data: lessonReports = [] } = useQuery({
+    queryKey: ["/api/lesson-reports/tutor"],
+    queryFn: async () => {
+      try {
+        const response = await fetch("/api/lesson-reports/tutor");
+        if (!response.ok) {
+          throw new Error("Failed to fetch lesson reports");
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching lesson reports:", error);
+        return [];
+      }
+    },
+    enabled: !!tutorProfile,
+  });
+
+  // 予約IDからレポート情報を取得する関数
+  const getReportForBooking = (bookingId: number) => {
+    return lessonReports.find((report: any) => report.bookingId === bookingId);
+  };
 
   // 予約カードがクリックされたときの処理
   const handleBookingClick = async (booking: ExtendedBooking) => {
@@ -586,10 +663,10 @@ export default function TutorBookingsPage() {
 
     // 予約詳細情報の基本的な処理（共通）
 
-    // レポート作成済みかどうかチェック - selectedBookingが更新されたあとに実行
-    const isCompletedWithReport =
-      booking.reportStatus === "completed" ||
-      (booking.reportStatus && booking.reportStatus.startsWith("completed:"));
+    // レポート情報を取得 - lessonReportsテーブルを参照
+    const report = getReportForBooking(booking.id);
+    // レポート作成状況のチェック - lesson_reportsテーブルから確認
+    const isCompletedWithReport = !!report;
 
     // レポートが作成済み && 内容があれば直接レポート詳細モーダルを表示
     if (isCompletedWithReport && booking.reportContent) {
@@ -666,13 +743,12 @@ export default function TutorBookingsPage() {
               interactive={true} // インタラクティブにする
               onBookingClick={(booking) => {
                 console.log("カレンダーから予約がクリックされました:", booking);
-                // レポートが作成済みかどうかチェック
-                const hasReport =
-                  booking.reportStatus === "completed" ||
-                  (booking.reportStatus &&
-                    booking.reportStatus.startsWith("completed:"));
+                // レポート情報を取得 - lessonReportsテーブルを参照
+                const report = getReportForBooking(booking.id);
+                // レポート作成状況のチェック - lesson_reportsテーブルから確認
+                const hasReport = !!report;
 
-                if (hasReport && booking.reportContent) {
+                if (hasReport) {
                   console.log(
                     "レポート作成済みの予約 - 直接授業レポート表示モーダルを開きます",
                   );
