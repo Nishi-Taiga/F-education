@@ -1207,49 +1207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
 
   
-  // 講師の予約一覧取得
-  app.get("/api/tutor/bookings", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    const userId = req.user!.id;
-    
-    // ユーザーが講師かどうかチェック
-    if (req.user!.role !== "tutor") {
-      return res.status(403).json({ message: "Access denied. User is not a tutor" });
-    }
-    
-    try {
-      const tutor = await storage.getTutorByUserId(userId);
-      if (!tutor) {
-        return res.status(404).json({ message: "Tutor profile not found" });
-      }
-      
-      const bookings = await storage.getBookingsByTutorId(tutor.id);
-      
-      // 生徒名を付加した予約情報を作成
-      const bookingsWithStudentInfo = await Promise.all(
-        bookings.map(async (booking) => {
-          let studentName = undefined;
-          
-          if (booking.studentId) {
-            const student = await storage.getStudent(booking.studentId);
-            if (student) {
-              studentName = `${student.lastName} ${student.firstName}`;
-            }
-          }
-          
-          return {
-            ...booking,
-            studentName
-          };
-        })
-      );
-      
-      res.json(bookingsWithStudentInfo);
-    } catch (error) {
-      res.status(400).json({ message: "Failed to fetch tutor bookings", error });
-    }
-  });
+  // 講師の予約一覧取得 - 削除（/api/bookings?tutorId=Xに統合）
 
   // 生徒用アカウントの作成
   app.post("/api/students/:id/account", async (req, res) => {
