@@ -1736,8 +1736,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "この予約に対するレポートは既に存在します" });
       }
       
+      // 予約から日付と時間情報を追加
+      const reportDataWithDate = {
+        ...reportData,
+        date: booking.date,        // 予約から日付情報を取得
+        timeSlot: booking.timeSlot // 予約から時間情報を取得
+      };
+
       // レポートを作成
-      const report = await storage.createLessonReport(reportData);
+      const report = await storage.createLessonReport(reportDataWithDate);
       res.status(201).json(report);
     } catch (error) {
       console.error("レポート作成エラー:", error);
