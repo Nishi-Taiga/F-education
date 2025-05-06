@@ -203,6 +203,14 @@ export const lessonReportsRelations = relations(lessonReports, ({ one }) => ({
   }),
 }));
 
+// レッスンレポート挿入スキーマ
+export const insertLessonReportSchema = createInsertSchema(lessonReports)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true
+  });
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -297,15 +305,7 @@ export const insertPaymentTransactionSchema = createInsertSchema(paymentTransact
   metadata: true,
 });
 
-export const insertLessonReportSchema = createInsertSchema(lessonReports).pick({
-  bookingId: true,
-  tutorId: true,
-  studentId: true,
-  unitContent: true,
-  messageContent: true,
-  goalContent: true,
-  status: true,
-});
+
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
