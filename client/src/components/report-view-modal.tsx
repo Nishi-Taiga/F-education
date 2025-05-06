@@ -31,7 +31,6 @@ interface BookingForReport {
     unitContent: string;
     messageContent: string | null;
     goalContent: string | null;
-    status: string;
     createdAt: Date;
     updatedAt: Date;
     date?: string | null;
