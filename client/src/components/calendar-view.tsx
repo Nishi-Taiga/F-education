@@ -247,7 +247,6 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} 
                   ${isPast && !isCurrentDay ? 'opacity-60' : ''} 
-                  ${isCurrentDay ? 'bg-blue-50 border border-blue-200 shadow-sm' : ''} 
                   overflow-hidden flex flex-col`}
                 style={{ 
                   minHeight: hasThreeOrMoreBookings ? (window.innerWidth < 640 ? '95px' : '170px') : (window.innerWidth < 640 ? '60px' : '80px'), 
