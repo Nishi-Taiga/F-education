@@ -799,7 +799,7 @@ export default function HomePage() {
         
         <div className="md:flex md:items-start md:justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
               {user?.role === 'tutor' ? 'ダッシュボード' : '予約システム'}
             </h2>
           </div>
@@ -1032,7 +1032,7 @@ export default function HomePage() {
             {user?.role === 'tutor' ? (
               // 講師用メニュー
               <div>
-                <h3 className="text-lg font-semibold mb-3 text-center md:text-left">講師メニュー</h3>
+                <h3 className="text-base md:text-lg font-semibold mb-3 text-left">講師メニュー</h3>
                 <div className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-3">
                   <Button
                     variant="outline"
@@ -1043,7 +1043,7 @@ export default function HomePage() {
                       <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
                         <UserCog className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
                       </div>
-                      <span className="text-xs md:text-sm font-medium text-gray-900">プロフィール設定</span>
+                      <span className="text-xs md:text-sm font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] md:max-w-none">プロフィール</span>
                     </div>
                   </Button>
                   
@@ -1056,7 +1056,7 @@ export default function HomePage() {
                       <div className="w-8 h-8 md:w-10 md:h-10 bg-amber-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
                         <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
                       </div>
-                      <span className="text-xs md:text-sm font-medium text-gray-900">シフト管理</span>
+                      <span className="text-xs md:text-sm font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] md:max-w-none">シフト管理</span>
                     </div>
                   </Button>
                   
@@ -1078,7 +1078,7 @@ export default function HomePage() {
                       <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
                         <FileText className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
                       </div>
-                      <span className="text-xs md:text-sm font-medium text-gray-900">レポート作成</span>
+                      <span className="text-xs md:text-sm font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] md:max-w-none">レポート作成</span>
                     </div>
                   </Button>
                 </div>
@@ -1097,7 +1097,7 @@ export default function HomePage() {
                       <div className="w-8 h-8 md:w-10 md:h-10 bg-green-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
                         <Ticket className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
                       </div>
-                      <span className="text-xs md:text-sm font-medium text-gray-900">チケット購入</span>
+                      <span className="text-xs md:text-sm font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] md:max-w-none">チケット購入</span>
                     </div>
                   </Button>
                 )}
@@ -1112,7 +1112,7 @@ export default function HomePage() {
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-50 rounded-full flex items-center justify-center mb-1 md:mb-2">
                       <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
                     </div>
-                    <span className="text-xs md:text-sm font-medium text-gray-900">授業予約</span>
+                    <span className="text-xs md:text-sm font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] md:max-w-none">授業予約</span>
                   </div>
                 </Button>
                 
