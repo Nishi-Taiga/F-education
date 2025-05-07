@@ -904,6 +904,18 @@ export default function HomePage() {
               ) : bookings && bookings.length > 0 ? (
                 <div className="space-y-2">
                   {bookings
+                    .filter(booking => {
+                      // 現在の日付（日本時間）を取得
+                      const todayInJapan = new Date(getJapanDate());
+                      todayInJapan.setHours(0, 0, 0, 0); // その日の00:00:00に設定
+                      
+                      // 予約の日付
+                      const bookingDate = new Date(booking.date);
+                      bookingDate.setHours(0, 0, 0, 0); // 予約日の00:00:00に設定
+                      
+                      // 今日または今日以降の予約のみ表示
+                      return bookingDate.getTime() >= todayInJapan.getTime();
+                    })
                     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                     .map(booking => ({
                       ...booking,
