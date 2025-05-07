@@ -63,13 +63,54 @@ export function ReportEditModal({
   const { toast } = useToast();
   const [, setLocation] = useLocation(); // wouter hook
   
+  // 初期レポート内容を取得する関数（複数ソースから最適な値を取得）
+  const getInitialReportData = () => {
+    // 1. まずbooking.lessonReportから取得を試みる
+    if (booking.lessonReport) {
+      return {
+        unitContent: booking.lessonReport.unitContent || "",
+        messageContent: booking.lessonReport.messageContent || "",
+        goalContent: booking.lessonReport.goalContent || ""
+      };
+    }
+    
+    // 2. レポートコンテンツから解析を試みる
+    if (booking.reportContent) {
+      if (booking.reportContent.includes('【単元】')) {
+        try {
+          const unitMatch = booking.reportContent.match(/【単元】([\s\S]*?)(?=【伝言事項】)/);
+          const messageMatch = booking.reportContent.match(/【伝言事項】([\s\S]*?)(?=【来週までの目標\(課題\)】)/);
+          const goalMatch = booking.reportContent.match(/【来週までの目標\(課題\)】([\s\S]*)/);
+          
+          return {
+            unitContent: unitMatch ? unitMatch[1].trim() : "",
+            messageContent: messageMatch ? messageMatch[1].trim() : "",
+            goalContent: goalMatch ? goalMatch[1].trim() : ""
+          };
+        } catch (e) {
+          // 解析エラー - 空の値を返す
+        }
+      } else {
+        const parts = booking.reportContent.split("\n");
+        return {
+          unitContent: parts[0] || "",
+          messageContent: parts[1] || "",
+          goalContent: parts[2] || ""
+        };
+      }
+    }
+    
+    // 3. 何も見つからない場合は空の値を返す
+    return {
+      unitContent: "",
+      messageContent: "",
+      goalContent: ""
+    };
+  };
+  
   // メモリ使用量最適化: レポート内容を一つのオブジェクトにまとめる 
   // 既存レポートデータがある場合は初期値として設定
-  const [reportContent, setReportContent] = useState({
-    unitContent: booking.lessonReport?.unitContent || "",
-    messageContent: booking.lessonReport?.messageContent || "",
-    goalContent: booking.lessonReport?.goalContent || ""
-  });
+  const [reportContent, setReportContent] = useState(getInitialReportData());
   // 個別の setters - 内部的には一つの状態更新を使用
   const setUnitContent = (value: string) => setReportContent(prev => ({ ...prev, unitContent: value }));
   const setMessageContent = (value: string) => setReportContent(prev => ({ ...prev, messageContent: value }));
@@ -99,6 +140,15 @@ export function ReportEditModal({
   const { data: lessonReport, isLoading: isLoadingReport } = useLessonReportByBookingId(
     isOpen && booking && booking.id ? booking.id : null
   );
+  
+  // APIから取得したレポートをbookingに直接設定
+  useEffect(() => {
+    // APIでレポートデータが取得できたら、それをbookingオブジェクトに設定
+    if (lessonReport && !booking.lessonReport) {
+      booking.lessonReport = lessonReport;
+      console.log("APIからのレスポンスをbookingに設定しました:", lessonReport);
+    }
+  }, [lessonReport, booking]);
   
   // レッスンレポートの型安全なアクセス用のヘルパー関数（エラー耐性向上）
   const getReportField = (report: any, field: string, defaultValue: string = ""): string => {
@@ -192,7 +242,7 @@ export function ReportEditModal({
     
     // 初期値設定完了をログに出力
     console.log("レポート編集フォームの初期値を設定しました:", { unitContent, messageContent, goalContent });
-  }, [isOpen, booking?.id]);
+  }, [isOpen, booking?.id, lessonReport]);
 
   // 新しいレッスンレポートAPI用のミューテーション
   const createReportMutation = useCreateLessonReport();

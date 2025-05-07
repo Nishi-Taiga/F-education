@@ -264,9 +264,33 @@ export function ReportViewModal({
                         goalContent: goal
                       };
                       try {
+                        // レポート内容を保存
                         sessionStorage.setItem('INITIAL_REPORT_DATA', JSON.stringify(initialData));
+                        console.log("セッションストレージにレポートデータを保存:", initialData);
+                        
+                        // 追加: 予約データを完全なレポート情報と一緒に保存
+                        const fullBookingData = {
+                          ...booking,
+                          lessonReport: {
+                            id: booking.lessonReport?.id,
+                            bookingId: booking.id,
+                            tutorId: booking.tutorId,
+                            studentId: booking.studentId,
+                            date: booking.date,
+                            timeSlot: booking.timeSlot,
+                            unitContent: unit,
+                            messageContent: message,
+                            goalContent: goal,
+                            createdAt: booking.lessonReport?.createdAt || new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                          }
+                        };
+                        
+                        // 編集処理用の完全なデータを保存
+                        sessionStorage.setItem('EDIT_BOOKING_DATA', JSON.stringify(fullBookingData));
+                        console.log("セッションストレージに完全な予約データを保存:", fullBookingData);
                       } catch (err) {
-                        // エラーは静かに処理
+                        console.error("セッションストレージへの保存エラー:", err);
                       }
                     }
                   }
