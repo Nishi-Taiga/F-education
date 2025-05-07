@@ -100,81 +100,99 @@ export function ReportEditModal({
     isOpen && booking && booking.id ? booking.id : null
   );
   
-  // レッスンレポートの型安全なアクセス用のヘルパー関数
+  // レッスンレポートの型安全なアクセス用のヘルパー関数（エラー耐性向上）
   const getReportField = (report: any, field: string, defaultValue: string = ""): string => {
     if (!report) return defaultValue;
     return (report[field] as string) || defaultValue;
   };
   
+  // 初期値をログとして出力（デバッグ用）
+  console.log("レポート編集モーダル - 初期データ:", { 
+    bookingId: booking.id,
+    hasLessonReport: !!booking.lessonReport, 
+    lessonReportFields: booking.lessonReport,
+    apiReport: lessonReport,
+    currentState: reportContent
+  });
+  
   // パフォーマンス最適化: モーダルが開かれたときに既存のレポート内容を即時設定する
   useEffect(() => {
     if (!isOpen) return; // 閉じている場合は早期リターン
     
-    // 一度のstate更新で全フィールドを設定することでパフォーマンス向上
-    const setAllFields = (unit: string, message: string, goal: string) => {
-      // 即時に状態を更新
-      setReportContent({
-        unitContent: unit,
-        messageContent: message,
-        goalContent: goal
-      });
-    };
+    // デバッグ情報を出力
+    console.log("レポート編集フォーム初期化:", { 
+      hasBookingLessonReport: !!booking.lessonReport, 
+      hasAPILessonReport: !!lessonReport,
+      hasReportContent: !!booking.reportContent
+    });
     
-    // データソースの優先順位を設定:
+    let unitContent = "";
+    let messageContent = "";
+    let goalContent = "";
     
-    // 1. まずbooking.lessonReportを優先的に使用（最もレスポンスが早い）
+    // 優先順位1: まずbooking.lessonReportを確認（最も確実）
     if (booking.lessonReport) {
-      // 即時設定
-      setAllFields(
-        getReportField(booking.lessonReport, 'unitContent'),
-        getReportField(booking.lessonReport, 'messageContent'),
-        getReportField(booking.lessonReport, 'goalContent')
-      );
-    } 
-    // 2. その次にAPIレスポンスを使用（レスポンスが遅い場合がある）
+      unitContent = booking.lessonReport.unitContent || "";
+      messageContent = booking.lessonReport.messageContent || "";
+      goalContent = booking.lessonReport.goalContent || "";
+      
+      console.log("bookingから初期値を設定:", { unitContent, messageContent, goalContent });
+    }
+    // 優先順位2: APIレスポンスを確認
     else if (lessonReport) {
-      // 即時設定
-      setAllFields(
-        getReportField(lessonReport, 'unitContent'),
-        getReportField(lessonReport, 'messageContent'),
-        getReportField(lessonReport, 'goalContent')
-      );
+      if (typeof lessonReport === 'object') {
+        unitContent = getReportField(lessonReport, 'unitContent');
+        messageContent = getReportField(lessonReport, 'messageContent');
+        goalContent = getReportField(lessonReport, 'goalContent');
+        
+        console.log("APIレスポンスから初期値を設定:", { unitContent, messageContent, goalContent });
+      }
     }
     
-    // パターン3: 従来のreportContentを使用（後方互換性）
-    if (booking.reportContent) {
-      // 高速化: 新フォーマットの正規表現によるパース（一度に解析）
+    // 優先順位3: 従来のreportContentをチェック（フォールバック）
+    if ((!unitContent && !messageContent && !goalContent) && booking.reportContent) {
+      // 新フォーマットのレポートの場合
       if (booking.reportContent.includes('【単元】')) {
         try {
-          // 一度の正規表現実行で全要素を抽出（パフォーマンス向上）
           const unitMatch = booking.reportContent.match(/【単元】([\s\S]*?)(?=【伝言事項】)/);
           const messageMatch = booking.reportContent.match(/【伝言事項】([\s\S]*?)(?=【来週までの目標\(課題\)】)/);
           const goalMatch = booking.reportContent.match(/【来週までの目標\(課題\)】([\s\S]*)/);
           
-          setAllFields(
-            unitMatch ? unitMatch[1].trim() : "",
-            messageMatch ? messageMatch[1].trim() : "",
-            goalMatch ? goalMatch[1].trim() : ""
-          );
+          unitContent = unitMatch ? unitMatch[1].trim() : "";
+          messageContent = messageMatch ? messageMatch[1].trim() : "";
+          goalContent = goalMatch ? goalMatch[1].trim() : "";
+          
+          console.log("reportContentから初期値を設定 (新形式):", { unitContent, messageContent, goalContent });
         } catch (e) {
-          setAllFields(booking.reportContent, "", "");
+          unitContent = booking.reportContent;
+          console.log("reportContentのパースに失敗:", e);
         }
       } else {
-        // 古いフォーマット（分割処理の高速化）
+        // 古いフォーマットのレポートの場合
         const parts = booking.reportContent.split("\n");
-        setAllFields(
-          parts[0] || "",
-          parts[1] || "",
-          parts[2] || ""
-        );
+        unitContent = parts[0] || "";
+        messageContent = parts[1] || "";
+        goalContent = parts[2] || "";
+        
+        console.log("reportContentから初期値を設定 (旧形式):", { unitContent, messageContent, goalContent });
       }
-      return; // 早期リターンで後続処理をスキップ
     }
     
-    // パターン4: レポート内容なし - フィールドクリア
-    setAllFields("", "", "");
+    // すべてのソースから有効な値が取得できなかった場合の最終フォールバック
+    if (!unitContent && !messageContent && !goalContent) {
+      console.log("初期値が取得できませんでした - 空の値を使用します");
+    }
     
-  }, [isOpen, booking, lessonReport, setReportContent]);
+    // フォームの状態更新（一度に全フィールドを更新）
+    setReportContent({
+      unitContent,
+      messageContent,
+      goalContent
+    });
+    
+    // 初期値設定完了をログに出力
+    console.log("レポート編集フォームの初期値を設定しました:", { unitContent, messageContent, goalContent });
+  }, [isOpen, booking?.id]);
 
   // 新しいレッスンレポートAPI用のミューテーション
   const createReportMutation = useCreateLessonReport();
