@@ -231,10 +231,13 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
             textColorClass = "text-blue-600";
           }
           
+          // 予約の数に応じてセルの高さを動的に計算
+          const hasThreeOrMoreBookings = dayBookings.length >= 3;
+          
           return (
-            <div key={day.toString()} className={`p-0.5 min-w-0 ${dayBookings.length >= 3 ? 'aspect-auto' : 'aspect-square'}`} 
+            <div key={day.toString()} className={`p-0.5 min-w-0 ${hasThreeOrMoreBookings ? 'aspect-auto' : 'aspect-square'}`} 
                  style={{
-                   height: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '90px' : '140px') : 'auto'
+                   height: hasThreeOrMoreBookings ? (window.innerWidth < 640 ? '105px' : '160px') : 'auto'
                  }}>
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} 
@@ -242,7 +245,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   ${isCurrentDay ? 'bg-blue-50 border border-blue-200 shadow-sm' : ''} 
                   overflow-hidden flex flex-col`}
                 style={{ 
-                  minHeight: window.innerWidth < 640 ? '60px' : '120px', 
+                  minHeight: hasThreeOrMoreBookings ? (window.innerWidth < 640 ? '100px' : '150px') : (window.innerWidth < 640 ? '60px' : '80px'), 
                   height: '100%'
                 }}
                 onClick={() => isSelectable && handleDayClick(day)}
@@ -268,9 +271,9 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   }
                   
                   return (
-                    <div key={index} className="mt-0.5 min-w-0 w-full">
+                    <div key={index} className={`${index > 0 ? 'mt-1 md:mt-1.5' : 'mt-0.5'} min-w-0 w-full`}>
                       <div 
-                        className={`px-1 py-0.5 rounded ${bgColorClass} text-white relative cursor-pointer flex flex-col`}
+                        className={`${window.innerWidth < 640 ? 'px-1 py-0.5' : 'px-1 py-1'} rounded ${bgColorClass} text-white relative cursor-pointer flex flex-col`}
                         title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
                         onClick={(e) => {
                           e.stopPropagation(); // 日付クリックイベントが発火するのを防ぐ
@@ -278,7 +281,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                         }}
                       >
                         {/* 時間のみの表示（スペース効率化） */}
-                        <div className="text-center text-[9px] md:text-[10px] font-medium whitespace-nowrap">
+                        <div className="text-center text-[9px] md:text-[11px] font-medium whitespace-nowrap">
                           {booking.timeSlot.split('-')[0]}
                         </div>
                         
