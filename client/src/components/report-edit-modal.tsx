@@ -113,7 +113,7 @@ export function ReportEditModal({
     return (report[field] as string) || defaultValue;
   };
   
-  // パフォーマンス最適化: モーダルが開かれたときに既存のレポート内容を高速設定する
+  // パフォーマンス最適化: モーダルが開かれたときに既存のレポート内容を即時設定する
   useEffect(() => {
     if (!isOpen) return; // 閉じている場合は早期リターン
     
@@ -124,6 +124,7 @@ export function ReportEditModal({
     
     // 一度のstate更新で全フィールドを設定することでパフォーマンス向上
     const setAllFields = (unit: string, message: string, goal: string) => {
+      // 即時に状態を更新
       setReportContent({
         unitContent: unit,
         messageContent: message,
@@ -131,30 +132,31 @@ export function ReportEditModal({
       });
     };
     
-    // パターン1: 直接渡されたbooking.lessonReportを優先（既にロードされているデータ）
+    // データソースの優先順位を設定:
+    
+    // 1. まずbooking.lessonReportを優先的に使用（最もレスポンスが早い）
     if (booking.lessonReport) {
       if (process.env.NODE_ENV === 'development') {
-        console.log("予約オブジェクト内のlessonReportデータを使用します");
+        console.log("予約オブジェクト内のlessonReportデータを即時使用します");
       }
+      // 即時設定
       setAllFields(
         getReportField(booking.lessonReport, 'unitContent'),
         getReportField(booking.lessonReport, 'messageContent'),
         getReportField(booking.lessonReport, 'goalContent')
       );
-      return; // 早期リターンで後続処理をスキップ
-    }
-    
-    // パターン2: APIで取得したlessonReportを使用（最新データ）
-    if (lessonReport) {
+    } 
+    // 2. その次にAPIレスポンスを使用（レスポンスが遅い場合がある）
+    else if (lessonReport) {
       if (process.env.NODE_ENV === 'development') {
-        console.log("APIから取得したレッスンレポートデータを使用します");
+        console.log("APIから取得したレッスンレポートデータを即時使用します");
       }
+      // 即時設定
       setAllFields(
         getReportField(lessonReport, 'unitContent'),
         getReportField(lessonReport, 'messageContent'),
         getReportField(lessonReport, 'goalContent')
       );
-      return; // 早期リターンで後続処理をスキップ
     }
     
     // パターン3: 従来のreportContentを使用（後方互換性）

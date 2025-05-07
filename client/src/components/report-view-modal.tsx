@@ -298,18 +298,16 @@ export function ReportViewModal({
                     // エラーは静かに処理
                   }
                   
-                  // 少し遅延してから画面遷移することで、ローディング表示を確実に見せる
-                  setTimeout(() => {
-                    // モーダルを閉じて、編集コールバックを実行
-                    onClose();
-                    if (typeof onEdit === 'function') {
-                      onEdit();
-                    }
-                    
-                    // 編集ページへの遷移
-                    const reportEditUrl = `/report-edit?${params.toString()}`;
-                    window.location.assign(reportEditUrl);
-                  }, 100); // わずかな遅延を追加
+                  // 即時に画面遷移する
+                  // まずモーダルを閉じて編集コールバックを実行
+                  onClose();
+                  if (typeof onEdit === 'function') {
+                    onEdit();
+                  }
+                  
+                  // 編集ページへ即時遷移
+                  const reportEditUrl = `/report-edit?${params.toString()}`;
+                  window.location.assign(reportEditUrl);
                 }}
                 disabled={isNavigatingToEdit}
               >
