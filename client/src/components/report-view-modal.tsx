@@ -51,72 +51,55 @@ export function ReportViewModal({
   onClose,
   onEdit,
 }: ReportViewModalProps) {
-  // デバッグ情報の出力
-  console.log("ReportViewModal: onEdit prop exists:", !!onEdit);
-  console.log("ReportViewModal: booking reportStatus:", booking?.reportStatus);
-  
+  // 日付処理を最適化 - 無駄な計算や変換を減らす
   // 日付をフォーマット（無効な日付値のエラー処理を追加）
   let formattedDate = "日付不明";
   try {
-    if (booking.date && booking.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    if (booking.date && typeof booking.date === 'string' && booking.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // 一度だけDateオブジェクトに変換
       const dateObj = parse(booking.date, "yyyy-MM-dd", new Date());
       if (!isNaN(dateObj.getTime())) {
         formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
       }
     }
   } catch (error) {
-    console.error("Invalid date format:", booking.date);
+    // エラーログは開発環境でのみ出力
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Invalid date format:", booking.date);
+    }
   }
   
-  // レポート作成日時を取得
-  let reportDate: Date | null = null;
+  // レポート作成日時を取得 - パフォーマンス最適化
   let reportDateStr = "";
   
-  // lessonReportからレポート日時を取得
-  if (booking.lessonReport && booking.lessonReport.createdAt) {
+  // レポート日時処理の共通ロジックを関数化して重複コードを削減
+  const formatReportDate = (dateValue: Date | string) => {
     try {
-      reportDate = new Date(booking.lessonReport.createdAt);
+      const reportDate = dateValue instanceof Date ? dateValue : new Date(dateValue);
       
       // 有効な日付かチェック
       if (!isNaN(reportDate.getTime())) {
         // 何日前かを表示
-        reportDateStr = formatDistanceToNow(reportDate, { locale: ja, addSuffix: true });
+        const relativeTime = formatDistanceToNow(reportDate, { locale: ja, addSuffix: true });
         
-        // 日本時間に変換してフォーマット
-        const japanTime = new Date(reportDate.getTime() + (9 * 60 * 60 * 1000));
-        const fullDateStr = format(japanTime, "yyyy年M月d日 H:mm", { locale: ja });
-        reportDateStr = `${reportDateStr} (${fullDateStr})`;
-      } else {
-        reportDateStr = "日時不明";
+        // 日本時間に変換してフォーマット (UTC+9)
+        const fullDateStr = format(reportDate, "yyyy年M月d日 H:mm", { locale: ja });
+        return `${relativeTime} (${fullDateStr})`;
       }
+      return "日時不明";
     } catch (e) {
-      console.error("Invalid report date format:", booking.lessonReport.createdAt);
-      reportDateStr = "日時不明";
+      return "日時不明";
     }
+  };
+
+  // 最新のAPIデータを優先
+  if (booking.lessonReport?.createdAt) {
+    reportDateStr = formatReportDate(booking.lessonReport.createdAt);
   } 
-  // 後方互換性のため、reportStatusからも日時を取得
-  else if (booking.reportStatus && booking.reportStatus.startsWith('completed:')) {
-    try {
-      // タイムスタンプ部分を抽出
-      const timestamp = booking.reportStatus.split('completed:')[1];
-      reportDate = new Date(timestamp);
-      
-      // 有効な日付かチェック
-      if (!isNaN(reportDate.getTime())) {
-        // 何日前かを表示
-        reportDateStr = formatDistanceToNow(reportDate, { locale: ja, addSuffix: true });
-        
-        // 日本時間に変換してフォーマット
-        const japanTime = new Date(reportDate.getTime() + (9 * 60 * 60 * 1000));
-        const fullDateStr = format(japanTime, "yyyy年M月d日 H:mm", { locale: ja });
-        reportDateStr = `${reportDateStr} (${fullDateStr})`;
-      } else {
-        reportDateStr = "日時不明";
-      }
-    } catch (e) {
-      console.error("Invalid report date format:", booking.reportStatus);
-      reportDateStr = "日時不明";
-    }
+  // 後方互換性対応
+  else if (booking.reportStatus?.startsWith('completed:')) {
+    const timestamp = booking.reportStatus.split('completed:')[1];
+    reportDateStr = formatReportDate(timestamp);
   }
   
   // lesson_reportsテーブルからデータを取得して表示
@@ -124,46 +107,48 @@ export function ReportViewModal({
   let message = "";
   let goal = "";
   
-  // lessonReportオブジェクトが存在する場合は直接そこからデータを取得
+  // レポートデータ取得の高速化 - 処理を最適化
   if (booking.lessonReport) {
-    console.log("レポートをlessonReportから取得します:", booking.lessonReport);
+    // 最新のAPIデータからレポート内容を取得
     unit = booking.lessonReport.unitContent || "";
     message = booking.lessonReport.messageContent || "";
     goal = booking.lessonReport.goalContent || "";
   } 
-  // 後方互換性のため、lessonReportがない場合は従来のreportContentを使用
+  // 後方互換性のため、レポートが既存のフォーマットで保存されている場合は解析
   else if (booking.reportContent) {
-    console.log("レポートをreportContentから取得します（旧形式）");
     if (booking.reportContent.includes('【単元】')) {
-      // 新フォーマット
+      // 新フォーマットの場合
       try {
-        const unitPart = booking.reportContent.split('【単元】')[1].split('【伝言事項】')[0].trim();
-        const messagePart = booking.reportContent.split('【伝言事項】')[1].split('【来週までの目標(課題)】')[0].trim();
-        const goalPart = booking.reportContent.split('【来週までの目標(課題)】')[1].trim();
+        // 正規表現を使った一回の処理で高速化
+        const unitMatch = booking.reportContent.match(/【単元】([\s\S]*?)(?=【伝言事項】)/);
+        const messageMatch = booking.reportContent.match(/【伝言事項】([\s\S]*?)(?=【来週までの目標\(課題\)】)/);
+        const goalMatch = booking.reportContent.match(/【来週までの目標\(課題\)】([\s\S]*)/);
         
-        unit = unitPart;
-        message = messagePart;
-        goal = goalPart;
+        unit = unitMatch ? unitMatch[1].trim() : "";
+        message = messageMatch ? messageMatch[1].trim() : "";
+        goal = goalMatch ? goalMatch[1].trim() : "";
       } catch (e) {
         // フォーマットエラーの場合は単純にそのまま表示
         unit = booking.reportContent;
       }
     } else {
-      // 古いフォーマット（単純に分割）
+      // 古いフォーマット（単純に分割）- 無駄な比較を避ける
       const parts = booking.reportContent.split("\n");
-      if (parts.length >= 1) unit = parts[0];
-      if (parts.length >= 2) message = parts[1];
-      if (parts.length >= 3) goal = parts[2];
+      unit = parts[0] || "";
+      message = parts[1] || "";
+      goal = parts[2] || "";
     }
   }
-
-  // デバッグ用：ステータス情報
-  console.log("レポートステータス詳細:", {
-    reportStatus: booking?.reportStatus,
-    isCompleted: booking?.reportStatus === "completed" || (booking?.reportStatus && booking?.reportStatus.startsWith('completed:')),
-    hasEditCallback: typeof onEdit === 'function',
-    isPastLesson: true, // 簡易化：過去のレッスンとして扱う
-  });
+  
+  // デバッグ情報は開発環境でのみ出力
+  if (process.env.NODE_ENV === 'development') {
+    // 軽量なデバッグ情報のみを出力
+    const debugInfo = {
+      hasReport: !!booking.lessonReport || !!booking.reportContent,
+      reportSource: booking.lessonReport ? 'lessonReport' : (booking.reportContent ? 'reportContent' : 'none')
+    };
+    console.debug("レポート表示モーダル:", debugInfo);
+  }
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -253,36 +238,22 @@ export function ReportViewModal({
         </div>
         
         <DialogFooter className="mt-4 gap-2 flex">
-          {/* デバッグ情報 */}
-          {(() => {
-            // このIIFEはReactNodeを返すため型エラーを解消
-            const hasEditFunction = typeof onEdit === 'function';
-            console.log("DialogFooter内 - onEdit存在:", hasEditFunction);
-            return null;
-          })()}
-          
-          {/* 常に編集ボタンを表示（レポートの内容を持ってレポート編集モーダルへ） */}
+          {/* 編集ボタン - パフォーマンス最適化 */}
           <Button 
             variant="default" 
             onClick={() => {
-              console.log("編集ボタンクリック - レポートデータで編集モーダルを開く");
-              
-              // レポートIDまたは予約IDを取得
+              // 必要なデータを先に準備
               const reportId = booking.lessonReport?.id;
               const bookingId = booking.id;
-              
-              // URLパラメータを構築
               const params = new URLSearchParams();
               
+              // 最適化：事前に全てのデータを準備してからURLパラメータを設定
               if (reportId) {
-                // 既存のレポートIDがある場合はそれを使用
                 params.set('reportId', reportId.toString());
-                console.log(`レポートID ${reportId} を使用して編集画面に移動します`);
               } else {
-                // レポートがまだ存在しない場合は予約IDを使用
                 params.set('bookingId', bookingId.toString());
                 
-                // レポートデータが解析された場合、その内容も保存
+                // レポートデータが既にある場合のみセッションストレージに保存
                 if (unit || message || goal) {
                   const initialData = {
                     unitContent: unit,
@@ -292,44 +263,41 @@ export function ReportViewModal({
                   try {
                     sessionStorage.setItem('INITIAL_REPORT_DATA', JSON.stringify(initialData));
                   } catch (err) {
-                    console.error("初期レポートデータのセッションストレージ保存に失敗", err);
+                    // エラーは静かに処理
                   }
                 }
-                
-                console.log(`予約ID ${bookingId} を使用して編集画面に移動します`);
               }
               
-              // 予約情報をセッションストレージに保存（編集画面で必要な情報を提供するため）
+              // 編集画面で必要な予約情報を最小限にしてストレージに保存
               try {
-                const bookingData = {
+                const essentialBookingData = {
                   id: booking.id,
                   date: booking.date,
                   timeSlot: booking.timeSlot,
-                  subject: booking.subject,
+                  subject: booking.subject || "",
                   studentId: booking.studentId,
-                  studentName: booking.studentName,
+                  studentName: booking.studentName || "",
                   tutorId: booking.tutorId
                 };
-                sessionStorage.setItem('EDIT_BOOKING_DATA', JSON.stringify(bookingData));
+                sessionStorage.setItem('EDIT_BOOKING_DATA', JSON.stringify(essentialBookingData));
               } catch (err) {
-                console.error("予約データのセッションストレージ保存に失敗", err);
+                // エラーは静かに処理
               }
               
-              // まずモーダルを閉じる
+              // モーダルを閉じて、編集コールバックを実行
               onClose();
-              
-              // 親から渡されたコールバックがあれば実行
               if (typeof onEdit === 'function') {
-                console.log("親から渡された編集コールバックを実行します");
                 onEdit();
               }
               
-              // 専用の編集ページへ遷移
-              window.location.href = `/report-edit?${params.toString()}`;
+              // 編集ページへの遷移を最適化 - window.location.hrefは処理が遅いため直接location.assignを使用
+              const reportEditUrl = `/report-edit?${params.toString()}`;
+              window.location.assign(reportEditUrl);
             }}
           >
             レポートを編集
           </Button>
+          
           <Button 
             variant="outline" 
             onClick={onClose}

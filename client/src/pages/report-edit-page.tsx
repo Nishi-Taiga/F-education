@@ -31,42 +31,42 @@ export default function ReportEditPage() {
   );
   
   useEffect(() => {
-    // 初期データ取得を試みる
+    // 最適化された初期データ取得処理
     const tryLoadInitialData = async () => {
-      console.log("レポート編集ページが初期化されました");
-      
       try {
-        // セッションストレージから予約データを取得
+        // 1. セッションストレージから予約データを最初に確認（最も高速）
         const storedBookingData = sessionStorage.getItem('EDIT_BOOKING_DATA');
         if (storedBookingData) {
-          console.log("セッションストレージから予約データを読み込みました");
+          // セッションストレージからデータを読み込む（最速）
           setBookingData(JSON.parse(storedBookingData));
+          setLoading(false);
+          setModalOpen(true);
+          return; // 早期リターンで後続の処理をスキップ
         }
         
-        // 初期レポートデータがあれば取得 (新規作成時のみ)
+        // 2. 初期レポートデータ取得（新規作成時のみ必要）
         const initialReportData = sessionStorage.getItem('INITIAL_REPORT_DATA');
         
-        // 必要な情報がセッションストレージにない場合
-        if (!storedBookingData && (!reportId || !reportData) && !bookingId) {
+        // 3. APIパラメータ（reportIdかbookingId）がない場合は処理中断
+        if ((!reportId || !reportData) && !bookingId) {
           toast({
             title: "エラー",
-            description: "編集するレポートデータが見つかりません。レポート一覧に戻ります。",
+            description: "編集するレポートデータが見つかりません。マイページに戻ります。",
             variant: "destructive",
           });
-          setTimeout(() => setLocation('/'), 1500);
+          // すぐにリダイレクト
+          setLocation('/');
           return;
         }
         
-        // 予約データがない場合はAPIから取得（reportIdまたはbookingIdがある場合）
-        if (!storedBookingData && (reportId || bookingId)) {
-          console.log("APIから予約データを取得します");
-          
-          if (reportId && reportData && typeof reportData === 'object' && 'bookingId' in reportData && reportData.bookingId) {
-            // レポートIDからAPIで予約データを取得
+        // 4. レポートIDから予約データを取得
+        if (reportId && reportData && typeof reportData === 'object' && 'bookingId' in reportData && reportData.bookingId) {
+          try {
+            // APIリクエストを開始
             const response = await fetch(`/api/bookings/${reportData.bookingId}`);
             if (response.ok) {
               const booking = await response.json();
-              console.log("レポートIDから予約データを取得しました", booking);
+              // レポートデータを結合
               setBookingData({
                 ...booking,
                 lessonReport: reportData
@@ -74,90 +74,96 @@ export default function ReportEditPage() {
             } else {
               throw new Error("予約データの取得に失敗しました");
             }
-          } 
-          else if (bookingId) {
-            // 予約IDからAPIで予約データを取得
+          } catch (error) {
+            throw new Error("レポートからの予約データ取得に失敗しました");
+          }
+        } 
+        // 5. または予約IDから取得
+        else if (bookingId) {
+          try {
             const response = await fetch(`/api/bookings/${bookingId}`);
             if (response.ok) {
               const booking = await response.json();
-              console.log("予約IDから予約データを取得しました", booking);
               
               // 初期レポートデータがあれば追加
               if (initialReportData) {
-                const initialData = JSON.parse(initialReportData);
-                booking.lessonReport = {
-                  id: 0,
-                  bookingId: booking.id,
-                  tutorId: booking.tutorId,
-                  studentId: booking.studentId,
-                  ...initialData,
-                  createdAt: new Date(),
-                  updatedAt: new Date()
-                };
+                try {
+                  const initialData = JSON.parse(initialReportData);
+                  booking.lessonReport = {
+                    id: 0, // 新規レポート
+                    bookingId: booking.id,
+                    tutorId: booking.tutorId,
+                    studentId: booking.studentId,
+                    ...initialData,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                  };
+                } catch (parseError) {
+                  // 初期データのパースエラーは無視して続行
+                }
               }
               
               setBookingData(booking);
             } else {
               throw new Error("予約データの取得に失敗しました");
             }
+          } catch (error) {
+            throw new Error("予約IDからの予約データ取得に失敗しました");
           }
         }
         
-        // データ取得完了、モーダルを表示
+        // 6. データ取得完了、モーダルを表示
         setLoading(false);
         setModalOpen(true);
       } catch (error) {
-        console.error("データ取得エラー:", error);
+        // エラー処理の統一
         toast({
           title: "エラー",
-          description: "レポートデータの読み込みに失敗しました。",
+          description: error instanceof Error ? error.message : "レポートデータの読み込みに失敗しました。",
           variant: "destructive",
         });
-        setTimeout(() => setLocation('/'), 1500);
+        // すぐにリダイレクト
+        setLocation('/');
       }
     };
     
     tryLoadInitialData();
   }, [reportId, bookingId, reportData, toast, setLocation]);
   
-  // モーダルを閉じたときの挙動
+  // モーダルを閉じたときの挙動 - パフォーマンス最適化
   const handleClose = () => {
-    console.log("レポート編集モーダルが閉じられました");
-    // マイページにリダイレクト
-    setLocation('/');
+    // セッションストレージのクリーンアップを非同期で実行
+    setTimeout(() => {
+      try {
+        sessionStorage.removeItem('EDIT_BOOKING_DATA');
+        sessionStorage.removeItem('INITIAL_REPORT_DATA');
+      } catch (e) {
+        // エラーは無視
+      }
+    }, 0);
     
-    // セッションストレージのクリーンアップ
-    try {
-      sessionStorage.removeItem('EDIT_BOOKING_DATA');
-      sessionStorage.removeItem('INITIAL_REPORT_DATA');
-    } catch (e) {
-      console.error("セッションストレージのクリーンアップに失敗", e);
-    }
+    // 即時リダイレクト
+    setLocation('/');
   };
   
-  // モーダル保存成功時の挙動
+  // モーダル保存成功時の挙動 - 並列処理で高速化
   const handleSuccess = () => {
-    console.log("レポートが正常に保存されました");
-    
-    // 確実にマイページのデータが更新されるよう、全ての関連クエリを無効化
-    try {
-      // 全てのキャッシュを無効化
-      queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/lesson-reports"] });
+    // すべてのアクションを並列化
+    Promise.all([
+      // 1. メインデータのキャッシュ無効化
+      queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/lesson-reports"] }),
       
-      // 個別のレポートIDに対するキャッシュも無効化
-      if (reportId) {
-        queryClient.invalidateQueries({ queryKey: [`/api/lesson-reports/${reportId}`] });
-      }
+      // 2. 条件付きキャッシュ無効化を遅延なく並列実行
+      reportId ? queryClient.invalidateQueries({ queryKey: [`/api/lesson-reports/${reportId}`] }) : Promise.resolve(),
+      bookingId ? queryClient.invalidateQueries({ queryKey: [`/api/bookings/${bookingId}`] }) : Promise.resolve(),
       
-      // 個別の予約IDに対するキャッシュも無効化
-      if (bookingId) {
-        queryClient.invalidateQueries({ queryKey: [`/api/bookings/${bookingId}`] });
-      }
-    } catch (e) {
-      console.error("クエリキャッシュの更新エラー:", e);
-    }
+      // 3. データを先に取得しておく
+      queryClient.prefetchQuery({ queryKey: ["/api/tutor/bookings"] })
+    ]).catch(() => {
+      // エラーは無視 - ユーザー体験を優先
+    });
   };
 
   return (
