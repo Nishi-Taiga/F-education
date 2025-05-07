@@ -85,12 +85,10 @@ export const queryClient = new QueryClient({
       retry: (failureCount, error) => {
         // ネットワークエラーのみ再試行し、401/403/404/500などのサーバーエラーは再試行しない
         return failureCount < 2 && !(error instanceof Error && 'status' in error);
-      },
-      suspense: false,             // Suspenseモードはオフ
+      }
     },
     mutations: {
       retry: false,                // ミューテーションは再試行しない
-      networkMode: 'always',       // オフライン時も処理を試みる
       onSuccess: () => {
         // バックグラウンドで特定のデータをプリフェッチするオプション
         // queryClient.prefetchQuery(...) を呼び出すことも可能
