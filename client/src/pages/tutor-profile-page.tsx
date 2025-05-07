@@ -320,18 +320,28 @@ export default function TutorProfilePage() {
   return (
     <div className="container py-8">
       <Toaster />
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">講師プロフィール設定</h1>
-        <div className="flex gap-2">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+        <h1 className="text-xl md:text-2xl font-bold">講師プロフィール設定</h1>
+        <div className="flex flex-wrap gap-2">
           {!isEditing && (
-            <Button variant="outline" onClick={() => setIsEditing(true)} className="flex items-center gap-2">
-              <PencilIcon className="h-4 w-4" />
-              編集する
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditing(true)} 
+              className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
+            >
+              <PencilIcon className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden md:inline">編集する</span>
+              <span className="inline md:hidden">編集</span>
             </Button>
           )}
-          <Button variant="outline" onClick={() => setLocation("/")} className="flex items-center gap-2">
-            <Home className="h-4 w-4" />
-            ホームに戻る
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation("/")} 
+            className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
+          >
+            <Home className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden md:inline">ホームに戻る</span>
+            <span className="inline md:hidden">ホーム</span>
           </Button>
         </div>
       </div>
@@ -669,15 +679,15 @@ export default function TutorProfilePage() {
                         }
                       }}
                       disabled={isSaving || saveProfileMutation.isPending}
-                      className="flex items-center gap-2"
+                      className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3 w-3 md:h-4 md:w-4" />
                       キャンセル
                     </Button>
                     
                     <Button 
                       type="submit" 
-                      className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white flex items-center gap-2"
+                      className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
                       disabled={isSaving || saveProfileMutation.isPending}
                       onClick={() => {
                         // ボタンクリック時もフォームエラーをコンソールに表示（デバッグ用）
@@ -686,13 +696,15 @@ export default function TutorProfilePage() {
                     >
                       {isSaving || saveProfileMutation.isPending ? (
                         <span className="flex items-center gap-1">
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-opacity-50 border-t-white"></span>
-                          保存中...
+                          <span className="h-3 w-3 md:h-4 md:w-4 animate-spin rounded-full border-2 border-white border-opacity-50 border-t-white"></span>
+                          <span className="hidden md:inline">保存中...</span>
+                          <span className="inline md:hidden">保存中</span>
                         </span>
                       ) : (
                         <>
-                          <Save className="h-4 w-4" />
-                          プロフィールを保存
+                          <Save className="h-3 w-3 md:h-4 md:w-4" />
+                          <span className="hidden md:inline">プロフィールを保存</span>
+                          <span className="inline md:hidden">保存</span>
                         </>
                       )}
                     </Button>
