@@ -175,13 +175,13 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
 
       {/* Day labels */}
       <div className="grid grid-cols-7 gap-1 text-center font-medium mb-2">
-        <div className="text-red-600 text-base">日</div>
-        <div className="text-gray-700 text-base">月</div>
-        <div className="text-gray-700 text-base">火</div>
-        <div className="text-gray-700 text-base">水</div>
-        <div className="text-gray-700 text-base">木</div>
-        <div className="text-gray-700 text-base">金</div>
-        <div className="text-blue-600 text-base">土</div>
+        <div className="text-red-600 text-sm md:text-base">日</div>
+        <div className="text-gray-700 text-sm md:text-base">月</div>
+        <div className="text-gray-700 text-sm md:text-base">火</div>
+        <div className="text-gray-700 text-sm md:text-base">水</div>
+        <div className="text-gray-700 text-sm md:text-base">木</div>
+        <div className="text-gray-700 text-sm md:text-base">金</div>
+        <div className="text-blue-600 text-sm md:text-base">土</div>
       </div>
       
       {/* Calendar grid */}
@@ -216,12 +216,12 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   ${isPast && !isCurrentDay ? 'opacity-60' : ''} 
                   ${isCurrentDay ? 'bg-blue-50 border border-blue-200 shadow-sm' : ''} 
                   overflow-hidden`}
-                style={{ height: '90px', maxHeight: '90px' }}
+                style={{ height: 'auto', minHeight: '60px', maxHeight: '75px' }}
                 onClick={() => isSelectable && handleDayClick(day)}
               >
                 <div className="p-0.5 text-center">
                   <span className={`
-                    ${isCurrentDay ? 'bg-primary text-white rounded-full w-7 h-7 flex items-center justify-center mx-auto text-base font-bold' : 'text-base font-medium'}
+                    ${isCurrentDay ? 'bg-primary text-white rounded-full w-5 h-5 md:w-7 md:h-7 flex items-center justify-center mx-auto text-sm md:text-base font-bold' : 'text-sm md:text-base font-medium'}
                     ${!isCurrentMonth ? 'text-gray-400' : textColorClass}
                   `}>
                     {day.getDate()}
@@ -248,15 +248,15 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                           onBookingClick?.(booking);
                         }}
                       >
-                        {/* 時間 */}
-                        <div className="text-center text-[11px] font-medium">
+                        {/* 時間のみの表示（スペース効率化） */}
+                        <div className="text-center text-[10px] md:text-[11px] font-medium whitespace-nowrap">
                           {booking.timeSlot.split('-')[0]}
                         </div>
                         
-                        {/* 生徒名 */}
+                        {/* 生徒名 - PCのみ表示（モバイルでは非表示） */}
                         {booking.studentName && (
-                          <div className="bg-white bg-opacity-50 text-black rounded-sm text-center px-0.5 py-0.5 text-[10px] font-medium mt-0.5 overflow-hidden text-ellipsis">
-                            {booking.studentName.length > 8 ? `${booking.studentName.substring(0, 7)}…` : booking.studentName}
+                          <div className="hidden md:block bg-white bg-opacity-50 text-black rounded-sm text-center px-0.5 py-0.5 text-[9px] md:text-[10px] font-medium mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">
+                            {booking.studentName.length > 6 ? `${booking.studentName.substring(0, 5)}…` : booking.studentName}
                           </div>
                         )}
                         
