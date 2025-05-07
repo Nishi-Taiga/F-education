@@ -238,9 +238,6 @@ export function ReportEditModal({
       await Promise.all([
         // 1. 後方互換性のために旧フォーマットのデータを更新（失敗しても続行）
         (async () => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log("旧形式のデータも並列で更新します");
-          }
           try {
             const response = await fetch(`/api/bookings/${booking.id}/report`, {
               method: "POST",
@@ -254,24 +251,13 @@ export function ReportEditModal({
                 goal: goalContent,
               }),
             });
-            
-            if (!response.ok && process.env.NODE_ENV === 'development') {
-              console.warn("旧フォーマットデータの更新に失敗しましたが処理を続行します");
-            }
           } catch (error) {
             // エラーをキャッチしても処理を続行
-            if (process.env.NODE_ENV === 'development') {
-              console.warn("旧フォーマットデータの更新でエラーが発生:", error);
-            }
           }
         })(),
         
         // 2. キャッシュデータをバックグラウンドで最適化して無効化（一括処理）
         (async () => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log("キャッシュを並列処理で無効化・更新します");
-          }
-          
           // すべてのキャッシュ関連操作を一括で処理
           const cacheOperations = [
             // グローバルキャッシュの無効化
@@ -292,10 +278,6 @@ export function ReportEditModal({
           ];
           
           await Promise.all(cacheOperations);
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log("キャッシュの更新が完了しました");
-          }
         })()
       ]);
       
@@ -333,7 +315,6 @@ export function ReportEditModal({
     // グローバル変数をチェックする関数
     const checkGlobalVars = () => {
       if ((window as any).REPORT_EDIT_MODAL_SHOULD_OPEN) {
-        console.log("グローバル変数REPORT_EDIT_MODAL_SHOULD_OPENが検出されました");
         (window as any).REPORT_EDIT_MODAL_SHOULD_OPEN = false;
         // このコンポーネントは既に開いているので何もしない
       }

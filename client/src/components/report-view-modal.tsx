@@ -64,10 +64,7 @@ export function ReportViewModal({
       }
     }
   } catch (error) {
-    // エラーログは開発環境でのみ出力
-    if (process.env.NODE_ENV === 'development') {
-      console.error("Invalid date format:", booking.date);
-    }
+    // 無効な日付形式はデフォルト表示
   }
   
   // 状態管理を追加
@@ -144,15 +141,7 @@ export function ReportViewModal({
     }
   }
   
-  // デバッグ情報は開発環境でのみ出力
-  if (process.env.NODE_ENV === 'development') {
-    // 軽量なデバッグ情報のみを出力
-    const debugInfo = {
-      hasReport: !!booking.lessonReport || !!booking.reportContent,
-      reportSource: booking.lessonReport ? 'lessonReport' : (booking.reportContent ? 'reportContent' : 'none')
-    };
-    console.debug("レポート表示モーダル:", debugInfo);
-  }
+
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
