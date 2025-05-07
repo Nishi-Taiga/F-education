@@ -140,7 +140,12 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
 
   // Handle day click
   const handleDayClick = (day: Date) => {
-    if (!interactive || isBefore(day, new Date())) return;
+    // 当日の授業予約も可能に修正
+    // 過去の日付のみ選択不可（当日は選択可能）
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // 当日の0時0分にして比較する
+    
+    if (!interactive || isBefore(day, today)) return;
     const dateString = format(day, "yyyy-MM-dd");
     onSelectDate?.(dateString);
   };

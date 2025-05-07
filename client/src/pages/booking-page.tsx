@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -46,6 +46,9 @@ export default function BookingPage() {
   const [studentSchoolLevel, setStudentSchoolLevel] = useState<SchoolLevel | null>(null);
   const [selectedTutorId, setSelectedTutorId] = useState<number | null>(null);
   const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
+  
+  // 時間選択セクションへのスクロールのためのref
+  const timeSlotSectionRef = useRef<HTMLDivElement>(null);
 
   // 登録済みの生徒一覧を取得
   const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
@@ -181,6 +184,13 @@ export default function BookingPage() {
   const handleDateSelection = (date: string) => {
     setSelectedDate(date);
     setSelectedTimeSlot(null);
+    
+    // 生徒と科目が選択されていれば時間選択セクションまでスクロール
+    if (selectedStudentId && selectedSubject) {
+      setTimeout(() => {
+        timeSlotSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
   };
 
   const handleTimeSlotSelection = (timeSlot: string) => {
