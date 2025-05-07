@@ -1180,7 +1180,10 @@ export default function SettingsPage() {
                         更新中...
                       </>
                     ) : (
-                      "更新"
+                      <>
+                        <span className="hidden md:inline">更新する</span>
+                        <span className="inline md:hidden">更新</span>
+                      </>
                     )}
                   </Button>
                 </DialogFooter>
@@ -1188,7 +1191,7 @@ export default function SettingsPage() {
             </Dialog>
 
             {/* 生徒を追加ボタン - 下部に配置 */}
-            <div className="flex justify-center mt-6 mb-8">
+            <div className="flex justify-center mt-4 md:mt-6 mb-6 md:mb-8">
               <Button 
                 onClick={() => {
                   // フォームをリセット
@@ -1205,9 +1208,9 @@ export default function SettingsPage() {
                   // 新規追加ダイアログを開く
                   setAddDialogOpen(true);
                 }}
-                className="flex items-center"
+                className="flex items-center text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9"
               >
-                <PlusCircle className="mr-2 h-4 w-4" />
+                <PlusCircle className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4" />
                 生徒を追加
               </Button>
             </div>
@@ -1380,10 +1383,11 @@ export default function SettingsPage() {
                   </form>
                 </Form>
                 
-                <DialogFooter>
+                <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
                   <Button 
                     type="button" 
                     variant="outline" 
+                    className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
                     onClick={() => {
                       // ダイアログを閉じる
                       setAddDialogOpen(false);
@@ -1406,14 +1410,18 @@ export default function SettingsPage() {
                     type="submit"
                     form="add-student-form"
                     disabled={addStudentMutation.isPending}
+                    className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
                   >
                     {addStudentMutation.isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4 animate-spin" />
                         登録中...
                       </>
                     ) : (
-                      "登録する"
+                      <>
+                        <span className="hidden md:inline">登録する</span>
+                        <span className="inline md:hidden">登録</span>
+                      </>
                     )}
                   </Button>
                 </DialogFooter>
@@ -1507,12 +1515,21 @@ export default function SettingsPage() {
                     />
                   </div>
                   
-                  <div className="flex justify-end space-x-4">
-                    <Button type="button" variant="outline" onClick={() => passwordForm.reset()}>
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
+                      onClick={() => passwordForm.reset()}
+                    >
                       キャンセル
                     </Button>
-                    <Button type="submit">
-                      変更する
+                    <Button 
+                      type="submit"
+                      className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
+                    >
+                      <span className="hidden md:inline">変更する</span>
+                      <span className="inline md:hidden">変更</span>
                     </Button>
                   </div>
                 </form>
@@ -1588,7 +1605,11 @@ export default function SettingsPage() {
             )}
             
             <DialogFooter>
-              <Button type="button" onClick={() => setAccountInfoDialogOpen(false)}>
+              <Button 
+                type="button" 
+                onClick={() => setAccountInfoDialogOpen(false)}
+                className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto mx-auto sm:mx-0"
+              >
                 閉じる
               </Button>
             </DialogFooter>
@@ -1680,16 +1701,18 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 
-                <div className="flex justify-end space-x-2 mt-4">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4">
                   <Button 
                     type="button" 
                     variant="outline" 
                     onClick={() => setPasswordDialogOpen(false)}
+                    className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
                   >
                     キャンセル
                   </Button>
                   <Button 
                     type="submit"
+                    className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
                     disabled={
                       !newPassword || 
                       !confirmPassword ||
@@ -1700,11 +1723,14 @@ export default function SettingsPage() {
                   >
                     {updateStudentPasswordMutation.isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4 animate-spin" />
                         更新中...
                       </>
                     ) : (
-                      "変更する"
+                      <>
+                        <span className="hidden md:inline">変更する</span>
+                        <span className="inline md:hidden">変更</span>
+                      </>
                     )}
                   </Button>
                 </div>
