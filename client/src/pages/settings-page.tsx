@@ -1564,6 +1564,7 @@ export default function SettingsPage() {
                     <Button 
                       variant="outline" 
                       size="sm"
+                      className="text-xs px-2 py-0 h-7 md:h-8"
                       onClick={() => {
                         if (studentAccountInfo && studentAccountInfo.studentAccountId) {
                           console.log("Showing username dialog for account:", studentAccountInfo.studentAccountId);
@@ -1587,6 +1588,7 @@ export default function SettingsPage() {
                     <Button 
                       variant="outline" 
                       size="sm"
+                      className="text-xs px-2 py-0 h-7 md:h-8"
                       onClick={() => {
                         if (studentAccountInfo && studentAccountInfo.studentAccountId) {
                           updateStudentPasswordDialog();
@@ -1781,16 +1783,18 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 
-                <div className="flex justify-end space-x-2 mt-4">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4">
                   <Button 
                     type="button" 
                     variant="outline" 
                     onClick={() => setUsernameDialogOpen(false)}
+                    className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
                   >
                     キャンセル
                   </Button>
                   <Button 
                     type="submit"
+                    className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
                     disabled={
                       !newUsername || 
                       newUsername.length < 4 || 
@@ -1799,11 +1803,14 @@ export default function SettingsPage() {
                   >
                     {updateStudentUsernameMutation.isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4 animate-spin" />
                         更新中...
                       </>
                     ) : (
-                      "変更する"
+                      <>
+                        <span className="hidden md:inline">変更する</span>
+                        <span className="inline md:hidden">変更</span>
+                      </>
                     )}
                   </Button>
                 </div>
