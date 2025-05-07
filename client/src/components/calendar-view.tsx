@@ -178,41 +178,21 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                 </div>
               </>
             ) : (
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-green-500 mr-1 rounded-full"></div>
-                <span className="font-medium">報告あり</span>
-              </div>
+              <>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-red-500 mr-1 rounded-full"></div>
+                  <span className="font-medium">未報告</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-green-500 mr-1 rounded-full"></div>
+                  <span className="font-medium">報告あり</span>
+                </div>
+              </>
             )}
           </div>
         </div>
         
-        {/* カレンダー選択ボタンを左揃えに */}
-        <div className="flex justify-start gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={goToPreviousMonth}
-            className="text-xs py-0.5 h-7"
-          >
-            前月
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={goToNextMonth}
-            className="text-xs py-0.5 h-7"
-          >
-            次月
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={goToCurrentMonth}
-            className="text-xs py-0.5 h-7"
-          >
-            今月
-          </Button>
-        </div>
+        {/* 月切り替えボタンは不要のため削除 */}
       </div>
 
       {/* Day labels */}
@@ -254,7 +234,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
           return (
             <div key={day.toString()} className={`p-0.5 min-w-0 ${dayBookings.length >= 3 ? 'aspect-auto' : 'aspect-square'}`} 
                  style={{
-                   height: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '90px' : '90px') : 'auto'
+                   height: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '90px' : '120px') : 'auto'
                  }}>
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} 
@@ -262,7 +242,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   ${isCurrentDay ? 'bg-blue-50 border border-blue-200 shadow-sm' : ''} 
                   overflow-hidden flex flex-col`}
                 style={{ 
-                  minHeight: '60px', 
+                  minHeight: window.innerWidth < 640 ? '60px' : '100px', 
                   height: '100%'
                 }}
                 onClick={() => isSelectable && handleDayClick(day)}
@@ -304,8 +284,8 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                         
                         {/* 生徒名 - PCのみ表示（モバイルでは非表示） */}
                         {booking.studentName && (
-                          <div className="hidden md:block bg-white bg-opacity-50 text-black rounded-sm text-center px-0.5 py-0.5 text-[8px] md:text-[9px] font-medium mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">
-                            {booking.studentName.length > 6 ? `${booking.studentName.substring(0, 5)}…` : booking.studentName}
+                          <div className="hidden md:block bg-white bg-opacity-50 text-black rounded-sm text-center px-0.5 py-0.5 text-[9px] md:text-[10px] font-medium mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">
+                            {booking.studentName.length > 8 ? `${booking.studentName.substring(0, 7)}…` : booking.studentName}
                           </div>
                         )}
                         
