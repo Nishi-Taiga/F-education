@@ -671,37 +671,73 @@ export default function HomePage() {
   };
   
   // レポート作成対象の授業を取得する関数
-  const getUnreportedBookings = (): (Booking & { studentName?: string })[] => {
+  const getUnreportedBookings = (): (Booking & { 
+    studentName?: string,
+    hasReport?: boolean,
+    isPastLesson?: boolean
+  })[] => {
     if (!bookings) return [];
     
     // 現在の日時を取得（日本時間）
     const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-    const today = getJapanDate();
+    const japanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    const todayJapan = japanTime.toISOString().split('T')[0]; // YYYY-MM-DD形式
     
     // テスト用データを使用（講師アカウントの場合のみ）
     if (bookings.length === 0 && user?.role === 'tutor') {
       // テストデータからレポート未作成のデータをフィルタリング
       return testBookings
-        .filter(booking => booking.reportStatus !== "completed")
+        .filter(booking => {
+          // レポート作成済みかどうかをチェック（新フォーマットに対応）
+          const isReported = booking.reportStatus === "completed" || 
+                            (booking.reportStatus && booking.reportStatus.startsWith("completed:"));
+          
+          // レポート未作成の授業だけをフィルタリング
+          return !isReported;
+        })
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .map(booking => ({
-          ...booking,
-          studentName: booking.studentName || getStudentName(booking.studentId)
-        }));
+        .map(booking => {
+          // 授業の日付
+          const lessonDate = booking.date;
+          // 過去の授業かどうか判定
+          const isPastLesson = lessonDate < todayJapan;
+          
+          return {
+            ...booking,
+            studentName: booking.studentName || getStudentName(booking.studentId),
+            hasReport: false, // すでにフィルタリングしたのでfalse
+            isPastLesson
+          };
+        });
     }
     
-    // 未報告の授業をすべて取得（過去の未報告授業も含む）
+    // 予約済みの授業を取得し、レポート状態によるフィルタリングを追加
     return bookings
-      // レポートが未作成の授業だけをフィルタリング
-      .filter(booking => booking.reportStatus !== "completed")
+      .filter(booking => {
+        // レポート作成済みかどうかをチェック（新フォーマットに対応）
+        const isReported = booking.reportStatus === "completed" || 
+                          (booking.reportStatus && booking.reportStatus.startsWith("completed:")) ||
+                          booking.lessonReport; // lesson_reportsテーブルからのデータもチェック
+        
+        // レポート未作成の授業だけをフィルタリング
+        return !isReported;
+      })
       // 日付ごとに並べ替え（降順：新しい日付が上）
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      // 生徒名を追加
-      .map(booking => ({
-        ...booking,
-        studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
-      }));
+      // 生徒名を追加し、過去の授業かどうかフラグを設定
+      .map(booking => {
+        // 授業の日付
+        const lessonDate = booking.date;
+        // 過去の授業かどうか判定
+        const isPastLesson = lessonDate < todayJapan;
+        
+        return {
+          ...booking,
+          studentName: booking.studentId ? getStudentName(booking.studentId) : undefined,
+          hasReport: false, // すでにフィルタリングしたのでfalse
+          isPastLesson
+        };
+      });
   };
   
   // レポート作成ダイアログを開く関数
@@ -1241,44 +1277,21 @@ export default function HomePage() {
                                 </div>
                               </div>
                               <div className="ml-2">
-                                {booking.reportStatus === 'completed' ? (
+                                {/* 新しい判定ロジック - isPastLessonフラグを使用 */}
+                                {booking.hasReport ? (
                                   <div className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">
-                                    報告済み
+                                    レポート済
+                                  </div>
+                                ) : booking.isPastLesson ? (
+                                  // 過去の授業は赤色（未報告）
+                                  <div className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
+                                    未報告
                                   </div>
                                 ) : (
-                                  (() => {
-                                    // 日本時間の今日の日付を取得
-                                    const now = new Date();
-                                    const japanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
-                                    const todayJapan = japanTime.toISOString().split('T')[0]; // YYYY-MM-DD形式
-                                    
-                                    // 授業の日付
-                                    const lessonDate = booking.date;
-                                    
-                                    // 日付の比較
-                                    if (lessonDate < todayJapan) {
-                                      // 前日までの報告書未作成の授業は赤色
-                                      return (
-                                        <div className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
-                                          未報告
-                                        </div>
-                                      );
-                                    } else if (lessonDate === todayJapan) {
-                                      // 当日の授業は青色
-                                      return (
-                                        <div className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                                          今日
-                                        </div>
-                                      );
-                                    } else {
-                                      // 翌日以降の授業
-                                      return (
-                                        <div className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                                          予定
-                                        </div>
-                                      );
-                                    }
-                                  })()
+                                  // 今日以降の授業は青色
+                                  <div className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                    {booking.date === getJapanDate() ? "今日" : "予定"}
+                                  </div>
                                 )}
                               </div>
                             </div>
