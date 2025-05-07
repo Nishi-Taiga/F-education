@@ -806,36 +806,6 @@ export default function HomePage() {
           {user?.role !== 'tutor' && (
             <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-3 border border-gray-200">
               <div className="flex justify-between items-start">
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="h-7 rounded-full border-dashed"
-                    onClick={handleAddTickets}
-                    disabled={addTicketsMutation.isPending}
-                  >
-                    {addTicketsMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <Plus className="h-3 w-3 mr-1" />
-                    )}
-                    <span className="text-xs">追加</span>
-                  </Button>
-                  
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="h-7 rounded-full border-dashed text-red-500 border-red-200 hover:bg-red-50"
-                    onClick={handleResetTickets}
-                    disabled={resetTicketsMutation.isPending}
-                  >
-                    {resetTicketsMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <span className="text-xs">リセット</span>
-                    )}
-                  </Button>
-                </div>
               </div>
               
               {/* 生徒ごとのチケット残数 */}
@@ -858,7 +828,7 @@ export default function HomePage() {
                 </div>
               )}
               
-              <p className="text-xs text-gray-500 mt-2">※開発用：チケット追加・リセット</p>
+
             </div>
           )}
         </div>
@@ -932,46 +902,8 @@ export default function HomePage() {
                   }
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {/* テスト用のデータ */}
-                  <BookingCard 
-                    key="test-past-with-report" 
-                    booking={{
-                      id: 9001,
-                      createdAt: new Date(),
-                      userId: user ? user.id : 0,
-                      tutorId: 1,
-                      studentId: 4,
-                      tutorShiftId: 1,
-                      date: "2025-04-15",
-                      timeSlot: "16:00-17:30",
-                      subject: "数学",
-                      status: "confirmed",
-                      reportStatus: "completed",
-                      reportContent: "中学1年の方程式\n授業中は集中して取り組めていました。解説を聞いて理解しようとする姿勢が素晴らしいです。\n次回までに教科書p.45-46の問題を解いてきてください。",
-                      studentName: "テスト 太郎"
-                    }}
-                    onViewReportClick={handleViewReportClick}
-                  />
-                  <BookingCard 
-                    key="test-today"
-                    booking={{
-                      id: 9002,
-                      createdAt: new Date(),
-                      userId: user ? user.id : 0,
-                      tutorId: 1,
-                      studentId: 4,
-                      tutorShiftId: 2,
-                      date: "2025-04-30",
-                      timeSlot: "18:00-19:30",
-                      subject: "英語",
-                      status: "confirmed",
-                      reportStatus: null,
-                      reportContent: null,
-                      studentName: "テスト 太郎"
-                    }}
-                    onCancelClick={handleCancelClick}
-                  />
+                <div className="py-4 text-center text-gray-500">
+                  予約がありません
                 </div>
               )}
             </div>
