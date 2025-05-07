@@ -594,51 +594,51 @@ export default function SettingsPage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <div className="flex items-center">
-            <Button variant="ghost" size="icon" className="mr-2" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="mr-1 md:mr-2 h-8 w-8 md:h-10 md:w-10" onClick={() => navigate("/")}>
+              <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
-            <h1 className="text-2xl font-bold text-primary">F education</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-primary">F education</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-gray-700">{user?.displayName || user?.username}</span>
+            <span className="text-sm md:text-base text-gray-700">{user?.displayName || user?.username}</span>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">設定</h2>
-          <p className="mt-1 text-sm text-gray-600">アカウント設定を変更</p>
+      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        <div className="mb-6 md:mb-8">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">設定</h2>
+          <p className="mt-1 text-xs md:text-sm text-gray-600">アカウント設定を変更</p>
         </div>
 
         <Tabs value={currentTab} onValueChange={setCurrentTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="profile">
-              <User className="mr-2 h-4 w-4" />
+          <TabsList className="mb-4 md:mb-6">
+            <TabsTrigger value="profile" className="text-xs md:text-sm">
+              <User className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4" />
               プロフィール
             </TabsTrigger>
-            <TabsTrigger value="students">
-              <UsersRound className="mr-2 h-4 w-4" />
+            <TabsTrigger value="students" className="text-xs md:text-sm">
+              <UsersRound className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4" />
               生徒管理
             </TabsTrigger>
-            <TabsTrigger value="password">
-              <ArrowLeft className="mr-2 h-4 w-4" />
+            <TabsTrigger value="password" className="text-xs md:text-sm">
+              <ArrowLeft className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4" />
               パスワード
             </TabsTrigger>
           </TabsList>
 
           {/* プロフィール情報タブ */}
           <TabsContent value="profile">
-            <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-6">プロフィール情報</h3>
+            <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-4 md:p-6 mb-6 md:mb-8">
+              <h3 className="text-base md:text-lg font-medium text-gray-900 mb-4 md:mb-6">プロフィール情報</h3>
               
               <Form {...settingsForm}>
                 <form onSubmit={settingsForm.handleSubmit(onSubmitSettings)} className="space-y-8">
                   <div className="space-y-6">
                     {/* 基本情報 */}
                     <div>
-                      <h4 className="text-md font-medium text-gray-700 mb-4">基本情報</h4>
+                      <h4 className="text-sm md:text-md font-medium text-gray-700 mb-3 md:mb-4">基本情報</h4>
                       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <FormField
                           control={settingsForm.control}
@@ -686,7 +686,7 @@ export default function SettingsPage() {
                     
                     {/* 住所情報 */}
                     <div>
-                      <h4 className="text-md font-medium text-gray-700 mb-4">住所情報</h4>
+                      <h4 className="text-sm md:text-md font-medium text-gray-700 mb-3 md:mb-4">住所情報</h4>
                       
                       <div className="flex space-x-2 mt-4">
                         <FormField
@@ -769,18 +769,18 @@ export default function SettingsPage() {
                   
 
                   
-                  <div className="flex justify-end space-x-4">
-                    <Button type="button" variant="outline" onClick={() => navigate("/")}>
+                  <div className="flex justify-end space-x-3 md:space-x-4">
+                    <Button type="button" variant="outline" onClick={() => navigate("/")} className="text-xs md:text-sm px-3 md:px-4">
                       キャンセル
                     </Button>
-                    <Button type="submit" disabled={updateSettingsMutation.isPending}>
+                    <Button type="submit" disabled={updateSettingsMutation.isPending} className="text-xs md:text-sm px-3 md:px-4">
                       {updateSettingsMutation.isPending ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4 animate-spin" />
                           保存中...
                         </>
                       ) : (
-                        "保存する"
+                        "保存"
                       )}
                     </Button>
                   </div>
@@ -794,8 +794,8 @@ export default function SettingsPage() {
           {/* 生徒情報管理タブ */}
           <TabsContent value="students">
             {/* 登録済み生徒一覧 - 上部に配置 */}
-            <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-6">登録済み生徒</h3>
+            <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-4 md:p-6 mb-6 md:mb-8">
+              <h3 className="text-base md:text-lg font-medium text-gray-900 mb-4 md:mb-6">登録済み生徒</h3>
 
               {isLoadingStudents ? (
                 <div className="flex justify-center items-center p-4">
