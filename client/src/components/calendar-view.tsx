@@ -219,7 +219,8 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                 style={{ 
                   minHeight: '60px', 
                   // 予約が3件以上ある場合はセルサイズを大きくする（特にモバイル用）
-                  height: '100%'
+                  height: '100%',
+                  maxHeight: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '120px' : '105px') : '75px'
                 }}
                 onClick={() => isSelectable && handleDayClick(day)}
               >
