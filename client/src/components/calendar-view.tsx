@@ -237,7 +237,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
           return (
             <div key={day.toString()} className={`p-0.5 min-w-0 ${hasThreeOrMoreBookings ? 'aspect-auto' : 'aspect-square'}`} 
                  style={{
-                   height: hasThreeOrMoreBookings ? (window.innerWidth < 640 ? '105px' : '180px') : 'auto'
+                   height: hasThreeOrMoreBookings ? (window.innerWidth < 640 ? '90px' : '180px') : 'auto'
                  }}>
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} 
@@ -245,7 +245,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   ${isCurrentDay ? 'bg-blue-50 border border-blue-200 shadow-sm' : ''} 
                   overflow-hidden flex flex-col`}
                 style={{ 
-                  minHeight: hasThreeOrMoreBookings ? (window.innerWidth < 640 ? '100px' : '170px') : (window.innerWidth < 640 ? '60px' : '80px'), 
+                  minHeight: hasThreeOrMoreBookings ? (window.innerWidth < 640 ? '85px' : '170px') : (window.innerWidth < 640 ? '60px' : '80px'), 
                   height: '100%'
                 }}
                 onClick={() => isSelectable && handleDayClick(day)}
