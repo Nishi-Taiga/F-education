@@ -49,6 +49,17 @@ export default function BookingPage() {
   
   // 時間選択セクションへのスクロールのためのref
   const timeSlotSectionRef = useRef<HTMLDivElement>(null);
+  
+  // 科目選択時の共通処理
+  const handleSubjectChange = (value: string) => {
+    setSelectedSubject(value);
+    // 日付が既に選択されている場合はスクロール
+    if (selectedDate) {
+      setTimeout(() => {
+        timeSlotSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  };
 
   // 登録済みの生徒一覧を取得
   const { data: students, isLoading: isLoadingStudents } = useQuery<Student[]>({
@@ -536,7 +547,9 @@ export default function BookingPage() {
           {/* Time slots and selected bookings */}
           <div className="lg:col-span-1">
             <Card className="p-3 mb-3">
-              <h3 className="text-base font-medium text-gray-900 mb-3">授業時間を選択</h3>
+              <div ref={timeSlotSectionRef}>
+                <h3 className="text-base font-medium text-gray-900 mb-3">授業時間を選択</h3>
+              </div>
               
               {((user?.role !== 'student' && !selectedStudentId) || (!user?.role && !selectedStudentId) || !selectedSubject) ? (
                 <div className="p-4 border rounded-md bg-gray-50 text-center">
