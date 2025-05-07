@@ -151,6 +151,8 @@ export default function TutorBookingsPage() {
   >(null);
   // レポート情報をキャッシュする
   const [reportCache, setReportCache] = useState<{[key: number]: any}>({});
+  // キャッシュが正常に取得されているかを確認するための状態
+  const [loadedReportIds, setLoadedReportIds] = useState<Set<number>>(new Set());
   
   // 生徒IDから生徒名を取得する関数
   const getStudentName = (studentId: number | null): string | undefined => {
@@ -160,37 +162,60 @@ export default function TutorBookingsPage() {
     return `${student.lastName} ${student.firstName}`;
   };
   
-  // レポートを取得する関数（キャッシュを利用）
+  // コンポーネントマウント時にすべての予約のレポート情報を一括取得
+  useEffect(() => {
+    if (bookings && bookings.length > 0) {
+      console.log("すべての予約のレポート情報を事前に一括取得します");
+      
+      // 過去の予約IDのリストを作成
+      const pastBookingIds = bookings
+        .filter((booking: any) => {
+          const bookingDate = parseISO(booking.date);
+          return isBefore(bookingDate, new Date()) && !isToday(bookingDate);
+        })
+        .map((booking: any) => booking.id);
+      
+      // すべてのレポート情報を一括取得
+      Promise.all(
+        pastBookingIds.map(id => 
+          fetch(`/api/lesson-reports/booking/${id}`)
+            .then(response => {
+              if (response.status === 404) return { bookingId: id, report: null };
+              if (response.ok) return response.json().then(report => ({ bookingId: id, report }));
+              throw new Error(`予約ID ${id} のレポート情報取得に失敗`);
+            })
+            .catch(error => {
+              console.error(`予約ID ${id} のレポート取得エラー:`, error);
+              return { bookingId: id, report: null };
+            })
+        )
+      ).then(results => {
+        // キャッシュに情報を保存
+        const newCache = { ...reportCache };
+        const loadedIds = new Set(loadedReportIds);
+        
+        results.forEach(({ bookingId, report }) => {
+          newCache[bookingId] = report;
+          loadedIds.add(bookingId);
+        });
+        
+        console.log(`${results.length}件のレポート情報をキャッシュに保存しました`);
+        setReportCache(newCache);
+        setLoadedReportIds(loadedIds);
+      });
+    }
+  }, [bookings]); // bookingsが変更されたときに再実行
+  
+  // レポートを取得する関数（改良版）
   const getReportForBooking = (bookingId: number): any => {
-    // キャッシュにあればそれを返す
-    if (reportCache[bookingId]) {
+    // キャッシュにあれば返す
+    if (reportCache[bookingId] !== undefined || loadedReportIds.has(bookingId)) {
       return reportCache[bookingId];
     }
     
-    // レッスンレポートの取得をリクエスト
-    fetch(`/api/lesson-reports/booking/${bookingId}`)
-      .then(response => {
-        if (response.status === 404) return null;
-        if (response.ok) return response.json();
-        throw new Error('レポート情報の取得に失敗しました');
-      })
-      .then(report => {
-        if (report) {
-          // キャッシュに保存
-          setReportCache(prev => ({
-            ...prev,
-            [bookingId]: report
-          }));
-        }
-        return report;
-      })
-      .catch(error => {
-        console.error("レポート取得エラー:", error);
-        return null;
-      });
-    
-    // 非同期処理の結果を待たずに現時点でのキャッシュ状態を返す
-    return reportCache[bookingId] || null;
+    // キャッシュされていない場合は未読み込みとして null を返す
+    // データは useEffect で事前に一括取得するため、ここでは再取得しない
+    return null;
   };
 
   // 予約カードコンポーネント - コンポーネントを内部で定義し直して必要な状態と関数にアクセスできるようにする
