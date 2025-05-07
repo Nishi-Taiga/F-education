@@ -802,25 +802,24 @@ export default function HomePage() {
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
               {user?.role === 'tutor' ? 'ダッシュボード' : '予約システム'}
             </h2>
-
-            {/* インライン表示のチケット残数 (ユーザーが講師でない場合) */}
-            {user?.role !== 'tutor' && studentTickets.length > 0 && (
-              <div className="ml-4 flex items-center">
-                <div className="mr-1 bg-green-50 p-1 rounded-full">
-                  <Ticket className="text-green-600 h-3.5 w-3.5" />
-                </div>
-                <div className="flex flex-wrap gap-1.5 ml-1">
-                  {studentTickets.map(ticket => (
-                    <div key={ticket.studentId} className="flex items-center bg-gray-50 py-1 px-2 rounded-md whitespace-nowrap">
-                      <span className="text-xs font-medium truncate">{ticket.name}:</span>
-                      <span className="text-sm font-bold ml-1">{ticket.ticketCount}枚</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
           
+          {/* 右揃えのチケット残数表示 (ユーザーが講師でない場合) */}
+          {user?.role !== 'tutor' && studentTickets.length > 0 && (
+            <div className="ml-auto flex items-center mt-2 md:mt-0">
+              <div className="mr-1 bg-green-50 p-0.5 rounded-full">
+                <Ticket className="text-green-600 h-3 w-3" />
+              </div>
+              <div className="flex flex-wrap gap-1 ml-1">
+                {studentTickets.map(ticket => (
+                  <div key={ticket.studentId} className="flex items-center bg-gray-50 py-0.5 px-1.5 rounded-md whitespace-nowrap text-xs">
+                    <span className="font-medium truncate">{ticket.name}:</span>
+                    <span className="font-bold ml-1">{ticket.ticketCount}枚</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Calendar - 非スクロール領域 */}

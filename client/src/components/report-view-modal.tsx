@@ -246,94 +246,96 @@ export function ReportViewModal({
             </div>
           ) : (
             <>
-              {/* 編集ボタン - パフォーマンス最適化 */}
-              <Button 
-                variant="default" 
-                onClick={() => {
-                  // 編集モードに入ったことを表示
-                  setIsNavigatingToEdit(true);
-                  
-                  // 必要なデータを先に準備
-                  const reportId = booking.lessonReport?.id;
-                  const bookingId = booking.id;
-                  const params = new URLSearchParams();
-                  
-                  // 最適化：事前に全てのデータを準備してからURLパラメータを設定
-                  if (reportId) {
-                    params.set('reportId', reportId.toString());
-                  } else {
-                    params.set('bookingId', bookingId.toString());
+              {/* 編集ボタン - 講師の場合のみ表示 */}
+              {onEdit && (
+                <Button 
+                  variant="default" 
+                  onClick={() => {
+                    // 編集モードに入ったことを表示
+                    setIsNavigatingToEdit(true);
                     
-                    // レポートデータがある場合はセッションストレージに保存
-                    if (unit || message || goal) {
-                      const initialData = {
-                        unitContent: unit,
-                        messageContent: message,
-                        goalContent: goal
-                      };
-                      try {
-                        // レポート内容を保存
-                        sessionStorage.setItem('INITIAL_REPORT_DATA', JSON.stringify(initialData));
-                        console.log("セッションストレージにレポートデータを保存:", initialData);
-                        
-                        // 追加: 予約データを完全なレポート情報と一緒に保存
-                        const fullBookingData = {
-                          ...booking,
-                          lessonReport: {
-                            id: booking.lessonReport?.id,
-                            bookingId: booking.id,
-                            tutorId: booking.tutorId,
-                            studentId: booking.studentId,
-                            date: booking.date,
-                            timeSlot: booking.timeSlot,
-                            unitContent: unit,
-                            messageContent: message,
-                            goalContent: goal,
-                            createdAt: booking.lessonReport?.createdAt || new Date().toISOString(),
-                            updatedAt: new Date().toISOString()
-                          }
+                    // 必要なデータを先に準備
+                    const reportId = booking.lessonReport?.id;
+                    const bookingId = booking.id;
+                    const params = new URLSearchParams();
+                    
+                    // 最適化：事前に全てのデータを準備してからURLパラメータを設定
+                    if (reportId) {
+                      params.set('reportId', reportId.toString());
+                    } else {
+                      params.set('bookingId', bookingId.toString());
+                      
+                      // レポートデータがある場合はセッションストレージに保存
+                      if (unit || message || goal) {
+                        const initialData = {
+                          unitContent: unit,
+                          messageContent: message,
+                          goalContent: goal
                         };
-                        
-                        // 編集処理用の完全なデータを保存
-                        sessionStorage.setItem('EDIT_BOOKING_DATA', JSON.stringify(fullBookingData));
-                        console.log("セッションストレージに完全な予約データを保存:", fullBookingData);
-                      } catch (err) {
-                        console.error("セッションストレージへの保存エラー:", err);
+                        try {
+                          // レポート内容を保存
+                          sessionStorage.setItem('INITIAL_REPORT_DATA', JSON.stringify(initialData));
+                          console.log("セッションストレージにレポートデータを保存:", initialData);
+                          
+                          // 追加: 予約データを完全なレポート情報と一緒に保存
+                          const fullBookingData = {
+                            ...booking,
+                            lessonReport: {
+                              id: booking.lessonReport?.id,
+                              bookingId: booking.id,
+                              tutorId: booking.tutorId,
+                              studentId: booking.studentId,
+                              date: booking.date,
+                              timeSlot: booking.timeSlot,
+                              unitContent: unit,
+                              messageContent: message,
+                              goalContent: goal,
+                              createdAt: booking.lessonReport?.createdAt || new Date().toISOString(),
+                              updatedAt: new Date().toISOString()
+                            }
+                          };
+                          
+                          // 編集処理用の完全なデータを保存
+                          sessionStorage.setItem('EDIT_BOOKING_DATA', JSON.stringify(fullBookingData));
+                          console.log("セッションストレージに完全な予約データを保存:", fullBookingData);
+                        } catch (err) {
+                          console.error("セッションストレージへの保存エラー:", err);
+                        }
                       }
                     }
-                  }
-                  
-                  // 編集画面で必要な予約情報をセッションストレージに保存
-                  try {
-                    const essentialBookingData = {
-                      id: booking.id,
-                      date: booking.date,
-                      timeSlot: booking.timeSlot, 
-                      subject: booking.subject || "",
-                      studentId: booking.studentId,
-                      studentName: booking.studentName || "",
-                      tutorId: booking.tutorId
-                    };
-                    sessionStorage.setItem('EDIT_BOOKING_DATA', JSON.stringify(essentialBookingData));
-                  } catch (err) {
-                    // エラーは静かに処理
-                  }
-                  
-                  // 即時に画面遷移する
-                  // まずモーダルを閉じて編集コールバックを実行
-                  onClose();
-                  if (typeof onEdit === 'function') {
-                    onEdit();
-                  }
-                  
-                  // 編集ページへ即時遷移
-                  const reportEditUrl = `/report-edit?${params.toString()}`;
-                  window.location.assign(reportEditUrl);
-                }}
-                disabled={isNavigatingToEdit}
-              >
-                レポートを編集
-              </Button>
+                    
+                    // 編集画面で必要な予約情報をセッションストレージに保存
+                    try {
+                      const essentialBookingData = {
+                        id: booking.id,
+                        date: booking.date,
+                        timeSlot: booking.timeSlot, 
+                        subject: booking.subject || "",
+                        studentId: booking.studentId,
+                        studentName: booking.studentName || "",
+                        tutorId: booking.tutorId
+                      };
+                      sessionStorage.setItem('EDIT_BOOKING_DATA', JSON.stringify(essentialBookingData));
+                    } catch (err) {
+                      // エラーは静かに処理
+                    }
+                    
+                    // 即時に画面遷移する
+                    // まずモーダルを閉じて編集コールバックを実行
+                    onClose();
+                    if (typeof onEdit === 'function') {
+                      onEdit();
+                    }
+                    
+                    // 編集ページへ即時遷移
+                    const reportEditUrl = `/report-edit?${params.toString()}`;
+                    window.location.assign(reportEditUrl);
+                  }}
+                  disabled={isNavigatingToEdit}
+                >
+                  レポートを編集
+                </Button>
+              )}
               
               <Button 
                 variant="outline" 
