@@ -152,39 +152,39 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="py-1 text-xl font-bold">{formattedMonth}</span>
+            <span className="py-1 text-base md:text-xl font-bold">{formattedMonth}</span>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
           
           {/* 色の凡例 - 生徒保護者用と講師用で表示内容を分ける */}
-          <div className="flex items-center gap-2 text-xs bg-gray-50 p-1 rounded-lg">
+          <div className="flex items-center gap-1 text-[10px] md:text-xs bg-gray-50 p-1 rounded-lg">
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-blue-500 mr-1 rounded-full"></div>
+              <div className="w-2 h-2 md:w-3 md:h-3 bg-blue-500 mr-0.5 md:mr-1 rounded-full"></div>
               <span className="font-medium">予定</span>
             </div>
             {showLegend ? (
               <>
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-red-500 mr-1 rounded-full"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 bg-red-500 mr-0.5 md:mr-1 rounded-full"></div>
                   <span className="font-medium">未報告</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-green-500 mr-1 rounded-full"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 bg-green-500 mr-0.5 md:mr-1 rounded-full"></div>
                   <span className="font-medium">報告済</span>
                 </div>
               </>
             ) : (
               <>
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-red-500 mr-1 rounded-full"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 bg-red-500 mr-0.5 md:mr-1 rounded-full"></div>
                   <span className="font-medium">未報告</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-green-500 mr-1 rounded-full"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 bg-green-500 mr-0.5 md:mr-1 rounded-full"></div>
                   <span className="font-medium">報告あり</span>
                 </div>
               </>
@@ -234,7 +234,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
           return (
             <div key={day.toString()} className={`p-0.5 min-w-0 ${dayBookings.length >= 3 ? 'aspect-auto' : 'aspect-square'}`} 
                  style={{
-                   height: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '90px' : '120px') : 'auto'
+                   height: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '90px' : '140px') : 'auto'
                  }}>
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} 
@@ -242,7 +242,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   ${isCurrentDay ? 'bg-blue-50 border border-blue-200 shadow-sm' : ''} 
                   overflow-hidden flex flex-col`}
                 style={{ 
-                  minHeight: window.innerWidth < 640 ? '60px' : '100px', 
+                  minHeight: window.innerWidth < 640 ? '60px' : '120px', 
                   height: '100%'
                 }}
                 onClick={() => isSelectable && handleDayClick(day)}
