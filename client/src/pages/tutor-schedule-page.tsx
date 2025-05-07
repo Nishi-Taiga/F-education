@@ -291,25 +291,28 @@ export default function TutorSchedulePage() {
   
   return (
     <div className="container py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">シフト管理</h1>
-        <div className="flex gap-2">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+        <h1 className="text-xl md:text-2xl font-bold">シフト管理</h1>
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             onClick={() => navigate("/")}
-            className="flex items-center gap-2"
+            className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
           >
-            <Home className="h-4 w-4" />
-            ホームに戻る
+            <Home className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden md:inline">ホームに戻る</span>
+            <span className="inline md:hidden">ホーム</span>
           </Button>
           <Button
             variant="default"
             onClick={saveAllPendingShifts}
             disabled={pendingShifts.length === 0 || updateShiftMutation.isPending}
-            className="flex items-center gap-2"
+            className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
           >
-            <Save className="h-4 w-4" />
-            変更を保存 {pendingShifts.length > 0 && `(${pendingShifts.length}件)`}
+            <Save className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden md:inline">変更を保存</span>
+            <span className="inline md:hidden">保存</span>
+            {pendingShifts.length > 0 && <span className="font-medium">({pendingShifts.length})</span>}
           </Button>
         </div>
       </div>
@@ -331,23 +334,31 @@ export default function TutorSchedulePage() {
               variant="outline" 
               size="sm" 
               onClick={goToPreviousWeek}
+              className="h-8 px-2 text-xs md:text-sm"
             >
-              <ChevronLeftIcon className="h-4 w-4 mr-1" />
-              前の週
+              <ChevronLeftIcon className="h-3 w-3 md:h-4 md:w-4 mr-0.5 md:mr-1" />
+              <span className="hidden md:inline">前の週</span>
+              <span className="inline md:hidden">前週</span>
             </Button>
             
-            <div className="text-center">
-              <h3 className="text-lg font-medium">
-                {format(weekStart, "yyyy年M月d日", { locale: ja })} 〜{" "}
-                {format(addDays(weekStart, 6), "M月d日", { locale: ja })}
+            <div className="text-center mx-1">
+              <h3 className="text-sm md:text-lg font-medium">
+                <span className="hidden md:inline">
+                  {format(weekStart, "yyyy年M月d日", { locale: ja })} 〜{" "}
+                  {format(addDays(weekStart, 6), "M月d日", { locale: ja })}
+                </span>
+                <span className="inline md:hidden">
+                  {format(weekStart, "M/d", { locale: ja })} 〜{" "}
+                  {format(addDays(weekStart, 6), "M/d", { locale: ja })}
+                </span>
               </h3>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={goToCurrentWeek} 
-                className="text-sm text-muted-foreground mt-1"
+                className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1 h-6 md:h-8 px-2"
               >
-                今週に戻る
+                今週
               </Button>
             </div>
             
@@ -355,9 +366,11 @@ export default function TutorSchedulePage() {
               variant="outline" 
               size="sm" 
               onClick={goToNextWeek}
+              className="h-8 px-2 text-xs md:text-sm"
             >
-              次の週
-              <ChevronRightIcon className="h-4 w-4 ml-1" />
+              <span className="hidden md:inline">次の週</span>
+              <span className="inline md:hidden">次週</span>
+              <ChevronRightIcon className="h-3 w-3 md:h-4 md:w-4 ml-0.5 md:ml-1" />
             </Button>
           </div>
           
@@ -472,20 +485,23 @@ export default function TutorSchedulePage() {
               variant="default"
               onClick={saveAllPendingShifts}
               disabled={pendingShifts.length === 0 || updateShiftMutation.isPending}
-              className="flex items-center gap-2"
+              className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
             >
-              <Save className="h-4 w-4" />
-              変更を保存 {pendingShifts.length > 0 && `(${pendingShifts.length}件)`}
+              <Save className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden md:inline">変更を保存</span>
+              <span className="inline md:hidden">保存</span>
+              {pendingShifts.length > 0 && <span className="font-medium">({pendingShifts.length})</span>}
             </Button>
           </div>
           
           <div className="mt-6">
             <Separator className="my-4" />
-            <div className="text-sm text-muted-foreground space-y-1">
+            <div className="text-xs md:text-sm text-muted-foreground space-y-1">
               <p>※ 過去の日付のシフトは変更できません</p>
-              <p>※ 変更は「変更を保存」ボタンを押すまで反映されません</p>
+              <p>※ 変更は「保存」ボタンを押すまで反映されません</p>
               <p>※ 黄色でハイライトされている項目は未保存の変更です</p>
-              <p>※ 既に予約が入っている時間帯は、予約をキャンセルしない限りシフトを変更できません</p>
+              <p className="hidden md:block">※ 既に予約が入っている時間帯は、予約をキャンセルしない限りシフトを変更できません</p>
+              <p className="block md:hidden">※ 予約済みの時間帯は変更できません</p>
             </div>
           </div>
         </CardContent>
