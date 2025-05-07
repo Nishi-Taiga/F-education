@@ -764,12 +764,12 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-2 py-2 sm:px-6 lg:px-8 flex justify-between items-center">
           <div className="flex items-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
+            <h1 className="text-xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent whitespace-nowrap">F education</h1>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700">
+          <div className="flex items-center space-x-2 md:space-x-4">
+            <span className="text-gray-700 text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-none">
               {user?.role === 'tutor' && tutorProfile 
                 ? `${tutorProfile.lastName || ''} ${tutorProfile.firstName || ''}`
                 : (user?.displayName || user?.username)

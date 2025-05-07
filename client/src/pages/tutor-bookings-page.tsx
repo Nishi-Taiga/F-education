@@ -960,16 +960,18 @@ export default function TutorBookingsPage() {
     })) || [];
 
   return (
-    <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-6">予約管理</h1>
+    <div className="container py-4 md:py-8">
+      <header className="bg-white mb-6">
+        <h1 className="text-xl md:text-2xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">予約管理</h1>
+      </header>
 
       {/* デバッグ用説明 */}
-      <div className="mb-8 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-        <h2 className="text-lg font-semibold mb-2">レポート編集機能について</h2>
-        <p className="mb-2">
+      <div className="mb-6 p-3 md:p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+        <h2 className="text-base md:text-lg font-semibold mb-2">レポート編集機能について</h2>
+        <p className="mb-2 text-sm md:text-base">
           授業レポートの編集/作成が以下の方法で利用できます：
         </p>
-        <ul className="list-disc pl-5 mb-4">
+        <ul className="list-disc pl-5 mb-3 text-sm md:text-base">
           <li>
             カレンダーでレポート作成済みの授業をクリックすると、レポート詳細モーダルが開きます
           </li>
