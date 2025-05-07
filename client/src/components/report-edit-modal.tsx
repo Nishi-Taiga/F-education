@@ -402,42 +402,48 @@ export function ReportEditModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:w-auto sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>レポート編集</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-center sm:text-left">レポート編集</DialogTitle>
+          <DialogDescription className="text-center sm:text-left">
             {formattedDate} {booking.timeSlot}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           {/* 基本情報 */}
-          <div className="space-y-2 bg-gray-50 p-3 rounded-md">
+          <div className="space-y-3 bg-gray-50 p-3 rounded-md">
             {/* 日時 */}
-            <div className="flex items-center">
-              <CalendarDays className="h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-medium">日時:</span>
-              <span className="text-sm ml-2">{formattedDate} {booking.timeSlot}</span>
+            <div className="flex flex-wrap items-center gap-x-2">
+              <div className="flex items-center min-w-[4rem] sm:min-w-[5rem]">
+                <CalendarDays className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+                <span className="text-sm font-medium">日時:</span>
+              </div>
+              <span className="text-sm">{formattedDate} {booking.timeSlot}</span>
             </div>
             
             {/* 生徒名 */}
-            <div className="flex items-center">
-              <User className="h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-medium">生徒:</span>
-              <span className="text-sm ml-2">{booking.studentName || `生徒ID: ${booking.studentId}`}</span>
+            <div className="flex flex-wrap items-center gap-x-2">
+              <div className="flex items-center min-w-[4rem] sm:min-w-[5rem]">
+                <User className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+                <span className="text-sm font-medium">生徒:</span>
+              </div>
+              <span className="text-sm">{booking.studentName || `生徒ID: ${booking.studentId}`}</span>
             </div>
             
             {/* 科目 */}
-            <div className="flex items-center">
-              <BookOpen className="h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-medium">科目:</span>
-              <span className="text-sm ml-2">{booking.subject}</span>
+            <div className="flex flex-wrap items-center gap-x-2">
+              <div className="flex items-center min-w-[4rem] sm:min-w-[5rem]">
+                <BookOpen className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+                <span className="text-sm font-medium">科目:</span>
+              </div>
+              <span className="text-sm">{booking.subject}</span>
             </div>
           </div>
           
           {/* 警告メッセージ - 既存のレポートがある場合のみ表示 */}
           {(lessonReport || booking.reportContent) && (
-            <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-md flex items-start">
+            <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-md flex flex-wrap items-start">
               <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
               <p className="text-sm text-yellow-700">
                 このレポートは既に保存されています。編集内容は上書き保存されます。
@@ -446,53 +452,55 @@ export function ReportEditModal({
           )}
 
           {/* レポート編集フォーム */}
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <Label htmlFor="unit">単元</Label>
+              <Label htmlFor="unit" className="text-sm font-medium mb-1.5 block">単元</Label>
               <Textarea
                 id="unit"
                 value={unitContent}
                 onChange={(e) => setUnitContent(e.target.value)}
                 placeholder="授業で扱った単元・内容"
-                className="min-h-[80px]"
+                className="min-h-[80px] w-full resize-y"
               />
             </div>
             
             <div>
-              <Label htmlFor="message">伝言事項</Label>
+              <Label htmlFor="message" className="text-sm font-medium mb-1.5 block">伝言事項</Label>
               <Textarea
                 id="message"
                 value={messageContent}
                 onChange={(e) => setMessageContent(e.target.value)}
                 placeholder="保護者への伝言（褒めたいこと、改善点など）"
-                className="min-h-[80px]"
+                className="min-h-[80px] w-full resize-y"
               />
             </div>
             
             <div>
-              <Label htmlFor="goal">来週までの目標(課題)</Label>
+              <Label htmlFor="goal" className="text-sm font-medium mb-1.5 block">来週までの目標(課題)</Label>
               <Textarea
                 id="goal"
                 value={goalContent}
                 onChange={(e) => setGoalContent(e.target.value)}
                 placeholder="次回までの目標または宿題"
-                className="min-h-[80px]"
+                className="min-h-[80px] w-full resize-y"
               />
             </div>
           </div>
         
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-5 flex-col sm:flex-row gap-2 mt-6">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={isSaving}
+              className="w-full sm:w-auto order-2 sm:order-1"
             >
               キャンセル
             </Button>
             <Button 
               type="submit"
               disabled={isSaving}
+              className="w-full sm:w-auto order-1 sm:order-2"
             >
               {isSaving ? (
                 <>

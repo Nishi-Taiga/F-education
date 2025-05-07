@@ -265,23 +265,23 @@ export default function ReportEditPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center">
+    <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center w-full px-4 sm:px-0">
       {loading || isLoadingReport ? (
-        <div className="flex flex-col items-center gap-4">
-          <div className="p-8 bg-white rounded-lg shadow-md">
+        <div className="flex flex-col items-center gap-4 w-full max-w-md">
+          <div className="p-5 sm:p-8 bg-white rounded-lg shadow-md w-full">
             <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-primary" />
               <div className="text-center">
-                <p className="text-lg font-medium">レポート編集画面を表示中...</p>
-                <p className="text-sm text-gray-500 mt-2">データを読み込んでいます。しばらくお待ちください。</p>
+                <p className="text-base sm:text-lg font-medium">レポート編集画面を表示中...</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-2">データを読み込んでいます。しばらくお待ちください。</p>
               </div>
             </div>
           </div>
         </div>
       ) : !bookingData ? (
-        <div className="text-center p-8 bg-white rounded-lg shadow-md">
-          <p className="text-lg text-red-500 font-medium">レポートデータの読み込みに失敗しました</p>
-          <p className="mt-2">ページは自動的にリダイレクトされます</p>
+        <div className="text-center p-5 sm:p-8 bg-white rounded-lg shadow-md w-full max-w-md">
+          <p className="text-base sm:text-lg text-red-500 font-medium">レポートデータの読み込みに失敗しました</p>
+          <p className="text-xs sm:text-sm mt-2">ページは自動的にリダイレクトされます</p>
         </div>
       ) : (
         <ReportEditModal

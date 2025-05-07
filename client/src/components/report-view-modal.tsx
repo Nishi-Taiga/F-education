@@ -145,44 +145,52 @@ export function ReportViewModal({
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:w-auto sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>授業レポート</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-center sm:text-left">授業レポート</DialogTitle>
+          <DialogDescription className="text-center sm:text-left">
             {formattedDate} {booking.timeSlot}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
           {/* 基本情報 - 順序: 1.日時 2.生徒名 3.科目 */}
-          <div className="space-y-2">
+          <div className="space-y-3 bg-gray-50 p-3 rounded-md">
             {/* 1. 日時 */}
-            <div className="flex items-center">
-              <CalendarDays className="h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-medium">日時:</span>
-              <span className="text-sm ml-2">{formattedDate} {booking.timeSlot}</span>
+            <div className="flex flex-wrap items-center gap-x-2">
+              <div className="flex items-center min-w-[4rem] sm:min-w-[5rem]">
+                <CalendarDays className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+                <span className="text-sm font-medium">日時:</span>
+              </div>
+              <span className="text-sm">{formattedDate} {booking.timeSlot}</span>
             </div>
             
             {/* 2. 生徒名 */}
-            <div className="flex items-center">
-              <User className="h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-medium">生徒:</span>
-              <span className="text-sm ml-2">{booking.studentName || `生徒ID: ${booking.studentId}`}</span>
+            <div className="flex flex-wrap items-center gap-x-2">
+              <div className="flex items-center min-w-[4rem] sm:min-w-[5rem]">
+                <User className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+                <span className="text-sm font-medium">生徒:</span>
+              </div>
+              <span className="text-sm">{booking.studentName || `生徒ID: ${booking.studentId}`}</span>
             </div>
             
             {/* 3. 科目 */}
-            <div className="flex items-center">
-              <BookOpen className="h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-medium">科目:</span>
-              <span className="text-sm ml-2">{booking.subject}</span>
+            <div className="flex flex-wrap items-center gap-x-2">
+              <div className="flex items-center min-w-[4rem] sm:min-w-[5rem]">
+                <BookOpen className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+                <span className="text-sm font-medium">科目:</span>
+              </div>
+              <span className="text-sm">{booking.subject}</span>
             </div>
             
             {/* 講師情報 */}
             {booking.tutorName && (
-              <div className="flex items-center">
-                <User className="h-4 w-4 text-primary mr-2" />
-                <span className="text-sm font-medium">講師:</span>
-                <span className="text-sm ml-2">{booking.tutorName}</span>
+              <div className="flex flex-wrap items-center gap-x-2">
+                <div className="flex items-center min-w-[4rem] sm:min-w-[5rem]">
+                  <User className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+                  <span className="text-sm font-medium">講師:</span>
+                </div>
+                <span className="text-sm">{booking.tutorName}</span>
               </div>
             )}
           </div>
@@ -191,40 +199,40 @@ export function ReportViewModal({
           
           {/* レポート内容 */}
           <div className="space-y-3">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-y-1">
               <h4 className="text-sm font-semibold">授業レポート内容</h4>
               
               {reportDateStr && (
                 <div className="flex items-center text-xs text-gray-500">
-                  <Clock className="h-3 w-3 mr-1" />
-                  <span>作成: {reportDateStr}</span>
+                  <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
+                  <span className="inline-block">作成: {reportDateStr}</span>
                 </div>
               )}
             </div>
             
-            <div className="space-y-3 bg-gray-50 p-3 rounded-md">
+            <div className="space-y-4 bg-gray-50 p-3 rounded-md">
               <div>
-                <div className="text-xs text-gray-500 mb-1 flex items-center">
-                  <ChevronRight className="h-3 w-3 mr-1" />
-                  <span>単元</span>
+                <div className="text-xs text-gray-500 mb-2 flex items-center">
+                  <ChevronRight className="h-3 w-3 mr-1 flex-shrink-0" />
+                  <span className="font-medium">単元</span>
                 </div>
-                <p className="text-sm whitespace-pre-wrap">{unit || "-"}</p>
+                <p className="text-sm whitespace-pre-wrap px-2">{unit || "-"}</p>
               </div>
               
               <div>
-                <div className="text-xs text-gray-500 mb-1 flex items-center">
-                  <ChevronRight className="h-3 w-3 mr-1" />
-                  <span>伝言事項</span>
+                <div className="text-xs text-gray-500 mb-2 flex items-center">
+                  <ChevronRight className="h-3 w-3 mr-1 flex-shrink-0" />
+                  <span className="font-medium">伝言事項</span>
                 </div>
-                <p className="text-sm whitespace-pre-wrap">{message || "-"}</p>
+                <p className="text-sm whitespace-pre-wrap px-2">{message || "-"}</p>
               </div>
               
               <div>
-                <div className="text-xs text-gray-500 mb-1 flex items-center">
-                  <ChevronRight className="h-3 w-3 mr-1" />
-                  <span>来週までの目標（課題）</span>
+                <div className="text-xs text-gray-500 mb-2 flex items-center">
+                  <ChevronRight className="h-3 w-3 mr-1 flex-shrink-0" />
+                  <span className="font-medium">来週までの目標（課題）</span>
                 </div>
-                <p className="text-sm whitespace-pre-wrap">{goal || "-"}</p>
+                <p className="text-sm whitespace-pre-wrap px-2">{goal || "-"}</p>
               </div>
             </div>
           </div>
