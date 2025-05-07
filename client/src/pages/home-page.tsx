@@ -1129,7 +1129,7 @@ export default function HomePage() {
                       <div className="w-8 h-8 md:w-10 md:h-10 bg-gray-100 rounded-full flex items-center justify-center mb-1 md:mb-2">
                         <Settings className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
                       </div>
-                      <span className="text-xs md:text-sm font-medium text-gray-900">設定</span>
+                      <span className="text-xs md:text-sm font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] md:max-w-none">設定</span>
                     </div>
                   </Button>
                 )}
