@@ -162,6 +162,25 @@ export default function TutorBookingsPage() {
     return `${student.lastName} ${student.firstName}`;
   };
   
+  // bookingsの宣言を前に移動して型エラーを解消
+  const { data: bookings, isLoading: isLoadingBookings } = useQuery({
+    queryKey: ["/api/tutor/bookings"],
+    queryFn: async () => {
+      try {
+        const response = await fetch("/api/tutor/bookings");
+        if (!response.ok) {
+          throw new Error("Failed to fetch tutor bookings");
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching tutor bookings:", error);
+        throw error;
+      }
+    },
+    retry: false,
+    enabled: !!tutorProfile,
+  });
+
   // コンポーネントマウント時にすべての予約のレポート情報を一括取得
   useEffect(() => {
     if (bookings && bookings.length > 0) {
@@ -169,19 +188,19 @@ export default function TutorBookingsPage() {
       
       // 過去の予約IDのリストを作成
       const pastBookingIds = bookings
-        .filter((booking: any) => {
+        .filter((booking: Booking) => {
           const bookingDate = parseISO(booking.date);
           return isBefore(bookingDate, new Date()) && !isToday(bookingDate);
         })
-        .map((booking: any) => booking.id);
+        .map((booking: Booking) => booking.id);
       
       // すべてのレポート情報を一括取得
       Promise.all(
-        pastBookingIds.map(id => 
+        pastBookingIds.map((id: number) => 
           fetch(`/api/lesson-reports/booking/${id}`)
             .then(response => {
               if (response.status === 404) return { bookingId: id, report: null };
-              if (response.ok) return response.json().then(report => ({ bookingId: id, report }));
+              if (response.ok) return response.json().then((report: any) => ({ bookingId: id, report }));
               throw new Error(`予約ID ${id} のレポート情報取得に失敗`);
             })
             .catch(error => {
@@ -204,18 +223,77 @@ export default function TutorBookingsPage() {
         setLoadedReportIds(loadedIds);
       });
     }
-  }, [bookings]); // bookingsが変更されたときに再実行
+  }, [bookings, reportCache, loadedReportIds]); // 依存配列を適切に設定
   
-  // レポートを取得する関数（改良版）
+  // レポートを取得する関数（同期版 - すぐに結果を返す）
   const getReportForBooking = (bookingId: number): any => {
-    // キャッシュにあれば返す
+    // キャッシュにあればそれを返す
     if (reportCache[bookingId] !== undefined || loadedReportIds.has(bookingId)) {
       return reportCache[bookingId];
     }
     
-    // キャッシュされていない場合は未読み込みとして null を返す
-    // データは useEffect で事前に一括取得するため、ここでは再取得しない
+    // キャッシュにない場合は即時取得を開始
+    console.log(`予約ID ${bookingId} のレポート情報をオンデマンドで取得します`);
+    fetch(`/api/lesson-reports/booking/${bookingId}`)
+      .then(response => {
+        if (response.status === 404) return null;
+        if (response.ok) return response.json();
+        throw new Error(`レポート情報の取得に失敗しました (${response.status})`);
+      })
+      .then(report => {
+        if (report) {
+          console.log(`予約ID ${bookingId} のレポート情報を取得しました:`, report);
+        } else {
+          console.log(`予約ID ${bookingId} にはレポートがありません`);
+        }
+        
+        // キャッシュに情報を保存
+        setReportCache(prev => ({
+          ...prev,
+          [bookingId]: report
+        }));
+        
+        // ロード済みIDに追加
+        setLoadedReportIds(prev => new Set(prev).add(bookingId));
+      })
+      .catch(error => {
+        console.error(`予約ID ${bookingId} のレポート取得エラー:`, error);
+        // エラー時もロード済みとしてマーク
+        setLoadedReportIds(prev => new Set(prev).add(bookingId));
+      });
+    
+    // レポートがまだ取得されていないため null を返す
     return null;
+  };
+  
+  // 非同期版 - Promise を返す
+  const fetchReportForBooking = async (bookingId: number): Promise<any> => {
+    // キャッシュにあればそれを返す
+    if (reportCache[bookingId] !== undefined) {
+      return reportCache[bookingId];
+    }
+    
+    try {
+      const response = await fetch(`/api/lesson-reports/booking/${bookingId}`);
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error(`レポート情報の取得に失敗しました (${response.status})`);
+      
+      const report = await response.json();
+      
+      // キャッシュに情報を保存
+      setReportCache(prev => ({
+        ...prev,
+        [bookingId]: report
+      }));
+      
+      // ロード済みIDに追加
+      setLoadedReportIds(prev => new Set(prev).add(bookingId));
+      
+      return report;
+    } catch (error) {
+      console.error(`予約ID ${bookingId} のレポート取得エラー:`, error);
+      return null;
+    }
   };
 
   // 予約カードコンポーネント - コンポーネントを内部で定義し直して必要な状態と関数にアクセスできるようにする
@@ -487,24 +565,7 @@ export default function TutorBookingsPage() {
     enabled: !!user && user.role === "tutor",
   });
 
-  // 予約情報の取得
-  const { data: bookings, isLoading: isLoadingBookings } = useQuery({
-    queryKey: ["/api/tutor/bookings"],
-    queryFn: async () => {
-      try {
-        const response = await fetch("/api/tutor/bookings");
-        if (!response.ok) {
-          throw new Error("Failed to fetch tutor bookings");
-        }
-        return await response.json();
-      } catch (error) {
-        console.error("Error fetching tutor bookings:", error);
-        throw error;
-      }
-    },
-    retry: false,
-    enabled: !!tutorProfile,
-  });
+  // この部分は削除して、上で定義した bookings を使用
 
   // 生徒情報の取得
   const { data: students, isLoading: isLoadingStudents } = useQuery({
@@ -703,11 +764,20 @@ export default function TutorBookingsPage() {
       return !isBefore(bookingDate, new Date()) || isToday(bookingDate);
     }) || [];
 
-  // 過去の予約
+  // 過去の予約 - レポート状態を考慮したフィルタリング
   const pastBookings =
     bookings?.filter((booking: Booking) => {
       const bookingDate = parseISO(booking.date);
-      return isBefore(bookingDate, new Date()) && !isToday(bookingDate);
+      const isPastBooking = isBefore(bookingDate, new Date()) && !isToday(bookingDate);
+      
+      if (!isPastBooking) return false;
+      
+      // レポート済みかどうかをチェック
+      const report = getReportForBooking(booking.id);
+      
+      // レポート未作成の予約のみを表示する場合はここで条件を変更
+      // 現在はすべての過去の予約を表示
+      return true;
     }) || [];
 
   // 選択した日付の予約
