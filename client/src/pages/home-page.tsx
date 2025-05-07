@@ -797,37 +797,30 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">
         
-        <div className="md:flex md:items-start md:justify-between mb-4">
-          <div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+          <div className="flex items-center">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
               {user?.role === 'tutor' ? 'ダッシュボード' : '予約システム'}
             </h2>
-          </div>
-          {user?.role !== 'tutor' && (
-            <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-2 border border-gray-200">
-              {/* 生徒ごとのチケット残数 */}
-              {studentTickets.length > 0 && (
-                <div>
-                  <div className="flex items-center mb-1">
-                    <div className="mr-1 bg-green-50 p-1 rounded-full">
-                      <Ticket className="text-green-600 h-3.5 w-3.5" />
-                    </div>
-                    <p className="text-sm font-medium text-gray-900">チケット残数</p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {studentTickets.map(ticket => (
-                      <div key={ticket.studentId} className="flex-1 flex justify-between items-center bg-gray-50 py-1 px-2 rounded-md min-w-[180px] whitespace-nowrap overflow-hidden">
-                        <span className="text-xs font-medium truncate">{ticket.name}</span>
-                        <span className="text-sm font-bold ml-2 flex-shrink-0">{ticket.ticketCount}枚</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
 
-            </div>
-          )}
+            {/* インライン表示のチケット残数 (ユーザーが講師でない場合) */}
+            {user?.role !== 'tutor' && studentTickets.length > 0 && (
+              <div className="ml-4 flex items-center">
+                <div className="mr-1 bg-green-50 p-1 rounded-full">
+                  <Ticket className="text-green-600 h-3.5 w-3.5" />
+                </div>
+                <div className="flex flex-wrap gap-1.5 ml-1">
+                  {studentTickets.map(ticket => (
+                    <div key={ticket.studentId} className="flex items-center bg-gray-50 py-1 px-2 rounded-md whitespace-nowrap">
+                      <span className="text-xs font-medium truncate">{ticket.name}:</span>
+                      <span className="text-sm font-bold ml-1">{ticket.ticketCount}枚</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
         </div>
 
         {/* Calendar - 非スクロール領域 */}

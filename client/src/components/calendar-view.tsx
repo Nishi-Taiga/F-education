@@ -217,14 +217,15 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   ${isCurrentDay ? 'bg-blue-50 border border-blue-200 shadow-sm' : ''} 
                   overflow-hidden`}
                 style={{ 
-                  height: 'auto', 
                   minHeight: '60px', 
                   // 予約が3件以上ある場合はセルサイズを大きくする（特にモバイル用）
-                  maxHeight: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '120px' : '105px') : '75px'
+                  maxHeight: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '120px' : '105px') : '75px',
+                  // 現在の日付は背景色を適用（height: 100%にして背景色が全体に適用されるようにする）
+                  height: isCurrentDay ? '100%' : 'auto'
                 }}
                 onClick={() => isSelectable && handleDayClick(day)}
               >
-                <div className="p-0.5 text-center">
+                <div className={`p-0.5 text-center ${isCurrentDay ? 'h-full' : ''}`}>
                   <span className={`
                     ${isCurrentDay ? 'bg-primary text-white rounded-full w-5 h-5 md:w-7 md:h-7 flex items-center justify-center mx-auto text-sm md:text-base font-bold' : 'text-sm md:text-base font-medium'}
                     ${!isCurrentMonth ? 'text-gray-400' : textColorClass}

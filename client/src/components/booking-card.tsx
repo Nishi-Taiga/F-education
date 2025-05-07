@@ -40,8 +40,17 @@ export function BookingCard({ booking, onCancelClick, onViewReportClick }: Booki
   return (
     <div className="flex items-center p-3 bg-gray-50 rounded-md">
       <div className="flex-grow">
+        {/* 日付 */}
         <div className="text-sm font-medium">{formattedDate}</div>
+        {/* 時間帯 */}
         <div className="text-xs text-gray-600">{booking.timeSlot}</div>
+        {/* 生徒名 */}
+        {booking.studentId && (
+          <div className="text-xs text-gray-600 mt-0.5">
+            生徒: <span className="font-medium">{booking.studentName || `生徒ID: ${booking.studentId}`}</span>
+          </div>
+        )}
+        {/* 科目 */}
         {booking.subject && (
           <div className="text-xs text-gray-600 mt-0.5">
             科目: <span className="font-medium">{booking.subject}</span>
@@ -51,13 +60,6 @@ export function BookingCard({ booking, onCancelClick, onViewReportClick }: Booki
         <div className="text-xs text-gray-600 mt-0.5">
           担当講師: <span className="font-medium">{booking.tutorName || `講師ID: ${booking.tutorId}`}</span>
         </div>
-        {booking.studentId && (
-          <div className="flex items-center mt-1">
-            <span className="text-xs text-primary">
-              {booking.studentName || `生徒ID: ${booking.studentId}`}
-            </span>
-          </div>
-        )}
       </div>
       
       {/* レポート表示ボタン - 過去の授業でレポートが存在する場合のみ表示 */}
