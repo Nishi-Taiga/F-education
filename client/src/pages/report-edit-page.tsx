@@ -34,18 +34,53 @@ export default function ReportEditPage() {
     // 最適化された初期データ取得処理
     const tryLoadInitialData = async () => {
       try {
+        console.log("レポート編集ページ - データ読み込み開始:", { reportId, bookingId });
+        
         // 1. セッションストレージから予約データを最初に確認（最も高速）
         const storedBookingData = sessionStorage.getItem('EDIT_BOOKING_DATA');
+        const initialReportData = sessionStorage.getItem('INITIAL_REPORT_DATA');
+        
+        console.log("セッションストレージから取得したデータ:", { 
+          hasBookingData: !!storedBookingData, 
+          hasReportData: !!initialReportData 
+        });
+        
         if (storedBookingData) {
-          // セッションストレージからデータを読み込む（最速）
-          setBookingData(JSON.parse(storedBookingData));
+          // セッションストレージからデータを読み込む
+          const parsedBookingData = JSON.parse(storedBookingData);
+          console.log("パース済みの予約データ:", parsedBookingData);
+          
+          // 初期レポートデータがある場合は予約データに統合
+          if (initialReportData) {
+            try {
+              const parsedReportData = JSON.parse(initialReportData);
+              console.log("パース済みの初期レポートデータ:", parsedReportData);
+              
+              // 予約データにレポートデータが含まれていない場合のみ追加
+              if (!parsedBookingData.lessonReport) {
+                parsedBookingData.lessonReport = {
+                  id: parsedBookingData.lessonReport?.id,
+                  bookingId: parsedBookingData.id,
+                  tutorId: parsedBookingData.tutorId,
+                  studentId: parsedBookingData.studentId,
+                  date: parsedBookingData.date,
+                  timeSlot: parsedBookingData.timeSlot,
+                  ...parsedReportData,
+                };
+                console.log("レポートデータを統合しました");
+              }
+            } catch (e) {
+              console.error("レポートデータの解析エラー:", e);
+            }
+          }
+          
+          // 整形したデータを設定
+          setBookingData(parsedBookingData);
           setLoading(false);
           setModalOpen(true);
+          console.log("予約データを設定し、モーダルを開きます");
           return; // 早期リターンで後続の処理をスキップ
         }
-        
-        // 2. 初期レポートデータ取得（新規作成時のみ必要）
-        const initialReportData = sessionStorage.getItem('INITIAL_REPORT_DATA');
         
         // 3. APIパラメータ（reportIdかbookingId）がない場合は処理中断
         if ((!reportId || !reportData) && !bookingId) {
