@@ -1,9 +1,10 @@
+import { useState, useEffect } from "react";
 import { format, parse, formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import { DialogTitle, DialogDescription, DialogHeader, DialogFooter, DialogContent, Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { User, CalendarDays, BookOpen, ChevronRight, Calendar, Clock } from "lucide-react";
+import { User, CalendarDays, BookOpen, ChevronRight, Calendar, Clock, Loader2 } from "lucide-react";
 
 // 内部型定義を使用して柔軟性を確保
 interface BookingForReport {
@@ -68,6 +69,9 @@ export function ReportViewModal({
       console.error("Invalid date format:", booking.date);
     }
   }
+  
+  // 状態管理を追加
+  const [isNavigatingToEdit, setIsNavigatingToEdit] = useState(false);
   
   // レポート作成日時を取得 - パフォーマンス最適化
   let reportDateStr = "";
@@ -238,72 +242,89 @@ export function ReportViewModal({
         </div>
         
         <DialogFooter className="mt-4 gap-2 flex">
-          {/* 編集ボタン - パフォーマンス最適化 */}
-          <Button 
-            variant="default" 
-            onClick={() => {
-              // 必要なデータを先に準備
-              const reportId = booking.lessonReport?.id;
-              const bookingId = booking.id;
-              const params = new URLSearchParams();
-              
-              // 最適化：事前に全てのデータを準備してからURLパラメータを設定
-              if (reportId) {
-                params.set('reportId', reportId.toString());
-              } else {
-                params.set('bookingId', bookingId.toString());
-                
-                // レポートデータが既にある場合のみセッションストレージに保存
-                if (unit || message || goal) {
-                  const initialData = {
-                    unitContent: unit,
-                    messageContent: message,
-                    goalContent: goal
-                  };
+          {isNavigatingToEdit ? (
+            <div className="flex items-center justify-center w-full gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary"></div>
+              <span className="text-primary font-medium text-sm">レポート編集画面を表示中...</span>
+            </div>
+          ) : (
+            <>
+              {/* 編集ボタン - パフォーマンス最適化 */}
+              <Button 
+                variant="default" 
+                onClick={() => {
+                  // 編集モードに入ったことを表示
+                  setIsNavigatingToEdit(true);
+                  
+                  // 必要なデータを先に準備
+                  const reportId = booking.lessonReport?.id;
+                  const bookingId = booking.id;
+                  const params = new URLSearchParams();
+                  
+                  // 最適化：事前に全てのデータを準備してからURLパラメータを設定
+                  if (reportId) {
+                    params.set('reportId', reportId.toString());
+                  } else {
+                    params.set('bookingId', bookingId.toString());
+                    
+                    // レポートデータがある場合はセッションストレージに保存
+                    if (unit || message || goal) {
+                      const initialData = {
+                        unitContent: unit,
+                        messageContent: message,
+                        goalContent: goal
+                      };
+                      try {
+                        sessionStorage.setItem('INITIAL_REPORT_DATA', JSON.stringify(initialData));
+                      } catch (err) {
+                        // エラーは静かに処理
+                      }
+                    }
+                  }
+                  
+                  // 編集画面で必要な予約情報をセッションストレージに保存
                   try {
-                    sessionStorage.setItem('INITIAL_REPORT_DATA', JSON.stringify(initialData));
+                    const essentialBookingData = {
+                      id: booking.id,
+                      date: booking.date,
+                      timeSlot: booking.timeSlot, 
+                      subject: booking.subject || "",
+                      studentId: booking.studentId,
+                      studentName: booking.studentName || "",
+                      tutorId: booking.tutorId
+                    };
+                    sessionStorage.setItem('EDIT_BOOKING_DATA', JSON.stringify(essentialBookingData));
                   } catch (err) {
                     // エラーは静かに処理
                   }
-                }
-              }
+                  
+                  // 少し遅延してから画面遷移することで、ローディング表示を確実に見せる
+                  setTimeout(() => {
+                    // モーダルを閉じて、編集コールバックを実行
+                    onClose();
+                    if (typeof onEdit === 'function') {
+                      onEdit();
+                    }
+                    
+                    // 編集ページへの遷移
+                    const reportEditUrl = `/report-edit?${params.toString()}`;
+                    window.location.assign(reportEditUrl);
+                  }, 100); // わずかな遅延を追加
+                }}
+                disabled={isNavigatingToEdit}
+              >
+                レポートを編集
+              </Button>
               
-              // 編集画面で必要な予約情報を最小限にしてストレージに保存
-              try {
-                const essentialBookingData = {
-                  id: booking.id,
-                  date: booking.date,
-                  timeSlot: booking.timeSlot,
-                  subject: booking.subject || "",
-                  studentId: booking.studentId,
-                  studentName: booking.studentName || "",
-                  tutorId: booking.tutorId
-                };
-                sessionStorage.setItem('EDIT_BOOKING_DATA', JSON.stringify(essentialBookingData));
-              } catch (err) {
-                // エラーは静かに処理
-              }
-              
-              // モーダルを閉じて、編集コールバックを実行
-              onClose();
-              if (typeof onEdit === 'function') {
-                onEdit();
-              }
-              
-              // 編集ページへの遷移を最適化 - window.location.hrefは処理が遅いため直接location.assignを使用
-              const reportEditUrl = `/report-edit?${params.toString()}`;
-              window.location.assign(reportEditUrl);
-            }}
-          >
-            レポートを編集
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            onClick={onClose}
-          >
-            閉じる
-          </Button>
+              <Button 
+                variant="outline" 
+                onClick={onClose}
+                disabled={isNavigatingToEdit}
+              >
+                閉じる
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
