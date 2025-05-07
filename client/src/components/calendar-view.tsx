@@ -83,6 +83,10 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
   const goToNextMonth = () => {
     setCurrentDate(addMonths(currentDate, 1));
   };
+  
+  const goToCurrentMonth = () => {
+    setCurrentDate(new Date());
+  };
 
   // Get bookings for a specific day
   const getBookingsForDay = (day: Date) => {
@@ -143,34 +147,72 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
 
   return (
     <div className="overflow-hidden">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-3">
-        <div className="flex items-center mb-2 md:mb-0">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <span className="py-1 text-xl font-bold">{formattedMonth}</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
-        
-        {/* 色の凡例 - 講師用アカウントのみ表示 */}
-        {showLegend && (
-          <div className="flex items-center gap-3 text-xs bg-gray-50 p-2 rounded-lg">
+      <div className="flex flex-col mb-3">
+        {/* 年月表示と色の凡例を1行に配置 */}
+        <div className="flex justify-between items-center mb-2">
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <span className="py-1 text-xl font-bold">{formattedMonth}</span>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+          
+          {/* 色の凡例 - 生徒保護者用と講師用で表示内容を分ける */}
+          <div className="flex items-center gap-2 text-xs bg-gray-50 p-1 rounded-lg">
             <div className="flex items-center">
-              <div className="w-4 h-4 bg-blue-500 mr-1 rounded-full"></div>
+              <div className="w-3 h-3 bg-blue-500 mr-1 rounded-full"></div>
               <span className="font-medium">予定</span>
             </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-red-500 mr-1 rounded-full"></div>
-              <span className="font-medium">未報告</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-green-500 mr-1 rounded-full"></div>
-              <span className="font-medium">報告済</span>
-            </div>
+            {showLegend ? (
+              <>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-red-500 mr-1 rounded-full"></div>
+                  <span className="font-medium">未報告</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-green-500 mr-1 rounded-full"></div>
+                  <span className="font-medium">報告済</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-green-500 mr-1 rounded-full"></div>
+                <span className="font-medium">報告あり</span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+        
+        {/* カレンダー選択ボタンを左揃えに */}
+        <div className="flex justify-start gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={goToPreviousMonth}
+            className="text-xs py-0.5 h-7"
+          >
+            前月
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={goToNextMonth}
+            className="text-xs py-0.5 h-7"
+          >
+            次月
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={goToCurrentMonth}
+            className="text-xs py-0.5 h-7"
+          >
+            今月
+          </Button>
+        </div>
       </div>
 
       {/* Day labels */}
