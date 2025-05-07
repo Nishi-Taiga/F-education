@@ -804,24 +804,21 @@ export default function HomePage() {
             </h2>
           </div>
           {user?.role !== 'tutor' && (
-            <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-3 border border-gray-200">
-              <div className="flex justify-between items-start">
-              </div>
-              
+            <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-lg p-2 border border-gray-200">
               {/* 生徒ごとのチケット残数 */}
               {studentTickets.length > 0 && (
-                <div className="mt-3">
-                  <div className="flex items-center mb-2">
-                    <div className="mr-2 bg-green-50 p-1.5 rounded-full">
-                      <Ticket className="text-green-600 h-4 w-4" />
+                <div>
+                  <div className="flex items-center mb-1">
+                    <div className="mr-1 bg-green-50 p-1 rounded-full">
+                      <Ticket className="text-green-600 h-3.5 w-3.5" />
                     </div>
-                    <p className="text-base font-medium text-gray-900">チケット残数</p>
+                    <p className="text-sm font-medium text-gray-900">チケット残数</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {studentTickets.map(ticket => (
-                      <div key={ticket.studentId} className="flex-1 flex justify-between items-center bg-gray-50 p-2 rounded-md min-w-[200px] whitespace-nowrap overflow-hidden">
-                        <span className="text-sm font-medium truncate">{ticket.name}</span>
-                        <span className="text-base font-bold ml-2 flex-shrink-0">{ticket.ticketCount}枚</span>
+                      <div key={ticket.studentId} className="flex-1 flex justify-between items-center bg-gray-50 py-1 px-2 rounded-md min-w-[180px] whitespace-nowrap overflow-hidden">
+                        <span className="text-xs font-medium truncate">{ticket.name}</span>
+                        <span className="text-sm font-bold ml-2 flex-shrink-0">{ticket.ticketCount}枚</span>
                       </div>
                     ))}
                   </div>
@@ -836,7 +833,7 @@ export default function HomePage() {
         {/* Calendar - 非スクロール領域 */}
         <Card className="p-3 mb-4">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-base font-medium text-gray-900">予約済み授業</h3>
+            <h3 className="text-base font-bold text-gray-900">予約済み授業</h3>
           </div>
           
           <div className="calendar-section">
@@ -863,7 +860,7 @@ export default function HomePage() {
         {user?.role !== 'tutor' && (
           <Card className="p-3 mb-4" id="booking-list">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-base font-medium text-gray-900">予約一覧</h3>
+              <h3 className="text-base font-bold text-gray-900">予約一覧</h3>
             </div>
             
             <div className="space-y-2">

@@ -216,7 +216,12 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   ${isPast && !isCurrentDay ? 'opacity-60' : ''} 
                   ${isCurrentDay ? 'bg-blue-50 border border-blue-200 shadow-sm' : ''} 
                   overflow-hidden`}
-                style={{ height: 'auto', minHeight: '60px', maxHeight: '75px' }}
+                style={{ 
+                  height: 'auto', 
+                  minHeight: '60px', 
+                  // 予約が3件以上ある場合はセルサイズを大きくする（特にモバイル用）
+                  maxHeight: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '120px' : '105px') : '75px'
+                }}
                 onClick={() => isSelectable && handleDayClick(day)}
               >
                 <div className="p-0.5 text-center">
@@ -227,8 +232,8 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                     {day.getDate()}
                   </span>
                 </div>
-                {/* モバイルでは最大2件まで表示（小さい画面でのオーバーフロー防止） */}
-                {dayBookings.slice(0, window.innerWidth < 640 ? 2 : 3).map((booking, index) => {
+                {/* 最大3件まで表示 */}
+                {dayBookings.slice(0, 3).map((booking, index) => {
                   // 授業状態に応じた色分け
                   const lessonStatus = getLessonStatus(booking);
                   let bgColorClass = "bg-blue-500"; // デフォルト：これから（青）
@@ -288,12 +293,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                 })}
                 
                 {/* 3件以上ある場合は+N件という表示を追加 */}
-                {window.innerWidth < 640 && dayBookings.length > 2 && (
-                  <div className="mt-0.5 mb-0.5 text-[10px] text-center text-gray-600 font-medium">
-                    +{dayBookings.length - 2}件
-                  </div>
-                )}
-                {window.innerWidth >= 640 && dayBookings.length > 3 && (
+                {dayBookings.length > 3 && (
                   <div className="mt-0.5 mb-0.5 text-[10px] text-center text-gray-600 font-medium">
                     +{dayBookings.length - 3}件
                   </div>
