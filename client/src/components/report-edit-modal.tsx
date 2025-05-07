@@ -63,11 +63,12 @@ export function ReportEditModal({
   const { toast } = useToast();
   const [, setLocation] = useLocation(); // wouter hook
   
-  // メモリ使用量最適化: レポート内容を一つのオブジェクトにまとめる
+  // メモリ使用量最適化: レポート内容を一つのオブジェクトにまとめる 
+  // 既存レポートデータがある場合は初期値として設定
   const [reportContent, setReportContent] = useState({
-    unitContent: "",
-    messageContent: "",
-    goalContent: ""
+    unitContent: booking.lessonReport?.unitContent || "",
+    messageContent: booking.lessonReport?.messageContent || "",
+    goalContent: booking.lessonReport?.goalContent || ""
   });
   // 個別の setters - 内部的には一つの状態更新を使用
   const setUnitContent = (value: string) => setReportContent(prev => ({ ...prev, unitContent: value }));
@@ -91,7 +92,7 @@ export function ReportEditModal({
       }
     }
   } catch (error) {
-    console.error("Invalid date format:", booking.date);
+    // 無効な日付フォーマットはデフォルト表示に戻す
   }
 
   // 新しいAPIを使用してレッスンレポートを取得

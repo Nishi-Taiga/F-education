@@ -119,13 +119,53 @@ export default function ReportEditPage() {
                   bookingId: booking.id,
                   tutorId: booking.tutorId,
                   studentId: booking.studentId,
-                  ...initialData,
+                  unitContent: initialData.unitContent || "",
+                  messageContent: initialData.messageContent || "",
+                  goalContent: initialData.goalContent || "",
                   createdAt: new Date(),
                   updatedAt: new Date()
                 };
               } catch (parseError) {
                 // 初期データのパースエラーは無視して続行
               }
+            }
+            
+            // reportContentがあるが、lessonReportがない場合はreportContentから内容を抽出してlessonReportを作成
+            if (!booking.lessonReport && booking.reportContent) {
+              let unitContent = "";
+              let messageContent = "";
+              let goalContent = "";
+              
+              if (booking.reportContent.includes('【単元】')) {
+                try {
+                  const unitMatch = booking.reportContent.match(/【単元】([\s\S]*?)(?=【伝言事項】)/);
+                  const messageMatch = booking.reportContent.match(/【伝言事項】([\s\S]*?)(?=【来週までの目標\(課題\)】)/);
+                  const goalMatch = booking.reportContent.match(/【来週までの目標\(課題\)】([\s\S]*)/);
+                  
+                  unitContent = unitMatch ? unitMatch[1].trim() : "";
+                  messageContent = messageMatch ? messageMatch[1].trim() : "";
+                  goalContent = goalMatch ? goalMatch[1].trim() : "";
+                } catch (e) {
+                  unitContent = booking.reportContent;
+                }
+              } else {
+                const parts = booking.reportContent.split("\n");
+                unitContent = parts[0] || "";
+                messageContent = parts[1] || "";
+                goalContent = parts[2] || "";
+              }
+              
+              booking.lessonReport = {
+                id: 0,
+                bookingId: booking.id,
+                tutorId: booking.tutorId,
+                studentId: booking.studentId,
+                unitContent,
+                messageContent,
+                goalContent,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              };
             }
             
             setBookingData(booking);
