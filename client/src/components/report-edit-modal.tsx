@@ -58,10 +58,7 @@ export function ReportEditModal({
   onClose,
   onSuccess
 }: ReportEditModalProps) {
-  // パフォーマンス向上: 開発用のデバッグ情報は本番環境ではスキップ
-  if (process.env.NODE_ENV === 'development') {
-    console.log("レポート編集モーダルが呼び出されました", { isOpen, bookingId: booking?.id });
-  }
+  // 開発用コンソールログを削除
   
   const { toast } = useToast();
   const [, setLocation] = useLocation(); // wouter hook
@@ -82,12 +79,7 @@ export function ReportEditModal({
   
   const [isSaving, setIsSaving] = useState(false);
   
-  // パフォーマンス向上: useEffect内の不要なログを削除
-  useEffect(() => {
-    if (isOpen && process.env.NODE_ENV === 'development') {
-      console.log("ReportEditModal - モーダルが開かれました。予約情報:", booking);
-    }
-  }, [isOpen, booking]);
+  // 不要なuseEffectを削除
 
   // 日付をフォーマット（無効な日付値のエラー処理を追加）
   let formattedDate = "日付不明";
@@ -117,11 +109,6 @@ export function ReportEditModal({
   useEffect(() => {
     if (!isOpen) return; // 閉じている場合は早期リターン
     
-    // 開発環境でのみログを出力
-    if (process.env.NODE_ENV === 'development') {
-      console.log("ReportEditModal - モーダルが開かれました。予約情報:", booking);
-    }
-    
     // 一度のstate更新で全フィールドを設定することでパフォーマンス向上
     const setAllFields = (unit: string, message: string, goal: string) => {
       // 即時に状態を更新
@@ -136,9 +123,6 @@ export function ReportEditModal({
     
     // 1. まずbooking.lessonReportを優先的に使用（最もレスポンスが早い）
     if (booking.lessonReport) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("予約オブジェクト内のlessonReportデータを即時使用します");
-      }
       // 即時設定
       setAllFields(
         getReportField(booking.lessonReport, 'unitContent'),
@@ -148,9 +132,6 @@ export function ReportEditModal({
     } 
     // 2. その次にAPIレスポンスを使用（レスポンスが遅い場合がある）
     else if (lessonReport) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("APIから取得したレッスンレポートデータを即時使用します");
-      }
       // 即時設定
       setAllFields(
         getReportField(lessonReport, 'unitContent'),
@@ -161,10 +142,6 @@ export function ReportEditModal({
     
     // パターン3: 従来のreportContentを使用（後方互換性）
     if (booking.reportContent) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("従来の予約レポートデータを解析します");
-      }
-      
       // 高速化: 新フォーマットの正規表現によるパース（一度に解析）
       if (booking.reportContent.includes('【単元】')) {
         try {
@@ -179,10 +156,6 @@ export function ReportEditModal({
             goalMatch ? goalMatch[1].trim() : ""
           );
         } catch (e) {
-          // エラー時はログだけ出力し、レポート全体を単元欄に表示
-          if (process.env.NODE_ENV === 'development') {
-            console.error("レポート解析エラー:", e);
-          }
           setAllFields(booking.reportContent, "", "");
         }
       } else {
@@ -198,9 +171,6 @@ export function ReportEditModal({
     }
     
     // パターン4: レポート内容なし - フィールドクリア
-    if (process.env.NODE_ENV === 'development') {
-      console.log("レポート内容がありません、フィールドをクリアします");
-    }
     setAllFields("", "", "");
     
   }, [isOpen, booking, lessonReport, setReportContent]);
@@ -236,11 +206,8 @@ export function ReportEditModal({
         goalContent
       };
 
-      console.log("レポート保存処理を開始します");
-      
       // 優先度1: booking.lessonReportが存在する場合はそのIDを使用
       if (booking.lessonReport?.id) {
-        console.log(`booking.lessonReportのID ${booking.lessonReport.id} を使用して更新します`);
         await updateReportMutation.mutateAsync({ 
           reportId: booking.lessonReport.id,
           data: {
@@ -253,7 +220,6 @@ export function ReportEditModal({
       // 優先度2: APIで取得したlessonReportを使用
       else if (lessonReport && typeof lessonReport === 'object' && 'id' in lessonReport && lessonReport.id) {
         // 既存のレポートを更新
-        console.log(`APIで取得したlessonReportのID ${lessonReport.id} を使用して更新します`);
         await updateReportMutation.mutateAsync({ 
           reportId: lessonReport.id as number,
           data: {
@@ -264,7 +230,6 @@ export function ReportEditModal({
         });
       } else {
         // 新規レポートを作成
-        console.log("新規レポートを作成します");
         await createReportMutation.mutateAsync(reportData);
       }
       
