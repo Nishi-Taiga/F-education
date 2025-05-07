@@ -73,7 +73,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     const userId = req.user!.id;
     const bookings = await storage.getBookingsByUserId(userId);
-    res.json(bookings);
+    
+    // 講師情報を追加
+    const bookingsWithTutorNames = await Promise.all(
+      bookings.map(async (booking) => {
+        let tutorName = null;
+        if (booking.tutorId) {
+          const tutor = await storage.getTutor(booking.tutorId);
+          if (tutor) {
+            tutorName = `${tutor.lastName} ${tutor.firstName}`;
+          }
+        }
+        return {
+          ...booking,
+          tutorName
+        };
+      })
+    );
+    
+    res.json(bookingsWithTutorNames);
   });
   
   // 授業の詳細情報取得

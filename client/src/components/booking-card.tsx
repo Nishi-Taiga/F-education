@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 interface BookingCardProps {
   booking: Booking & {
     studentName?: string;
+    tutorName?: string;
   };
-  onCancelClick?: (booking: Booking & { studentName?: string }) => void;
-  onViewReportClick?: (booking: Booking & { studentName?: string }) => void;
+  onCancelClick?: (booking: Booking & { studentName?: string; tutorName?: string }) => void;
+  onViewReportClick?: (booking: Booking & { studentName?: string; tutorName?: string }) => void;
 }
 
 export function BookingCard({ booking, onCancelClick, onViewReportClick }: BookingCardProps) {
@@ -48,7 +49,7 @@ export function BookingCard({ booking, onCancelClick, onViewReportClick }: Booki
         )}
         {/* 担当講師情報 */}
         <div className="text-xs text-gray-600 mt-0.5">
-          担当講師: <span className="font-medium">講師ID: {booking.tutorId}</span>
+          担当講師: <span className="font-medium">{booking.tutorName || `講師ID: ${booking.tutorId}`}</span>
         </div>
         {booking.studentId && (
           <div className="flex items-center mt-1">
