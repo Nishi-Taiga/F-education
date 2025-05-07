@@ -212,7 +212,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
           return (
             <div key={day.toString()} className={`p-0.5 min-w-0 ${dayBookings.length >= 3 ? 'aspect-auto' : 'aspect-square'}`} 
                  style={{
-                   height: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '120px' : '105px') : 'auto'
+                   height: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '90px' : '90px') : 'auto'
                  }}>
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} 
@@ -246,7 +246,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   }
                   
                   return (
-                    <div key={index} className="mt-0.5 mb-0.5 min-w-0 w-full">
+                    <div key={index} className="mt-0.5 min-w-0 w-full">
                       <div 
                         className={`px-1 py-0.5 rounded ${bgColorClass} text-white relative cursor-pointer flex flex-col`}
                         title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
@@ -256,13 +256,13 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                         }}
                       >
                         {/* 時間のみの表示（スペース効率化） */}
-                        <div className="text-center text-[10px] md:text-[11px] font-medium whitespace-nowrap">
+                        <div className="text-center text-[9px] md:text-[10px] font-medium whitespace-nowrap">
                           {booking.timeSlot.split('-')[0]}
                         </div>
                         
                         {/* 生徒名 - PCのみ表示（モバイルでは非表示） */}
                         {booking.studentName && (
-                          <div className="hidden md:block bg-white bg-opacity-50 text-black rounded-sm text-center px-0.5 py-0.5 text-[9px] md:text-[10px] font-medium mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">
+                          <div className="hidden md:block bg-white bg-opacity-50 text-black rounded-sm text-center px-0.5 py-0.5 text-[8px] md:text-[9px] font-medium mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap">
                             {booking.studentName.length > 6 ? `${booking.studentName.substring(0, 5)}…` : booking.studentName}
                           </div>
                         )}
@@ -295,7 +295,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                 
                 {/* 3件以上ある場合は+N件という表示を追加 */}
                 {dayBookings.length > 3 && (
-                  <div className="mt-0.5 mb-0.5 text-[10px] text-center text-gray-600 font-medium">
+                  <div className="mt-0.5 text-[8px] text-center text-gray-600 font-medium">
                     +{dayBookings.length - 3}件
                   </div>
                 )}
