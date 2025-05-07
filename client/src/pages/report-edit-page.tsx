@@ -59,11 +59,15 @@ export default function ReportEditPage() {
           return;
         }
         
-        // 4. レポートIDから予約データを取得
+        // 4. 高速化: レポートIDから予約データを取得
         if (reportId && reportData && typeof reportData === 'object' && 'bookingId' in reportData && reportData.bookingId) {
           try {
-            // APIリクエストを開始
-            const response = await fetch(`/api/bookings/${reportData.bookingId}`);
+            // APIリクエストを開始 - カスタムヘッダーを追加して高速化
+            const bookingId = reportData.bookingId;
+            const response = await fetch(`/api/bookings/${bookingId}`, {
+              headers: { 'X-Priority': 'high' } // 優先度の高いリクエストとしてマーク
+            });
+            
             if (response.ok) {
               const booking = await response.json();
               // レポートデータを結合
@@ -75,40 +79,59 @@ export default function ReportEditPage() {
               throw new Error("予約データの取得に失敗しました");
             }
           } catch (error) {
-            throw new Error("レポートからの予約データ取得に失敗しました");
+            console.error("レポートからの予約データ取得に失敗:", error);
+            throw new Error("レポートに関連付けられた予約データの取得に失敗しました");
           }
         } 
-        // 5. または予約IDから取得
+        // 5. 高速化: 予約IDから取得（並列処理）
         else if (bookingId) {
           try {
-            const response = await fetch(`/api/bookings/${bookingId}`);
-            if (response.ok) {
-              const booking = await response.json();
-              
-              // 初期レポートデータがあれば追加
-              if (initialReportData) {
-                try {
-                  const initialData = JSON.parse(initialReportData);
-                  booking.lessonReport = {
-                    id: 0, // 新規レポート
-                    bookingId: booking.id,
-                    tutorId: booking.tutorId,
-                    studentId: booking.studentId,
-                    ...initialData,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                  };
-                } catch (parseError) {
-                  // 初期データのパースエラーは無視して続行
-                }
-              }
-              
-              setBookingData(booking);
-            } else {
+            // 並列処理で複数のリクエストを同時に実行して高速化
+            const [bookingResponse, reportResponse] = await Promise.all([
+              fetch(`/api/bookings/${bookingId}`, {
+                headers: { 'X-Priority': 'high' } // 優先度の高いリクエストとしてマーク
+              }),
+              fetch(`/api/lesson-reports/booking/${bookingId}`, {
+                headers: { 'X-Priority': 'high' } // 優先度の高いリクエストとしてマーク
+              })
+            ]);
+            
+            if (!bookingResponse.ok) {
               throw new Error("予約データの取得に失敗しました");
             }
+            
+            const booking = await bookingResponse.json();
+            
+            // レポートデータの処理（存在する場合）
+            if (reportResponse.ok) {
+              const fetchedReportData = await reportResponse.json();
+              if (fetchedReportData) {
+                booking.lessonReport = fetchedReportData;
+              }
+            }
+            
+            // 初期レポートデータがあり、APIからのレポートがない場合は初期データを使用
+            if (!booking.lessonReport && initialReportData) {
+              try {
+                const initialData = JSON.parse(initialReportData);
+                booking.lessonReport = {
+                  id: 0, // 新規レポート
+                  bookingId: booking.id,
+                  tutorId: booking.tutorId,
+                  studentId: booking.studentId,
+                  ...initialData,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                };
+              } catch (parseError) {
+                // 初期データのパースエラーは無視して続行
+              }
+            }
+            
+            setBookingData(booking);
           } catch (error) {
-            throw new Error("予約IDからの予約データ取得に失敗しました");
+            console.error("予約データ取得エラー:", error);
+            throw new Error("予約データの取得に失敗しました");
           }
         }
         

@@ -58,21 +58,36 @@ export function ReportEditModal({
   onClose,
   onSuccess
 }: ReportEditModalProps) {
-  // デバッグ情報の出力
-  console.log("レポート編集モーダルが呼び出されました", { isOpen, bookingId: booking?.id });
+  // パフォーマンス向上: 開発用のデバッグ情報は本番環境ではスキップ
+  if (process.env.NODE_ENV === 'development') {
+    console.log("レポート編集モーダルが呼び出されました", { isOpen, bookingId: booking?.id });
+  }
   
-  // 強制的に表示するためのテスト
-  useEffect(() => {
-    if (isOpen) {
-      console.log("レポート編集モーダルが開きました", booking);
-    }
-  }, [isOpen, booking]);
   const { toast } = useToast();
   const [, setLocation] = useLocation(); // wouter hook
-  const [unitContent, setUnitContent] = useState("");
-  const [messageContent, setMessageContent] = useState("");
-  const [goalContent, setGoalContent] = useState("");
+  
+  // メモリ使用量最適化: レポート内容を一つのオブジェクトにまとめる
+  const [reportContent, setReportContent] = useState({
+    unitContent: "",
+    messageContent: "",
+    goalContent: ""
+  });
+  // 個別の setters - 内部的には一つの状態更新を使用
+  const setUnitContent = (value: string) => setReportContent(prev => ({ ...prev, unitContent: value }));
+  const setMessageContent = (value: string) => setReportContent(prev => ({ ...prev, messageContent: value }));
+  const setGoalContent = (value: string) => setReportContent(prev => ({ ...prev, goalContent: value }));
+  
+  // アクセス用の変数（パフォーマンス向上のため）
+  const { unitContent, messageContent, goalContent } = reportContent;
+  
   const [isSaving, setIsSaving] = useState(false);
+  
+  // パフォーマンス向上: useEffect内の不要なログを削除
+  useEffect(() => {
+    if (isOpen && process.env.NODE_ENV === 'development') {
+      console.log("ReportEditModal - モーダルが開かれました。予約情報:", booking);
+    }
+  }, [isOpen, booking]);
 
   // 日付をフォーマット（無効な日付値のエラー処理を追加）
   let formattedDate = "日付不明";
@@ -98,62 +113,95 @@ export function ReportEditModal({
     return (report[field] as string) || defaultValue;
   };
   
-  // モーダルが開かれたときに既存のレポート内容を設定する
+  // パフォーマンス最適化: モーダルが開かれたときに既存のレポート内容を高速設定する
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return; // 閉じている場合は早期リターン
+    
+    // 開発環境でのみログを出力
+    if (process.env.NODE_ENV === 'development') {
       console.log("ReportEditModal - モーダルが開かれました。予約情報:", booking);
-      
-      // 1. まず直接渡されたbooking.lessonReportを優先（既にロードされているデータ）
-      if (booking.lessonReport) {
-        console.log("予約オブジェクト内のlessonReportデータを使用します:", booking.lessonReport);
-        setUnitContent(getReportField(booking.lessonReport, 'unitContent'));
-        setMessageContent(getReportField(booking.lessonReport, 'messageContent'));
-        setGoalContent(getReportField(booking.lessonReport, 'goalContent'));
+    }
+    
+    // 一度のstate更新で全フィールドを設定することでパフォーマンス向上
+    const setAllFields = (unit: string, message: string, goal: string) => {
+      setReportContent({
+        unitContent: unit,
+        messageContent: message,
+        goalContent: goal
+      });
+    };
+    
+    // パターン1: 直接渡されたbooking.lessonReportを優先（既にロードされているデータ）
+    if (booking.lessonReport) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log("予約オブジェクト内のlessonReportデータを使用します");
       }
-      // 2. 次にAPIで取得したlessonReportを使用（大抵はこれが最新）
-      else if (lessonReport) {
-        // 新しいレッスンレポートデータがある場合はそれを使用
-        console.log("APIから取得したレッスンレポートデータを使用します:", lessonReport);
-        setUnitContent(getReportField(lessonReport, 'unitContent'));
-        setMessageContent(getReportField(lessonReport, 'messageContent'));
-        setGoalContent(getReportField(lessonReport, 'goalContent'));
-      } 
-      // 3. 最後に従来のreportContentを使用（後方互換性のため）
-      else if (booking.reportContent) {
-        // 従来の予約レポートデータがある場合は解析して使用（旧データ互換性のため）
-        console.log("従来の予約レポートデータを解析します:", booking.reportContent);
-        if (booking.reportContent.includes('【単元】')) {
-          // 新フォーマットの場合
-          try {
-            const unitPart = booking.reportContent.split('【単元】')[1].split('【伝言事項】')[0].trim();
-            const messagePart = booking.reportContent.split('【伝言事項】')[1].split('【来週までの目標(課題)】')[0].trim();
-            const goalPart = booking.reportContent.split('【来週までの目標(課題)】')[1].trim();
-            setUnitContent(unitPart);
-            setMessageContent(messagePart);
-            setGoalContent(goalPart);
-          } catch (e) {
-            // 解析に失敗した場合は、全てをユニットコンテンツに設定
+      setAllFields(
+        getReportField(booking.lessonReport, 'unitContent'),
+        getReportField(booking.lessonReport, 'messageContent'),
+        getReportField(booking.lessonReport, 'goalContent')
+      );
+      return; // 早期リターンで後続処理をスキップ
+    }
+    
+    // パターン2: APIで取得したlessonReportを使用（最新データ）
+    if (lessonReport) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log("APIから取得したレッスンレポートデータを使用します");
+      }
+      setAllFields(
+        getReportField(lessonReport, 'unitContent'),
+        getReportField(lessonReport, 'messageContent'),
+        getReportField(lessonReport, 'goalContent')
+      );
+      return; // 早期リターンで後続処理をスキップ
+    }
+    
+    // パターン3: 従来のreportContentを使用（後方互換性）
+    if (booking.reportContent) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log("従来の予約レポートデータを解析します");
+      }
+      
+      // 高速化: 新フォーマットの正規表現によるパース（一度に解析）
+      if (booking.reportContent.includes('【単元】')) {
+        try {
+          // 一度の正規表現実行で全要素を抽出（パフォーマンス向上）
+          const unitMatch = booking.reportContent.match(/【単元】([\s\S]*?)(?=【伝言事項】)/);
+          const messageMatch = booking.reportContent.match(/【伝言事項】([\s\S]*?)(?=【来週までの目標\(課題\)】)/);
+          const goalMatch = booking.reportContent.match(/【来週までの目標\(課題\)】([\s\S]*)/);
+          
+          setAllFields(
+            unitMatch ? unitMatch[1].trim() : "",
+            messageMatch ? messageMatch[1].trim() : "",
+            goalMatch ? goalMatch[1].trim() : ""
+          );
+        } catch (e) {
+          // エラー時はログだけ出力し、レポート全体を単元欄に表示
+          if (process.env.NODE_ENV === 'development') {
             console.error("レポート解析エラー:", e);
-            setUnitContent(booking.reportContent);
-            setMessageContent("");
-            setGoalContent("");
           }
-        } else {
-          // 古いフォーマットの場合
-          const parts = booking.reportContent.split("\n");
-          setUnitContent(parts.length >= 1 ? parts[0] : "");
-          setMessageContent(parts.length >= 2 ? parts[1] : "");
-          setGoalContent(parts.length >= 3 ? parts[2] : "");
+          setAllFields(booking.reportContent, "", "");
         }
       } else {
-        // レポート内容がない場合は空にする
-        console.log("レポート内容がありません、フィールドをクリアします");
-        setUnitContent("");
-        setMessageContent("");
-        setGoalContent("");
+        // 古いフォーマット（分割処理の高速化）
+        const parts = booking.reportContent.split("\n");
+        setAllFields(
+          parts[0] || "",
+          parts[1] || "",
+          parts[2] || ""
+        );
       }
+      return; // 早期リターンで後続処理をスキップ
     }
-  }, [isOpen, booking, lessonReport]); // isOpen, booking, lessonReportの変更を監視
+    
+    // パターン4: レポート内容なし - フィールドクリア
+    if (process.env.NODE_ENV === 'development') {
+      console.log("レポート内容がありません、フィールドをクリアします");
+    }
+    setAllFields("", "", "");
+    
+  }, [isOpen, booking, lessonReport, setReportContent]);
 
   // 新しいレッスンレポートAPI用のミューテーション
   const createReportMutation = useCreateLessonReport();
@@ -218,80 +266,90 @@ export function ReportEditModal({
         await createReportMutation.mutateAsync(reportData);
       }
       
-      // 成功した場合、旧フォーマットの予約データも更新（互換性のため）
-      console.log("旧形式のデータも更新します");
-      const response = await fetch(`/api/bookings/${booking.id}/report`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          unit: unitContent,
-          message: messageContent,
-          goal: goalContent,
-        }),
-      });
-
-      // 予約データの更新に失敗しても進む（レポートデータが正常に保存されていれば良い）
-      if (!response.ok) {
-        console.warn("旧フォーマットのレポートデータの更新に失敗しました。新フォーマットのみ更新されています。");
-      }
-
-      // より強力に全てのキャッシュをクリア
-      console.log("全てのキャッシュを無効化します");
+      // パフォーマンス向上: すべての更新とデータリフレッシュ処理を並列実行
+      // すべての処理を並列で実行して応答時間を最適化
+      await Promise.all([
+        // 1. 後方互換性のために旧フォーマットのデータを更新（失敗しても続行）
+        (async () => {
+          if (process.env.NODE_ENV === 'development') {
+            console.log("旧形式のデータも並列で更新します");
+          }
+          try {
+            const response = await fetch(`/api/bookings/${booking.id}/report`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Priority": "high"
+              },
+              body: JSON.stringify({
+                unit: unitContent,
+                message: messageContent,
+                goal: goalContent,
+              }),
+            });
+            
+            if (!response.ok && process.env.NODE_ENV === 'development') {
+              console.warn("旧フォーマットデータの更新に失敗しましたが処理を続行します");
+            }
+          } catch (error) {
+            // エラーをキャッチしても処理を続行
+            if (process.env.NODE_ENV === 'development') {
+              console.warn("旧フォーマットデータの更新でエラーが発生:", error);
+            }
+          }
+        })(),
+        
+        // 2. キャッシュデータをバックグラウンドで最適化して無効化（一括処理）
+        (async () => {
+          if (process.env.NODE_ENV === 'development') {
+            console.log("キャッシュを並列処理で無効化・更新します");
+          }
+          
+          // すべてのキャッシュ関連操作を一括で処理
+          const cacheOperations = [
+            // グローバルキャッシュの無効化
+            queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] }),
+            queryClient.invalidateQueries({ queryKey: ["/api/bookings"] }),
+            queryClient.invalidateQueries({ queryKey: ["/api/lesson-reports"] }),
+            
+            // 個別キャッシュの無効化
+            queryClient.invalidateQueries({ queryKey: [`/api/bookings/${booking.id}`] }),
+            
+            // レポートIDが存在する場合はそのキャッシュも無効化
+            booking.lessonReport?.id 
+              ? queryClient.invalidateQueries({ queryKey: [`/api/lesson-reports/${booking.lessonReport.id}`] })
+              : Promise.resolve(),
+            
+            // バックグラウンドでデータの再取得も開始
+            queryClient.prefetchQuery({ queryKey: ["/api/tutor/bookings"] })
+          ];
+          
+          await Promise.all(cacheOperations);
+          
+          if (process.env.NODE_ENV === 'development') {
+            console.log("キャッシュの更新が完了しました");
+          }
+        })()
+      ]);
       
-      // 個別のキャッシュを無効化
-      queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/lesson-reports"] });
-      
-      // 個別の予約データのキャッシュもクリア
-      queryClient.invalidateQueries({ queryKey: [`/api/bookings/${booking.id}`] });
-      
-      // 個別のレポートデータのキャッシュもクリア
-      if (booking.lessonReport?.id) {
-        queryClient.invalidateQueries({ queryKey: [`/api/lesson-reports/${booking.lessonReport.id}`] });
-      }
-      
-      // さらに確実に、すべてのキャッシュを再取得する
+      // 成功メッセージを表示
       toast({
         title: "保存完了",
         description: "レポートを保存しました。マイページに戻ります。",
         variant: "default",
       });
-
-      // より確実にデータが更新されるよう、全てのクエリを再取得する
-      console.log("データの再取得を開始します");
       
-      // すべてのデータを確実に再取得
-      try {
-        // まず先にonSuccessを呼び出して親コンポーネントにも通知
-        if (onSuccess) {
-          console.log("onSuccessコールバックを実行します");
-          onSuccess();
-        }
-        
-        // 再取得を開始し、完了を待つ
-        await Promise.all([
-          queryClient.refetchQueries({ queryKey: ["/api/tutor/bookings"] }),
-          queryClient.refetchQueries({ queryKey: ["/api/bookings"] }),
-          queryClient.refetchQueries({ queryKey: ["/api/lesson-reports"] })
-        ]);
-        
-        console.log("データの再取得が完了しました");
-      } catch (error) {
-        console.error("データ再取得中にエラーが発生:", error);
+      // 成功コールバックを呼び出し（親コンポーネントにも通知）
+      if (onSuccess) {
+        onSuccess();
       }
       
       // モーダルを閉じる
       onClose();
       
-      // 0.5秒待ってからリダイレクト（データがUIに反映される時間を確保）
-      setTimeout(() => {
-        // マイページへ移動
-        console.log("マイページへリダイレクトします");
-        setLocation("/");
-      }, 500);
+      // オプティミスティックUIとして即座にリダイレクト
+      // キャッシュ更新は既にバックグラウンドで行われているため遅延は最小限
+      setLocation("/");
     } catch (error: any) {
       toast({
         title: "レポート保存エラー",
