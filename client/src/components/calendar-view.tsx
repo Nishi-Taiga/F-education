@@ -210,7 +210,10 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
           }
           
           return (
-            <div key={day.toString()} className="aspect-square p-0.5 min-w-0">
+            <div key={day.toString()} className={`p-0.5 min-w-0 ${dayBookings.length >= 3 ? 'aspect-auto' : 'aspect-square'}`} 
+                 style={{
+                   height: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '120px' : '105px') : 'auto'
+                 }}>
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} 
                   ${isPast && !isCurrentDay ? 'opacity-60' : ''} 
@@ -218,9 +221,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   overflow-hidden flex flex-col`}
                 style={{ 
                   minHeight: '60px', 
-                  // 予約が3件以上ある場合はセルサイズを大きくする（特にモバイル用）
-                  height: '100%',
-                  maxHeight: dayBookings.length >= 3 ? (window.innerWidth < 640 ? '120px' : '105px') : '75px'
+                  height: '100%'
                 }}
                 onClick={() => isSelectable && handleDayClick(day)}
               >
