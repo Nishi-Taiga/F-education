@@ -430,7 +430,7 @@ export default function BookingPage() {
                   studentSchoolLevel ? (
                     <Select
                       value={selectedSubject || ""}
-                      onValueChange={(value) => setSelectedSubject(value)}
+                      onValueChange={handleSubjectChange}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="科目を選択してください" />
@@ -450,7 +450,7 @@ export default function BookingPage() {
                       </div>
                       <Select
                         value={selectedSubject || ""}
-                        onValueChange={(value) => setSelectedSubject(value)}
+                        onValueChange={handleSubjectChange}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="科目を選択してください" />
@@ -474,7 +474,7 @@ export default function BookingPage() {
                   ) : studentSchoolLevel ? (
                     <Select
                       value={selectedSubject || ""}
-                      onValueChange={(value) => setSelectedSubject(value)}
+                      onValueChange={handleSubjectChange}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="科目を選択してください" />
@@ -494,7 +494,7 @@ export default function BookingPage() {
                       </div>
                       <Select
                         value={selectedSubject || ""}
-                        onValueChange={(value) => setSelectedSubject(value)}
+                        onValueChange={handleSubjectChange}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="科目を選択してください" />
