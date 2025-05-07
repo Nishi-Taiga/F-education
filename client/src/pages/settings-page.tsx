@@ -804,12 +804,12 @@ export default function SettingsPage() {
               ) : students && students.length > 0 ? (
                 <div className="space-y-4">
                   {students.map((student) => (
-                    <div key={student.id} className="p-4 border rounded-md bg-gray-50">
+                    <div key={student.id} className="p-3 md:p-4 border rounded-md bg-gray-50">
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-medium">{getFullName(student)}</div>
-                          <div className="text-sm text-gray-500">{getFullNameFurigana(student)}</div>
-                          <div className="mt-1 text-sm">
+                          <div className="text-sm md:text-base font-medium">{getFullName(student)}</div>
+                          <div className="text-xs md:text-sm text-gray-500">{getFullNameFurigana(student)}</div>
+                          <div className="mt-1 text-xs md:text-sm">
                             {student.school} | {student.grade}
                           </div>
                           
@@ -856,10 +856,11 @@ export default function SettingsPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex space-x-1 md:space-x-2">
                           <Button 
                             variant="outline" 
                             size="sm"
+                            className="text-xs px-2 py-1 h-7 md:h-8 md:px-3"
                             onClick={() => {
                               // 編集する生徒情報をセット
                               setEditingStudent(student);
@@ -873,6 +874,7 @@ export default function SettingsPage() {
                           <Button 
                             variant="destructive" 
                             size="sm"
+                            className="text-xs px-2 py-1 h-7 md:h-8 md:px-3"
                             onClick={() => {
                               // 削除確認ダイアログ表示の前に生徒情報をセット
                               setEditingStudent(student);
@@ -890,8 +892,8 @@ export default function SettingsPage() {
               ) : (
                 <div className="text-center p-4 border rounded-md bg-gray-50">
                   <p className="text-gray-500">生徒が登録されていません</p>
-                  <Button className="mt-4" onClick={() => setAddDialogOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
+                  <Button className="mt-3 md:mt-4 text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9" onClick={() => setAddDialogOpen(true)}>
+                    <PlusCircle className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4" />
                     新規生徒登録
                   </Button>
                 </div>
@@ -925,8 +927,13 @@ export default function SettingsPage() {
                   </ul>
                 </div>
                 
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setDeleteDialogOpen(false)}
+                    className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
+                  >
                     キャンセル
                   </Button>
                   <Button 
@@ -938,14 +945,15 @@ export default function SettingsPage() {
                       }
                     }}
                     disabled={deleteStudentMutation.isPending}
+                    className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
                   >
                     {deleteStudentMutation.isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4 animate-spin" />
                         削除中...
                       </>
                     ) : (
-                      "削除する"
+                      "削除"
                     )}
                   </Button>
                 </DialogFooter>
@@ -1135,10 +1143,11 @@ export default function SettingsPage() {
                   </form>
                 </Form>
                 
-                <DialogFooter>
+                <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
                   <Button 
                     type="button" 
                     variant="outline" 
+                    className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
                     onClick={() => {
                       // ダイアログを閉じる
                       setEditDialogOpen(false);
@@ -1163,14 +1172,15 @@ export default function SettingsPage() {
                     type="submit"
                     form="edit-student-form"
                     disabled={updateStudentMutation.isPending}
+                    className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 h-8 md:h-9 w-full sm:w-auto"
                   >
                     {updateStudentMutation.isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4 animate-spin" />
                         更新中...
                       </>
                     ) : (
-                      "更新する"
+                      "更新"
                     )}
                   </Button>
                 </DialogFooter>
