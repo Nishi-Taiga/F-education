@@ -33,9 +33,7 @@ async function comparePasswords(supplied: string, stored: string) {
     const hashedBuf = Buffer.from(hashed, "hex");
     const suppliedBuf = (await scryptPromise(supplied, salt, 64)) as Buffer;
     
-    // デバッグ用ログ
-    console.log(`Comparing password for supplied=${supplied}`);
-    
+    // パフォーマンス最適化：不要なデバッグログを削除
     return timingSafeEqual(hashedBuf, suppliedBuf);
   } catch (error) {
     console.error("Error comparing passwords:", error);
@@ -44,13 +42,16 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  // セッション設定の最適化（SameSite警告対応）
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "tutorial-service-secret",
-    resave: true,
-    saveUninitialized: true,
+    resave: false, // 不要な保存を減らす
+    saveUninitialized: false, // 未初期化セッションを保存しない
     store: storage.sessionStore,
     cookie: {
-      secure: false, // 開発環境ではHTTPSを使用していないため
+      secure: process.env.NODE_ENV === 'production', // 本番環境ではTLS/SSLを使用
+      httpOnly: true, // JavaScriptからのアクセスを防止
+      sameSite: 'lax', // クロスサイトリクエスト制限を緩和
       maxAge: 1000 * 60 * 60 * 24 // 24時間
     }
   };
@@ -95,24 +96,34 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
+      // エラー処理を最適化
       if (err) {
+        // 重大なエラーのみログ出力
         console.error("Login error:", err);
         return next(err);
       }
       
+      // 認証失敗
       if (!user) {
-        console.log("Login failed for username:", req.body.username);
+        // 本番環境ではログ出力しない
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Login failed for username:", req.body.username);
+        }
         return res.status(401).json({ message: "ユーザー名またはパスワードが正しくありません" });
       }
       
+      // セッション作成処理
       req.login(user, (loginErr) => {
         if (loginErr) {
           console.error("Session save error:", loginErr);
           return next(loginErr);
         }
         
-        console.log("Login successful for:", user.username);
+        // 本番環境ではログ出力しない
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Login successful for:", user.username);
+        }
         return res.status(200).json(user);
       });
     })(req, res, next);
