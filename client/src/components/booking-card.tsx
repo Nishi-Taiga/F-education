@@ -38,9 +38,6 @@ export function BookingCard({ booking, onCancelClick, onViewReportClick }: Booki
 
   return (
     <div className="flex items-center p-3 bg-gray-50 rounded-md">
-      <div className="w-10 h-10 flex-shrink-0 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mr-3">
-        <BookOpen className="h-4 w-4 text-primary" />
-      </div>
       <div className="flex-grow">
         <div className="text-sm font-medium">{formattedDate}</div>
         <div className="text-xs text-gray-600">{booking.timeSlot}</div>
@@ -49,9 +46,12 @@ export function BookingCard({ booking, onCancelClick, onViewReportClick }: Booki
             科目: <span className="font-medium">{booking.subject}</span>
           </div>
         )}
+        {/* 担当講師情報 */}
+        <div className="text-xs text-gray-600 mt-0.5">
+          担当講師: <span className="font-medium">講師ID: {booking.tutorId}</span>
+        </div>
         {booking.studentId && (
           <div className="flex items-center mt-1">
-            <User className="h-3 w-3 text-primary mr-1" />
             <span className="text-xs text-primary">
               {booking.studentName || `生徒ID: ${booking.studentId}`}
             </span>

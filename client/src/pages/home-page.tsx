@@ -810,7 +810,7 @@ export default function HomePage() {
               
               {/* 生徒ごとのチケット残数 */}
               {studentTickets.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="mt-3">
                   <div className="flex items-center mb-2">
                     <div className="mr-2 bg-green-50 p-1.5 rounded-full">
                       <Ticket className="text-green-600 h-4 w-4" />

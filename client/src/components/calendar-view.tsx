@@ -227,7 +227,8 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                     {day.getDate()}
                   </span>
                 </div>
-                {dayBookings.map((booking, index) => {
+                {/* モバイルでは最大2件まで表示（小さい画面でのオーバーフロー防止） */}
+                {dayBookings.slice(0, window.innerWidth < 640 ? 2 : 3).map((booking, index) => {
                   // 授業状態に応じた色分け
                   const lessonStatus = getLessonStatus(booking);
                   let bgColorClass = "bg-blue-500"; // デフォルト：これから（青）
@@ -241,7 +242,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   return (
                     <div key={index} className="mt-0.5 mb-0.5 min-w-0 w-full">
                       <div 
-                        className={`px-1 py-0.5 rounded ${bgColorClass} text-white relative group cursor-pointer flex flex-col`}
+                        className={`px-1 py-0.5 rounded ${bgColorClass} text-white relative cursor-pointer flex flex-col`}
                         title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
                         onClick={(e) => {
                           e.stopPropagation(); // 日付クリックイベントが発火するのを防ぐ
@@ -260,8 +261,8 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                           </div>
                         )}
                         
-                        {/* 学生情報のツールチップ */}
-                        <div className="absolute left-0 bottom-full mb-1 w-max z-10 hidden group-hover:block">
+                        {/* 学生情報のツールチップ - PC表示のみ */}
+                        <div className="absolute left-0 bottom-full mb-1 w-max z-10 hidden md:group-hover:block">
                           <div className="bg-gray-800 text-white text-xs rounded py-2 px-3 shadow-lg">
                             {booking.studentName ? (
                               <>
@@ -285,6 +286,18 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                     </div>
                   );
                 })}
+                
+                {/* 3件以上ある場合は+N件という表示を追加 */}
+                {window.innerWidth < 640 && dayBookings.length > 2 && (
+                  <div className="mt-0.5 mb-0.5 text-[10px] text-center text-gray-600 font-medium">
+                    +{dayBookings.length - 2}件
+                  </div>
+                )}
+                {window.innerWidth >= 640 && dayBookings.length > 3 && (
+                  <div className="mt-0.5 mb-0.5 text-[10px] text-center text-gray-600 font-medium">
+                    +{dayBookings.length - 3}件
+                  </div>
+                )}
               </div>
             </div>
           );
