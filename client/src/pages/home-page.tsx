@@ -556,26 +556,33 @@ export default function HomePage() {
             : booking
         );
         setTestBookings(updatedTestBookings);
-        
-        // リロードしてカレンダー表示を更新
-        setTimeout(() => {
-          // 強制的に再描画
-          setForceUpdate(prev => !prev);
-        }, 100);
       }
       
-      // データを再取得してUIを更新
+      // 実際のデータの場合はクエリキャッシュを無効化して再取得
+      if (selectedReportBooking && ![1001, 1002, 1003, 2001, 2002].includes(selectedReportBooking.id)) {
+        // 予約データのクエリキャッシュを無効化
+        queryClient.invalidateQueries({ queryKey: [user?.role === 'tutor' ? '/api/tutor/bookings' : '/api/bookings'] });
+      }
+      
+      // いずれの場合も必ずカレンダー表示を更新し、データを再取得する
+      // カレンダーの更新は両方のエンドポイントをチェックする必要がある
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tutor/bookings"] });
       
       // ダイアログを閉じる前に少し遅延を入れる
       setTimeout(() => {
+        // 強制的に再描画
+        setForceUpdate(prev => !prev);
+        
+        // レポート編集ダイアログを閉じる
         setShowReportDialog(false);
+        
         // 各フィールドの内容をクリア
         setUnitContent('');
         setMessageContent('');
         setGoalContent('');
         setReportSaving(false);
-      }, 500);
+      }, 300);
     },
     onError: (error) => {
       toast({
