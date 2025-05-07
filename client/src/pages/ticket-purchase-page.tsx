@@ -199,34 +199,34 @@ export default function TicketPurchasePage() {
 
       {/* Main Content */}
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">チケット購入</h2>
-          <p className="mt-1 text-sm text-gray-600">必要なチケット数を選択して購入してください</p>
+        <div className="mb-6 md:mb-8">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">チケット購入</h2>
+          <p className="mt-1 text-xs md:text-sm text-gray-600">必要なチケット数を選択して購入してください</p>
         </div>
 
-        <Card className="p-6 mb-8">
-          <div className="flex flex-col mb-6 pb-6 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-4">
+        <Card className="p-4 md:p-6 mb-6 md:mb-8">
+          <div className="flex flex-col mb-5 md:mb-6 pb-5 md:pb-6 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
               <div className="flex items-center">
-                <div className="mr-4 bg-primary bg-opacity-10 p-3 rounded-full">
-                  <Ticket className="text-primary h-6 w-6" />
+                <div className="mr-3 md:mr-4 bg-primary bg-opacity-10 p-2 md:p-3 rounded-full">
+                  <Ticket className="text-primary h-5 w-5 md:h-6 md:w-6" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">現在のチケット残数（合計）</p>
-                  <p className="text-2xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
+                  <p className="text-xs md:text-sm text-gray-600">現在のチケット残数（合計）</p>
+                  <p className="text-xl md:text-2xl font-bold text-gray-900">{user?.ticketCount || 0}</p>
                 </div>
               </div>
             </div>
             
             {/* 生徒別チケット残数 */}
             {studentTickets.length > 0 && (
-              <div className="mt-2 bg-gray-50 p-3 rounded-lg">
-                <p className="text-xs text-gray-500 mb-2">生徒別チケット残数</p>
-                <div className="flex flex-wrap gap-2">
+              <div className="mt-2 bg-gray-50 p-2 md:p-3 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1 md:mb-2">生徒別チケット残数</p>
+                <div className="flex flex-wrap gap-1 md:gap-2">
                   {studentTickets.map(ticket => (
-                    <div key={ticket.studentId} className="flex-1 flex justify-between items-center px-3 py-2 bg-white rounded-md border border-gray-100 min-w-[200px] whitespace-nowrap overflow-hidden">
-                      <span className="text-sm font-medium truncate">{ticket.name}</span>
-                      <span className="text-sm font-semibold text-primary ml-2 flex-shrink-0">{ticket.ticketCount}枚</span>
+                    <div key={ticket.studentId} className="flex-1 flex justify-between items-center px-2 md:px-3 py-1 md:py-2 bg-white rounded-md border border-gray-100 min-w-[120px] md:min-w-[200px] whitespace-nowrap overflow-hidden">
+                      <span className="text-xs md:text-sm font-medium truncate">{ticket.name}</span>
+                      <span className="text-xs md:text-sm font-semibold text-primary ml-1 md:ml-2 flex-shrink-0">{ticket.ticketCount}枚</span>
                     </div>
                   ))}
                 </div>
@@ -235,21 +235,21 @@ export default function TicketPurchasePage() {
           </div>
 
           {/* 生徒選択セクション */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-4">生徒選択</h3>
+          <div className="mb-6 md:mb-8">
+            <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">生徒選択</h3>
             
             {isLoadingStudents ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="flex justify-center py-6 md:py-8">
+                <Loader2 className="h-6 w-6 md:h-8 md:w-8 animate-spin text-primary" />
               </div>
             ) : students && students.length > 0 ? (
               <div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
                   {students.map((student) => (
                     <div 
                       key={student.id}
                       className={`
-                        p-4 border rounded-lg cursor-pointer transition-all
+                        p-3 md:p-4 border rounded-lg cursor-pointer transition-all
                         ${selectedStudent?.id === student.id 
                           ? 'border-primary bg-primary bg-opacity-5' 
                           : 'border-gray-200 hover:border-primary hover:bg-gray-50'}
@@ -261,28 +261,28 @@ export default function TicketPurchasePage() {
                       }}
                     >
                       <div className="flex justify-between items-center">
-                        <div className="font-medium">{student.lastName} {student.firstName}</div>
+                        <div className="text-sm md:text-base font-medium">{student.lastName} {student.firstName}</div>
                         {'ticketCount' in student && (
-                          <div className="bg-primary bg-opacity-10 px-2 py-1 rounded text-primary text-xs font-medium">
+                          <div className="bg-primary bg-opacity-10 px-1 md:px-2 py-0.5 md:py-1 rounded text-primary text-xs font-medium">
                             残り {(student as any).ticketCount} 枚
                           </div>
                         )}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">{student.grade} ({student.school})</div>
+                      <div className="text-xs md:text-sm text-gray-600 mt-1">{student.grade} ({student.school})</div>
                     </div>
                   ))}
                 </div>
 
                 {/* 小学生の場合、受験コースかどうかを選択 */}
                 {selectedStudent && selectedStudentType === "elementary" && (
-                  <div className="mt-4 mb-6">
-                    <h4 className="text-sm font-medium mb-2">コース選択</h4>
-                    <div className="flex gap-4">
+                  <div className="mt-3 md:mt-4 mb-4 md:mb-6">
+                    <h4 className="text-xs md:text-sm font-medium mb-1 md:mb-2">コース選択</h4>
+                    <div className="flex gap-2 md:gap-4">
                       <Button
                         type="button"
                         variant={!isExamCourse ? "default" : "outline"}
                         onClick={() => setIsExamCourse(false)}
-                        className="flex-1"
+                        className="flex-1 text-xs md:text-sm h-8 md:h-10 px-1 md:px-4"
                       >
                         通常コース
                       </Button>
@@ -290,7 +290,7 @@ export default function TicketPurchasePage() {
                         type="button"
                         variant={isExamCourse ? "default" : "outline"}
                         onClick={() => setIsExamCourse(true)}
-                        className="flex-1"
+                        className="flex-1 text-xs md:text-sm h-8 md:h-10 px-1 md:px-4"
                       >
                         中学受験コース
                       </Button>
@@ -307,9 +307,9 @@ export default function TicketPurchasePage() {
 
           {selectedStudentType && (
             <>
-              <h3 className="text-lg font-semibold mb-4">利用可能なチケット</h3>
+              <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">利用可能なチケット</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
                 {/* チケットの価格と種類は生徒タイプによって変わる */}
                 {(() => {
                   // 表示すべきチケット価格テーブルを決定
