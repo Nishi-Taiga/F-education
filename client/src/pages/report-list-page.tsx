@@ -45,8 +45,9 @@ const SUBJECTS = [
 export default function ReportListPage() {
   const [_, navigate] = useLocation();
   const { user } = useAuth();
-  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
-  const [subjectSearch, setSubjectSearch] = useState<string>("");
+  // 検索用の状態
+  const [selectedStudentId, setSelectedStudentId] = useState<string>("all");
+  const [subjectSearch, setSubjectSearch] = useState<string>("all");
   const [dateSearch, setDateSearch] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -149,42 +150,74 @@ export default function ReportListPage() {
     return matchStudentId && matchSubject && matchDate;
   });
 
-  // テスト用のデータ
-  const testReportedBookings = [
-    {
-      id: 9001,
-      createdAt: new Date(),
-      userId: user ? user.id : 0,
-      tutorId: 1,
-      studentId: 4,
-      tutorShiftId: 1,
-      date: "2025-04-15",
-      timeSlot: "16:00-17:30",
-      subject: "数学",
-      status: "confirmed",
-      reportStatus: "completed",
-      reportContent: "中学1年の方程式\n授業中は集中して取り組めていました。解説を聞いて理解しようとする姿勢が素晴らしいです。\n次回までに教科書p.45-46の問題を解いてきてください。",
-      studentName: "テスト 太郎"
-    },
-    {
-      id: 9002,
-      createdAt: new Date(),
-      userId: user ? user.id : 0,
-      tutorId: 1,
-      studentId: 4,
-      tutorShiftId: 1,
-      date: "2025-04-01",
-      timeSlot: "16:00-17:30",
-      subject: "英語",
-      status: "confirmed",
-      reportStatus: "completed",
-      reportContent: "中学1年の不定詞\n文法の理解が進んでいます。演習問題では8割以上正解できていました。\n次回までに教科書p.32の例文を音読練習してきてください。",
-      studentName: "テスト 太郎"
-    }
-  ];
+  // テスト用のデータ（フィルタリングに対応）
+  const getTestReportedBookings = (): (Booking & { studentName?: string })[] => {
+    const data = [
+      {
+        id: 9001,
+        createdAt: new Date(),
+        userId: user ? user.id : 0,
+        tutorId: 1,
+        studentId: 4,
+        tutorShiftId: 1,
+        date: "2025-04-15",
+        timeSlot: "16:00-17:30",
+        subject: "数学",
+        status: "confirmed" as const,
+        reportStatus: "completed" as const,
+        reportContent: "中学1年の方程式\n授業中は集中して取り組めていました。解説を聞いて理解しようとする姿勢が素晴らしいです。\n次回までに教科書p.45-46の問題を解いてきてください。",
+        studentName: "テスト 太郎"
+      },
+      {
+        id: 9002,
+        createdAt: new Date(),
+        userId: user ? user.id : 0,
+        tutorId: 1,
+        studentId: 4,
+        tutorShiftId: 1,
+        date: "2025-04-01",
+        timeSlot: "16:00-17:30",
+        subject: "英語",
+        status: "confirmed" as const,
+        reportStatus: "completed" as const,
+        reportContent: "中学1年の不定詞\n文法の理解が進んでいます。演習問題では8割以上正解できていました。\n次回までに教科書p.32の例文を音読練習してきてください。",
+        studentName: "テスト 太郎"
+      }
+    ];
+    
+    // テストデータもフィルタリング
+    return data.filter(booking => {
+      // 生徒IDでフィルタリング
+      const matchStudentId = 
+        selectedStudentId === "all" || 
+        !selectedStudentId || 
+        (booking.studentId !== null && booking.studentId.toString() === selectedStudentId);
+      
+      // 教科でフィルタリング
+      const matchSubject = 
+        subjectSearch === "all" || 
+        !subjectSearch || 
+        booking.subject === subjectSearch;
+      
+      // 日付でフィルタリング
+      let matchDate = true;
+      if (selectedDate) {
+        const bookingDate = parseISO(booking.date);
+        matchDate = 
+          bookingDate.getFullYear() === selectedDate.getFullYear() &&
+          bookingDate.getMonth() === selectedDate.getMonth() &&
+          bookingDate.getDate() === selectedDate.getDate();
+      }
+      
+      return matchStudentId && matchSubject && matchDate;
+    });
+  };
 
   // 最終的に表示するデータ
-  const displayBookings = filteredBookings.length > 0 ? filteredBookings : testReportedBookings;
+  // 実際のデータがある場合はフィルター結果を、無い場合はフィルタリング適用済みのテストデータを表示
+  const hasRealData = reportedBookings.length > 0;
+  const testFilteredBookings = getTestReportedBookings();
+  const displayBookings = hasRealData ? filteredBookings : testFilteredBookings;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -313,7 +346,7 @@ export default function ReportListPage() {
             </div>
           ) : displayBookings.length > 0 ? (
             <div className="space-y-3">
-              {displayBookings.map(booking => (
+              {displayBookings.map((booking: Booking & { studentName?: string }) => (
                 <div key={booking.id} className="group relative">
                   <BookingCard 
                     booking={booking}
