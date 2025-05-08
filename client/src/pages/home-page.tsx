@@ -769,16 +769,10 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">
         
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-          <div className="flex items-center">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
-              {user?.role === 'tutor' ? 'ダッシュボード' : 'ホーム'}
-            </h2>
-          </div>
-          
-          {/* 右揃えのチケット残数表示 (ユーザーが講師でない場合) */}
-          {user?.role !== 'tutor' && studentTickets.length > 0 && (
-            <div className="ml-auto flex items-center mt-2 md:mt-0">
+        {/* チケット残数表示 (ユーザーが講師でない場合) */}
+        {user?.role !== 'tutor' && studentTickets.length > 0 && (
+          <div className="flex justify-end mb-4">
+            <div className="flex items-center">
               <div className="mr-1 bg-green-50 p-0.5 rounded-full">
                 <Ticket className="text-green-600 h-3 w-3" />
               </div>
@@ -791,8 +785,8 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Calendar - 非スクロール領域 */}
         <Card className="p-3 mb-4">
