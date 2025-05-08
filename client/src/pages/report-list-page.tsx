@@ -122,21 +122,19 @@ export default function ReportListPage() {
     };
   }, [isCalendarOpen]);
 
-  // 検索フィルタリング
-  const filteredBookings = reportedBookings.filter((booking: Booking & { studentName?: string }) => {
-    // 生徒IDでフィルタリング
+  // 検索フィルタリングを行う関数
+  const filterBooking = (booking: Booking & { studentName?: string }): boolean => {
+    // 1. 生徒IDでフィルタリング
     const matchStudentId = 
       selectedStudentId === "all" || 
-      !selectedStudentId || 
       (booking.studentId !== null && booking.studentId.toString() === selectedStudentId);
     
-    // 教科でフィルタリング
+    // 2. 教科でフィルタリング
     const matchSubject = 
       subjectSearch === "all" || 
-      !subjectSearch || 
       booking.subject === subjectSearch;
     
-    // 日付でフィルタリング
+    // 3. 日付でフィルタリング
     let matchDate = true;
     if (selectedDate) {
       const bookingDate = parseISO(booking.date);
@@ -146,9 +144,15 @@ export default function ReportListPage() {
         bookingDate.getDate() === selectedDate.getDate();
     }
     
+    // リリース時はログ出力を削除する
+    // console.log(`[フィルター] ID:${booking.id}, 生徒:${matchStudentId}, 教科:${matchSubject}, 日付:${matchDate}`);
+    
     // すべての条件に一致する予約のみを表示
     return matchStudentId && matchSubject && matchDate;
-  });
+  };
+  
+  // フィルタリング適用済みのデータ
+  const filteredBookings = reportedBookings.filter(filterBooking);
 
   // テスト用のデータ（フィルタリングに対応）
   const getTestReportedBookings = (): (Booking & { studentName?: string })[] => {
@@ -185,32 +189,8 @@ export default function ReportListPage() {
       }
     ];
     
-    // テストデータもフィルタリング
-    return data.filter(booking => {
-      // 生徒IDでフィルタリング
-      const matchStudentId = 
-        selectedStudentId === "all" || 
-        !selectedStudentId || 
-        (booking.studentId !== null && booking.studentId.toString() === selectedStudentId);
-      
-      // 教科でフィルタリング
-      const matchSubject = 
-        subjectSearch === "all" || 
-        !subjectSearch || 
-        booking.subject === subjectSearch;
-      
-      // 日付でフィルタリング
-      let matchDate = true;
-      if (selectedDate) {
-        const bookingDate = parseISO(booking.date);
-        matchDate = 
-          bookingDate.getFullYear() === selectedDate.getFullYear() &&
-          bookingDate.getMonth() === selectedDate.getMonth() &&
-          bookingDate.getDate() === selectedDate.getDate();
-      }
-      
-      return matchStudentId && matchSubject && matchDate;
-    });
+    // 同じフィルタリング関数をテストデータにも適用
+    return data.filter(filterBooking);
   };
 
   // 最終的に表示するデータ
@@ -236,7 +216,13 @@ export default function ReportListPage() {
           <div className="grid grid-cols-2 gap-2">
             {/* 生徒名ドロップダウン */}
             <div className="relative">
-              <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+              <Select 
+                value={selectedStudentId} 
+                onValueChange={(value) => {
+                  console.log("生徒が選択されました:", value);
+                  setSelectedStudentId(value);
+                }}
+              >
                 <SelectTrigger className="pl-9">
                   <User className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
                   <SelectValue placeholder="生徒名で検索" />
@@ -254,7 +240,13 @@ export default function ReportListPage() {
             
             {/* 教科ドロップダウン */}
             <div className="relative">
-              <Select value={subjectSearch} onValueChange={setSubjectSearch}>
+              <Select 
+                value={subjectSearch} 
+                onValueChange={(value) => {
+                  console.log("教科が選択されました:", value);
+                  setSubjectSearch(value);
+                }}
+              >
                 <SelectTrigger className="pl-9">
                   <BookOpen className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
                   <SelectValue placeholder="教科で検索" />
