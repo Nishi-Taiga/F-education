@@ -221,7 +221,7 @@ export default function ReportListPage() {
                     size="sm" 
                     onClick={() => setIsCalendarOpen(false)}
                   >
-                    閉じる
+                    検索
                   </Button>
                 </div>
               </PopoverContent>
