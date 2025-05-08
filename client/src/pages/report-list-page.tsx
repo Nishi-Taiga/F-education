@@ -219,7 +219,7 @@ export default function ReportListPage() {
               <Select 
                 value={selectedStudentId} 
                 onValueChange={(value) => {
-                  console.log("生徒が選択されました:", value);
+                  // 生徒IDが選択されたらすぐにフィルタリングに反映
                   setSelectedStudentId(value);
                 }}
               >
@@ -243,7 +243,7 @@ export default function ReportListPage() {
               <Select 
                 value={subjectSearch} 
                 onValueChange={(value) => {
-                  console.log("教科が選択されました:", value);
+                  // 教科が選択されたらすぐにフィルタリングに反映
                   setSubjectSearch(value);
                 }}
               >
@@ -287,34 +287,27 @@ export default function ReportListPage() {
                       selected={selectedDate}
                       onSelect={(date) => {
                         setSelectedDate(date);
-                        // カレンダーは閉じない
+                        // 日付を選択したらすぐにフィルタリングを更新し、カレンダーを閉じる
+                        if (date) {
+                          const formattedDate = format(date, 'yyyy-MM-dd');
+                          setDateSearch(formattedDate);
+                          setIsCalendarOpen(false);
+                        }
                       }}
                       initialFocus
                       locale={ja}
                     />
-                    <div className="pt-2 border-t mt-2 flex justify-between">
+                    <div className="pt-2 border-t mt-2 flex justify-center">
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={() => {
                           setSelectedDate(undefined);
                           setDateSearch('');
-                        }}
-                      >
-                        クリア
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => {
-                          if (selectedDate) {
-                            // 選択された日付に合わせて検索フィルターを適用
-                            const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-                            setDateSearch(formattedDate);
-                          }
                           setIsCalendarOpen(false);
                         }}
                       >
-                        検索
+                        クリア
                       </Button>
                     </div>
                   </CardContent>
