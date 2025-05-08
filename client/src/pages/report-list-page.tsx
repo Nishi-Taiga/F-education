@@ -1,28 +1,56 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { BookingCard } from "@/components/booking-card";
 import { ReportViewModal } from "@/components/report-view-modal";
 import { CommonHeader } from "@/components/common-header";
-import { Card } from "@/components/ui/card";
-import { Loader2, ArrowLeft, FileText, Search, Calendar } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Loader2, ArrowLeft, FileText, Search, Calendar, User, BookOpen } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import type { Booking, Student } from "@shared/schema";
 import { format, parseISO, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
 
+// 教科一覧
+const SUBJECTS = [
+  "国語",
+  "算数",
+  "数学",
+  "英語",
+  "理科",
+  "社会",
+  "物理",
+  "化学",
+  "生物",
+  "地学",
+  "日本史",
+  "世界史",
+  "地理",
+  "現代社会",
+  "倫理",
+  "政治経済"
+];
+
 export default function ReportListPage() {
   const [_, navigate] = useLocation();
   const { user } = useAuth();
-  const [studentNameSearch, setStudentNameSearch] = useState("");
-  const [subjectSearch, setSubjectSearch] = useState("");
+  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
+  const [subjectSearch, setSubjectSearch] = useState<string>("");
   const [dateSearch, setDateSearch] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   // レポート閲覧ダイアログ用の状態
   const [showReportViewDialog, setShowReportViewDialog] = useState(false);
@@ -72,17 +100,33 @@ export default function ReportListPage() {
     }
   }, [selectedDate]);
 
+  // カレンダーが表示されている間は外側のクリックを検出する
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
+        setIsCalendarOpen(false);
+      }
+    };
+
+    if (isCalendarOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCalendarOpen]);
+
   // 検索フィルタリング
   const filteredBookings = reportedBookings.filter((booking: Booking & { studentName?: string }) => {
-    const studentName = booking.studentName || '';
-    const subject = booking.subject || '';
-    const date = format(parseISO(booking.date), 'yyyy年MM月dd日', { locale: ja });
+    // 生徒IDで検索
+    const matchStudentId = !selectedStudentId || 
+      (booking.studentId !== null && booking.studentId.toString() === selectedStudentId);
     
-    // 各検索条件でフィルタリング
-    const matchStudentName = !studentNameSearch || studentName.toLowerCase().includes(studentNameSearch.toLowerCase());
-    const matchSubject = !subjectSearch || subject.toLowerCase().includes(subjectSearch.toLowerCase());
+    // 教科で検索
+    const matchSubject = !subjectSearch || booking.subject === subjectSearch;
     
-    // 日付フィルターは選択された日付かテキスト入力のどちらかで行う
+    // 日付で検索
     let matchDate = true;
     if (selectedDate) {
       // 選択された日付と予約日が同じ日かチェック
@@ -90,12 +134,9 @@ export default function ReportListPage() {
       matchDate = bookingDate.getFullYear() === selectedDate.getFullYear() &&
                   bookingDate.getMonth() === selectedDate.getMonth() &&
                   bookingDate.getDate() === selectedDate.getDate();
-    } else if (dateSearch) {
-      // テキスト検索の場合
-      matchDate = date.includes(dateSearch);
     }
     
-    return matchStudentName && matchSubject && matchDate;
+    return matchStudentId && matchSubject && matchDate;
   });
 
   // テスト用のデータ
@@ -150,82 +191,89 @@ export default function ReportListPage() {
         <div className="mb-4 space-y-2">
           {/* 生徒名と教科の検索欄を横に並べる */}
           <div className="grid grid-cols-2 gap-2">
+            {/* 生徒名ドロップダウン */}
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-              <Input 
-                type="text" 
-                placeholder="生徒名で検索" 
-                className="pl-9"
-                value={studentNameSearch}
-                onChange={(e) => setStudentNameSearch(e.target.value)}
-              />
+              <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                <SelectTrigger className="pl-9">
+                  <User className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                  <SelectValue placeholder="生徒名で検索" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">すべての生徒</SelectItem>
+                  {students?.map((student: Student) => (
+                    <SelectItem key={student.id} value={student.id.toString()}>
+                      {student.lastName} {student.firstName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            
+            {/* 教科ドロップダウン */}
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-              <Input 
-                type="text" 
-                placeholder="教科で検索" 
-                className="pl-9"
-                value={subjectSearch}
-                onChange={(e) => setSubjectSearch(e.target.value)}
-              />
+              <Select value={subjectSearch} onValueChange={setSubjectSearch}>
+                <SelectTrigger className="pl-9">
+                  <BookOpen className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                  <SelectValue placeholder="教科で検索" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">すべての教科</SelectItem>
+                  {SUBJECTS.map(subject => (
+                    <SelectItem key={subject} value={subject}>
+                      {subject}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
           {/* 日付検索欄はカレンダー付き */}
           <div className="relative">
-            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-              <PopoverTrigger asChild>
-                <div className="relative">
-                  <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                  <Input 
-                    type="text" 
-                    placeholder="日付で検索" 
-                    className="pl-9"
-                    value={dateSearch}
-                    onChange={(e) => {
-                      setDateSearch(e.target.value);
-                      // テキスト入力時は日付選択をクリア
-                      if (e.target.value === '') {
-                        setSelectedDate(undefined);
-                      }
+            <Button
+              variant="outline"
+              className="w-full justify-start pl-9 text-left font-normal"
+              onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+            >
+              <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              {selectedDate 
+                ? format(selectedDate, 'yyyy年MM月dd日', { locale: ja })
+                : "日付で検索"}
+            </Button>
+            
+            {isCalendarOpen && (
+              <Card className="absolute z-50 mt-1 w-auto">
+                <CardContent className="p-2">
+                  <CalendarComponent
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      setSelectedDate(date);
                     }}
-                    onFocus={() => setIsCalendarOpen(true)}
-                    readOnly
+                    initialFocus
+                    locale={ja}
                   />
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    setSelectedDate(date);
-                    // カレンダーを選択しても閉じないように修正
-                  }}
-                  initialFocus
-                  locale={ja}
-                />
-                <div className="p-2 border-t flex justify-between">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      setSelectedDate(undefined);
-                      setDateSearch('');
-                    }}
-                  >
-                    クリア
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={() => setIsCalendarOpen(false)}
-                  >
-                    検索
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+                  <div className="pt-2 border-t mt-2 flex justify-between">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedDate(undefined);
+                        setDateSearch('');
+                      }}
+                    >
+                      クリア
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => setIsCalendarOpen(false)}
+                    >
+                      検索
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
         
