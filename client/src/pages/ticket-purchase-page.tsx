@@ -205,29 +205,7 @@ export default function TicketPurchasePage() {
         </div>
 
         <Card className="p-4 md:p-6 mb-6 md:mb-8">
-          <div className="flex flex-col mb-5 md:mb-6 pb-5 md:pb-6 border-b border-gray-200">
-            {/* チケット残数 */}
-            {studentTickets.length > 0 && (
-              <div className="mb-6 md:mb-8">
-                <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">チケット残数</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                  {studentTickets.map(ticket => (
-                    <div 
-                      key={ticket.studentId}
-                      className="p-3 md:p-4 border rounded-lg border-gray-200 hover:border-primary hover:bg-gray-50"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm md:text-base font-medium">{ticket.name}</div>
-                        <div className="text-gray-600 text-xs font-medium">
-                          残り {ticket.ticketCount} 枚
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          {/* チケット残数セクションを削除 */}
 
           {/* 生徒選択セクション */}
           <div className="mb-6 md:mb-8">
