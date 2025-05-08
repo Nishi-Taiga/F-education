@@ -206,15 +206,22 @@ export default function TicketPurchasePage() {
 
         <Card className="p-4 md:p-6 mb-6 md:mb-8">
           <div className="flex flex-col mb-5 md:mb-6 pb-5 md:pb-6 border-b border-gray-200">
-            {/* 生徒別チケット残数 */}
+            {/* チケット残数 */}
             {studentTickets.length > 0 && (
-              <div className="bg-gray-50 p-2 md:p-3 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1 md:mb-2">生徒別チケット残数</p>
-                <div className="flex flex-wrap gap-1 md:gap-2">
+              <div className="mb-6 md:mb-8">
+                <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">チケット残数</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                   {studentTickets.map(ticket => (
-                    <div key={ticket.studentId} className="flex-1 flex justify-between items-center px-2 md:px-3 py-1 md:py-2 bg-white rounded-md border border-gray-100 min-w-[120px] md:min-w-[200px] whitespace-nowrap overflow-hidden">
-                      <span className="text-xs md:text-sm font-medium truncate">{ticket.name}</span>
-                      <span className="text-xs md:text-sm font-semibold text-primary ml-1 md:ml-2 flex-shrink-0">{ticket.ticketCount}枚</span>
+                    <div 
+                      key={ticket.studentId}
+                      className="p-3 md:p-4 border rounded-lg border-gray-200 hover:border-primary hover:bg-gray-50"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm md:text-base font-medium">{ticket.name}</div>
+                        <div className="text-gray-600 text-xs font-medium">
+                          残り {ticket.ticketCount} 枚
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
