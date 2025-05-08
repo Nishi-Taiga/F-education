@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { BookingCard } from "@/components/booking-card";
 import { ReportViewModal } from "@/components/report-view-modal";
+import { CommonHeader } from "@/components/common-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, FileText, Search, Calendar } from "lucide-react";
@@ -110,20 +111,8 @@ export default function ReportListPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <div className="flex items-center">
-            <Button variant="ghost" size="icon" className="mr-2" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700">{user?.displayName || user?.username}</span>
-          </div>
-        </div>
-      </header>
+      {/* CommonHeaderを使用 */}
+      <CommonHeader showBackButton={true} title="F education" />
 
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
