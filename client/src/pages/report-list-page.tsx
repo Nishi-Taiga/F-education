@@ -120,11 +120,11 @@ export default function ReportListPage() {
   // 検索フィルタリング
   const filteredBookings = reportedBookings.filter((booking: Booking & { studentName?: string }) => {
     // 生徒IDで検索
-    const matchStudentId = !selectedStudentId || 
+    const matchStudentId = selectedStudentId === "all" || !selectedStudentId || 
       (booking.studentId !== null && booking.studentId.toString() === selectedStudentId);
     
     // 教科で検索
-    const matchSubject = !subjectSearch || booking.subject === subjectSearch;
+    const matchSubject = subjectSearch === "all" || !subjectSearch || booking.subject === subjectSearch;
     
     // 日付で検索
     let matchDate = true;
@@ -199,7 +199,7 @@ export default function ReportListPage() {
                   <SelectValue placeholder="生徒名で検索" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">すべての生徒</SelectItem>
+                  <SelectItem value="all">すべての生徒</SelectItem>
                   {students?.map((student: Student) => (
                     <SelectItem key={student.id} value={student.id.toString()}>
                       {student.lastName} {student.firstName}
@@ -217,7 +217,7 @@ export default function ReportListPage() {
                   <SelectValue placeholder="教科で検索" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">すべての教科</SelectItem>
+                  <SelectItem value="all">すべての教科</SelectItem>
                   {SUBJECTS.map(subject => (
                     <SelectItem key={subject} value={subject}>
                       {subject}
@@ -242,37 +242,40 @@ export default function ReportListPage() {
             </Button>
             
             {isCalendarOpen && (
-              <Card className="absolute z-50 mt-1 w-auto">
-                <CardContent className="p-2">
-                  <CalendarComponent
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => {
-                      setSelectedDate(date);
-                    }}
-                    initialFocus
-                    locale={ja}
-                  />
-                  <div className="pt-2 border-t mt-2 flex justify-between">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => {
-                        setSelectedDate(undefined);
-                        setDateSearch('');
+              <div ref={calendarRef}>
+                <Card className="absolute z-50 mt-1 w-auto">
+                  <CardContent className="p-2">
+                    <CalendarComponent
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        setSelectedDate(date);
+                        // カレンダーは閉じない
                       }}
-                    >
-                      クリア
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={() => setIsCalendarOpen(false)}
-                    >
-                      検索
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                      initialFocus
+                      locale={ja}
+                    />
+                    <div className="pt-2 border-t mt-2 flex justify-between">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedDate(undefined);
+                          setDateSearch('');
+                        }}
+                      >
+                        クリア
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => setIsCalendarOpen(false)}
+                      >
+                        検索
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </div>
         </div>
