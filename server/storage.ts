@@ -668,15 +668,34 @@ export class MemStorage implements IStorage {
   }
   
   async deleteStudent(id: number): Promise<void> {
-    // 生徒情報を取得
-    const student = await this.getStudent(id);
-    if (!student) {
-      throw new Error("Student not found");
+    try {
+      // 生徒情報を取得
+      const student = await this.getStudent(id);
+      if (!student) {
+        throw new Error("Student not found");
+      }
+      
+      // 1. 生徒のチケット記録をフィルタリング（削除対象の生徒のものを除外）
+      this.studentTicketRecords = new Map(
+        Array.from(this.studentTicketRecords.entries())
+          .filter(([_, record]) => record.studentId !== id)
+      );
+      
+      // 2. 生徒のレッスンレポートの生徒IDをnullに更新
+      for (const [reportId, report] of this.lessonReports.entries()) {
+        if (report.studentId === id) {
+          const updatedReport = { ...report, studentId: null };
+          this.lessonReports.set(reportId, updatedReport);
+        }
+      }
+      
+      // 3. 物理削除ではなく、isActiveフラグをfalseに設定する（論理削除）
+      const updatedStudent = { ...student, isActive: false };
+      this.students.set(id, updatedStudent);
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      throw new Error(`Failed to delete student: ${error.message}`);
     }
-    
-    // 物理削除ではなく、isActiveフラグをfalseに設定する（論理削除）
-    const updatedStudent = { ...student, isActive: false };
-    this.students.set(id, updatedStudent);
   }
   
   // ユーザー名の更新
@@ -1230,11 +1249,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteStudent(id: number): Promise<void> {
-    // 論理削除: isActiveをfalseに設定
-    await db
-      .update(students)
-      .set({ isActive: false })
-      .where(eq(students.id, id));
+    try {
+      // トランザクションを開始
+      await db.transaction(async (tx) => {
+        // 1. 生徒のチケットデータを削除
+        await tx
+          .delete(studentTickets)
+          .where(eq(studentTickets.studentId, id));
+        
+        // 2. 生徒のレッスンレポートの生徒IDをnullに更新
+        await tx
+          .update(lessonReports)
+          .set({ studentId: null })
+          .where(eq(lessonReports.studentId, id));
+          
+        // 3. 論理削除: isActiveをfalseに設定
+        await tx
+          .update(students)
+          .set({ isActive: false })
+          .where(eq(students.id, id));
+      });
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      throw new Error(`Failed to delete student: ${error.message}`);
+    }
   }
 
   // 講師関連
