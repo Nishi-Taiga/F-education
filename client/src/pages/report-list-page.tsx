@@ -162,6 +162,9 @@ export default function ReportListPage() {
       (booking.studentId !== null && booking.studentId !== undefined && 
        String(booking.studentId) === appliedStudentId);
     
+    // フィルタリングのデバッグログ（必要に応じて有効化する）
+    // console.log(`フィルタリング: booking.studentId=${booking.studentId}, appliedStudentId=${appliedStudentId}, match=${matchStudent}`);
+    
     // 2. 教科でフィルタリング
     const matchSubject = 
       appliedSubject === "all" || 
@@ -178,9 +181,6 @@ export default function ReportListPage() {
         bookingDate.getDate() === filterDate.getDate();
     }
     
-    // デバッグ用（検索が動作しているか確認用）
-    // console.log(`Booking ${booking.id}: student=${matchStudent}, subject=${matchSubject}, date=${matchDate}`);
-    
     // すべての条件に一致する予約のみを表示
     return Boolean(matchStudent && matchSubject && matchDate);
   };
@@ -190,13 +190,21 @@ export default function ReportListPage() {
 
   // テスト用のデータ（フィルタリングに対応）
   const getTestReportedBookings = (): (Booking & { studentName?: string })[] => {
+    // 生徒のID情報を取得（デバッグを少し削減）
+    const taroIdObj = students.find(s => s.lastName === "テスト" && s.firstName === "太郎");
+    const hanakoIdObj = students.find(s => s.lastName === "テスト" && s.firstName === "花子");
+    
+    // 実際の生徒IDを使用（デフォルト値は4と5）
+    const taroId = taroIdObj?.id || 4;
+    const hanakoId = hanakoIdObj?.id || 5;
+    
     const data = [
       {
         id: 9001,
         createdAt: new Date(),
         userId: user ? user.id : 0,
         tutorId: 1,
-        studentId: 4,
+        studentId: taroId, // テスト太郎のID
         tutorShiftId: 1,
         date: "2025-04-15",
         timeSlot: "16:00-17:30",
@@ -211,7 +219,7 @@ export default function ReportListPage() {
         createdAt: new Date(),
         userId: user ? user.id : 0,
         tutorId: 1,
-        studentId: 4,
+        studentId: taroId, // テスト太郎のID
         tutorShiftId: 1,
         date: "2025-04-01",
         timeSlot: "16:00-17:30",
@@ -220,6 +228,21 @@ export default function ReportListPage() {
         reportStatus: "completed" as const,
         reportContent: "中学1年の不定詞\n文法の理解が進んでいます。演習問題では8割以上正解できていました。\n次回までに教科書p.32の例文を音読練習してきてください。",
         studentName: "テスト 太郎"
+      },
+      {
+        id: 9003,
+        createdAt: new Date(),
+        userId: user ? user.id : 0,
+        tutorId: 1,
+        studentId: hanakoId, // テスト花子のID
+        tutorShiftId: 1,
+        date: "2025-04-10",
+        timeSlot: "16:00-17:30",
+        subject: "国語",
+        status: "confirmed" as const,
+        reportStatus: "completed" as const,
+        reportContent: "小学6年の読解問題\n丁寧に読み進め、要点をまとめる力がついてきています。\n次回までに教科書p.78-79の新出漢字を練習してきてください。",
+        studentName: "テスト 花子"
       }
     ];
     
