@@ -147,10 +147,11 @@ export default function ReportListPage() {
 
   // 検索フィルタリングを行う関数
   const filterBooking = (booking: Booking & { studentName?: string }): boolean => {
-    // 1. 生徒IDでフィルタリング
+    // 1. 生徒IDでフィルタリング（studentIdがnullの場合を考慮）
     const matchStudentId = 
       appliedStudentId === "all" || 
-      (booking.studentId !== null && booking.studentId.toString() === appliedStudentId);
+      (booking.studentId !== null && booking.studentId !== undefined && 
+       booking.studentId.toString() === appliedStudentId);
     
     // 2. 教科でフィルタリング
     const matchSubject = 
@@ -167,6 +168,9 @@ export default function ReportListPage() {
         bookingDate.getMonth() === filterDate.getMonth() &&
         bookingDate.getDate() === filterDate.getDate();
     }
+    
+    // デバッグ用のログ（確認用）
+    // console.log(`Booking ID:${booking.id}, StudentID:${booking.studentId}, Applied:${appliedStudentId}, Match:${matchStudentId}`);
     
     // すべての条件に一致する予約のみを表示
     return matchStudentId && matchSubject && matchDate;
@@ -301,24 +305,14 @@ export default function ReportListPage() {
               </Button>
             </div>
             
-            {/* 検索ボタンとクリアボタン */}
-            <div className="flex space-x-2">
-              <Button 
-                variant="outline"
-                onClick={clearAllFilters}
-                className="h-10"
-              >
-                <X className="h-4 w-4 mr-2" />
-                クリア
-              </Button>
-              <Button 
-                onClick={applyFilters}
-                className="min-w-28 h-10"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                検索
-              </Button>
-            </div>
+            {/* 検索ボタン */}
+            <Button 
+              onClick={applyFilters}
+              className="min-w-28 h-10"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              検索
+            </Button>
             
             {isCalendarOpen && (
               <div ref={calendarRef}>
@@ -334,7 +328,7 @@ export default function ReportListPage() {
                       initialFocus
                       locale={ja}
                     />
-                    <div className="pt-2 border-t mt-2 flex justify-between">
+                    <div className="pt-2 border-t mt-2 flex justify-center">
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -344,19 +338,6 @@ export default function ReportListPage() {
                         }}
                       >
                         クリア
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => {
-                          if (selectedDate) {
-                            // 選択された日付に合わせて検索フィルターを適用
-                            const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-                            setDateSearch(formattedDate);
-                          }
-                          setIsCalendarOpen(false);
-                        }}
-                      >
-                        検索
                       </Button>
                     </div>
                   </CardContent>
