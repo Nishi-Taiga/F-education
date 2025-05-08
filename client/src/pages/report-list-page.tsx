@@ -180,7 +180,7 @@ export default function ReportListPage() {
                   <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                   <Input 
                     type="text" 
-                    placeholder="日付で検索（カレンダーから選択）" 
+                    placeholder="日付で検索" 
                     className="pl-9"
                     value={dateSearch}
                     onChange={(e) => {
@@ -201,31 +201,29 @@ export default function ReportListPage() {
                   selected={selectedDate}
                   onSelect={(date) => {
                     setSelectedDate(date);
-                    setIsCalendarOpen(false);
+                    // カレンダーを選択しても閉じないように修正
                   }}
                   initialFocus
                   locale={ja}
                 />
-                {selectedDate && (
-                  <div className="p-2 border-t flex justify-between">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => {
-                        setSelectedDate(undefined);
-                        setDateSearch('');
-                      }}
-                    >
-                      クリア
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={() => setIsCalendarOpen(false)}
-                    >
-                      閉じる
-                    </Button>
-                  </div>
-                )}
+                <div className="p-2 border-t flex justify-between">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setSelectedDate(undefined);
+                      setDateSearch('');
+                    }}
+                  >
+                    クリア
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => setIsCalendarOpen(false)}
+                  >
+                    閉じる
+                  </Button>
+                </div>
               </PopoverContent>
             </Popover>
           </div>
