@@ -62,6 +62,11 @@ export function CommonHeader({
         </div>
 
         <div className="flex items-center space-x-2 md:space-x-4">
+          {/* ユーザー名表示 */}
+          <span className="text-sm md:text-base text-gray-700 hidden md:inline-block mr-2">
+            {user?.displayName || user?.username}
+          </span>
+          
           {/* デスクトップのメニュー */}
           <div className="hidden md:flex items-center space-x-2">
             {user?.role !== "tutor" && (
@@ -154,6 +159,11 @@ export function CommonHeader({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {/* モバイルでユーザー名表示 */}
+                <div className="px-2 py-1.5 text-sm text-gray-700 font-medium border-b mb-1">
+                  {user?.displayName || user?.username}
+                </div>
+                
                 <DropdownMenuItem onClick={() => navigate("/")}>
                   <Home className="h-4 w-4 mr-2" />
                   ホーム
