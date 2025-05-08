@@ -962,7 +962,7 @@ export default function SettingsPage() {
             
             {/* 生徒編集ダイアログ */}
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-              <DialogContent className="sm:max-w-[500px]">
+              <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-auto">
                 <DialogHeader>
                   <DialogTitle>生徒情報の編集</DialogTitle>
                   <DialogDescription>
@@ -996,7 +996,7 @@ export default function SettingsPage() {
                       updateStudentMutation.mutate(updateData as any);
                       setEditDialogOpen(false);
                     }}
-                    className="space-y-6"
+                    className="space-y-6 px-1 max-h-[60vh] md:max-h-[65vh] overflow-y-auto"
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
