@@ -37,7 +37,7 @@ export function CommonHeader({
   const [, navigate] = useLocation();
 
   // ヘッダータイトルを決定
-  const headerTitle = title || (user?.role === "tutor" ? "F education" : "F education 予約システム");
+  const headerTitle = title || "F education";
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm w-full">
