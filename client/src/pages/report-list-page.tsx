@@ -287,27 +287,34 @@ export default function ReportListPage() {
                       selected={selectedDate}
                       onSelect={(date) => {
                         setSelectedDate(date);
-                        // 日付を選択したらすぐにフィルタリングを更新し、カレンダーを閉じる
-                        if (date) {
-                          const formattedDate = format(date, 'yyyy-MM-dd');
-                          setDateSearch(formattedDate);
-                          setIsCalendarOpen(false);
-                        }
+                        // カレンダーは閉じない
                       }}
                       initialFocus
                       locale={ja}
                     />
-                    <div className="pt-2 border-t mt-2 flex justify-center">
+                    <div className="pt-2 border-t mt-2 flex justify-between">
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={() => {
                           setSelectedDate(undefined);
                           setDateSearch('');
-                          setIsCalendarOpen(false);
                         }}
                       >
                         クリア
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          if (selectedDate) {
+                            // 選択された日付に合わせて検索フィルターを適用
+                            const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+                            setDateSearch(formattedDate);
+                          }
+                          setIsCalendarOpen(false);
+                        }}
+                      >
+                        検索
                       </Button>
                     </div>
                   </CardContent>
