@@ -6,7 +6,7 @@ import { BookingCard } from "@/components/booking-card";
 import { ReportViewModal } from "@/components/report-view-modal";
 import { CommonHeader } from "@/components/common-header";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, ArrowLeft, FileText, Search, Calendar, User, BookOpen } from "lucide-react";
+import { Loader2, ArrowLeft, FileText, Search, Calendar, User, BookOpen, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
