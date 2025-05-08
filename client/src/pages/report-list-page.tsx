@@ -45,13 +45,41 @@ const SUBJECTS = [
 export default function ReportListPage() {
   const [_, navigate] = useLocation();
   const { user } = useAuth();
-  // 検索用の状態
+  
+  // 検索条件の状態（UI表示用）
   const [selectedStudentId, setSelectedStudentId] = useState<string>("all");
   const [subjectSearch, setSubjectSearch] = useState<string>("all");
-  const [dateSearch, setDateSearch] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
+  
+  // 検索条件の適用状態（実際のフィルタリングに使用）
+  const [appliedStudentId, setAppliedStudentId] = useState<string>("all");
+  const [appliedSubject, setAppliedSubject] = useState<string>("all");
+  const [dateSearch, setDateSearch] = useState("");
+  
+  // 検索ボタン押下時の処理
+  const applyFilters = () => {
+    setAppliedStudentId(selectedStudentId);
+    setAppliedSubject(subjectSearch);
+    if (selectedDate) {
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      setDateSearch(formattedDate);
+    } else {
+      setDateSearch('');
+    }
+  };
+  
+  // すべてのフィルターをクリアする
+  const clearAllFilters = () => {
+    setSelectedStudentId("all");
+    setSubjectSearch("all");
+    setSelectedDate(undefined);
+    setAppliedStudentId("all");
+    setAppliedSubject("all");
+    setDateSearch('');
+    setIsCalendarOpen(false);
+  };
 
   // レポート閲覧ダイアログ用の状態
   const [showReportViewDialog, setShowReportViewDialog] = useState(false);
@@ -93,17 +121,12 @@ export default function ReportListPage() {
           new Date(b.date).getTime() - new Date(a.date).getTime()) // 日付の降順でソート
     : [];
 
-  // 選択された日付が変更されたときにテキスト検索フィールドを更新
-  // 選択された日付が変更されたら、検索用の日付文字列も更新する
+  // ページ読み込み時に初期値を設定
   useEffect(() => {
-    if (selectedDate) {
-      // yyyy-MM-dd 形式の文字列に変換（検索用）
-      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      setDateSearch(formattedDate);
-    } else {
-      setDateSearch('');
-    }
-  }, [selectedDate]);
+    // 初期値を設定
+    setAppliedStudentId(selectedStudentId);
+    setAppliedSubject(subjectSearch);
+  }, []);
 
   // カレンダーが表示されている間は外側のクリックを検出する
   useEffect(() => {
@@ -126,26 +149,24 @@ export default function ReportListPage() {
   const filterBooking = (booking: Booking & { studentName?: string }): boolean => {
     // 1. 生徒IDでフィルタリング
     const matchStudentId = 
-      selectedStudentId === "all" || 
-      (booking.studentId !== null && booking.studentId.toString() === selectedStudentId);
+      appliedStudentId === "all" || 
+      (booking.studentId !== null && booking.studentId.toString() === appliedStudentId);
     
     // 2. 教科でフィルタリング
     const matchSubject = 
-      subjectSearch === "all" || 
-      booking.subject === subjectSearch;
+      appliedSubject === "all" || 
+      booking.subject === appliedSubject;
     
     // 3. 日付でフィルタリング
     let matchDate = true;
-    if (selectedDate) {
+    if (dateSearch) {
       const bookingDate = parseISO(booking.date);
+      const filterDate = parseISO(dateSearch);
       matchDate = 
-        bookingDate.getFullYear() === selectedDate.getFullYear() &&
-        bookingDate.getMonth() === selectedDate.getMonth() &&
-        bookingDate.getDate() === selectedDate.getDate();
+        bookingDate.getFullYear() === filterDate.getFullYear() &&
+        bookingDate.getMonth() === filterDate.getMonth() &&
+        bookingDate.getDate() === filterDate.getDate();
     }
-    
-    // リリース時はログ出力を削除する
-    // console.log(`[フィルター] ID:${booking.id}, 生徒:${matchStudentId}, 教科:${matchSubject}, 日付:${matchDate}`);
     
     // すべての条件に一致する予約のみを表示
     return matchStudentId && matchSubject && matchDate;
@@ -263,20 +284,41 @@ export default function ReportListPage() {
             </div>
           </div>
           
-          {/* 日付検索欄はカレンダー付き */}
-          <div className="relative">
-            <Button
-              variant="outline"
-              className="w-full justify-start pl-9 text-left font-normal"
-              onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-            >
-              <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <span className={selectedDate ? "" : "text-muted-foreground"}>
-                {selectedDate 
-                  ? format(selectedDate, 'yyyy年MM月dd日', { locale: ja })
-                  : "日付で検索"}
-              </span>
-            </Button>
+          {/* 日付検索欄とフィルタボタン */}
+          <div className="grid grid-cols-[1fr,auto] gap-2 items-start">
+            <div className="relative">
+              <Button
+                variant="outline"
+                className="w-full justify-start pl-9 text-left font-normal"
+                onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+              >
+                <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <span className={selectedDate ? "" : "text-muted-foreground"}>
+                  {selectedDate 
+                    ? format(selectedDate, 'yyyy年MM月dd日', { locale: ja })
+                    : "日付で検索"}
+                </span>
+              </Button>
+            </div>
+            
+            {/* 検索ボタンとクリアボタン */}
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline"
+                onClick={clearAllFilters}
+                className="h-10"
+              >
+                <X className="h-4 w-4 mr-2" />
+                クリア
+              </Button>
+              <Button 
+                onClick={applyFilters}
+                className="min-w-28 h-10"
+              >
+                <Search className="h-4 w-4 mr-2" />
+                検索
+              </Button>
+            </div>
             
             {isCalendarOpen && (
               <div ref={calendarRef}>
@@ -297,8 +339,8 @@ export default function ReportListPage() {
                         variant="outline" 
                         size="sm" 
                         onClick={() => {
+                          // カレンダーをクリアするだけで、実際のフィルタには反映しない
                           setSelectedDate(undefined);
-                          setDateSearch('');
                         }}
                       >
                         クリア
