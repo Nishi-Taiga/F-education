@@ -236,9 +236,11 @@ export default function ReportListPage() {
               onClick={() => setIsCalendarOpen(!isCalendarOpen)}
             >
               <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-              {selectedDate 
-                ? format(selectedDate, 'yyyy年MM月dd日', { locale: ja })
-                : "日付で検索"}
+              <span className="text-muted-foreground">
+                {selectedDate 
+                  ? format(selectedDate, 'yyyy年MM月dd日', { locale: ja })
+                  : "日付で検索"}
+              </span>
             </Button>
             
             {isCalendarOpen && (
@@ -268,7 +270,14 @@ export default function ReportListPage() {
                       </Button>
                       <Button 
                         size="sm" 
-                        onClick={() => setIsCalendarOpen(false)}
+                        onClick={() => {
+                          if (selectedDate) {
+                            // 選択された日付に合わせて検索フィルターを適用
+                            const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+                            setDateSearch(formattedDate);
+                          }
+                          setIsCalendarOpen(false);
+                        }}
                       >
                         検索
                       </Button>
