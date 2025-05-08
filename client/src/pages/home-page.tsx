@@ -7,6 +7,7 @@ import { BookingCard } from "@/components/booking-card";
 import { BookingCancellationModal } from "@/components/booking-cancellation-modal";
 import { ReportViewModal } from "@/components/report-view-modal";
 import { BookingDetailModal } from "@/components/booking-detail-modal";
+import { CommonHeader } from "@/components/common-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Ticket, CalendarCheck, Settings, Plus, UserCircle, ClipboardList, UserCog, Clock, BookOpen, Scroll, MapPin, GraduationCap, Copy, Check, FileText } from "lucide-react";
@@ -762,37 +763,8 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-2 py-2 sm:px-6 lg:px-8 flex justify-between items-center">
-          <div className="flex items-center">
-            <h1 className="text-xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent whitespace-nowrap">F education</h1>
-          </div>
-          <div className="flex items-center space-x-2 md:space-x-4">
-            <span className="text-gray-700 text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-none">
-              {user?.role === 'tutor' && tutorProfile 
-                ? `${tutorProfile.lastName || ''} ${tutorProfile.firstName || ''}`
-                : (user?.displayName || user?.username)
-              }
-            </span>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => {
-                logoutMutation.mutate();
-              }}
-              className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-              ログアウト
-            </Button>
-          </div>
-        </div>
-      </header>
+      {/* 共通ヘッダー */}
+      <CommonHeader />
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">

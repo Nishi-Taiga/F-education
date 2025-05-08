@@ -5,12 +5,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Ticket, Loader2 } from "lucide-react";
+import { Ticket, Loader2 } from "lucide-react";
 import { TicketCard } from "@/components/ticket-card";
 import { Cart } from "@/components/cart";
 import { PaymentSuccessModal } from "@/components/payment-success-modal";
 import { PaymentModal } from "@/components/PaymentModal";
 import { useToast } from "@/hooks/use-toast";
+import { CommonHeader } from "@/components/common-header";
 import { Student } from "@shared/schema";
 
 export type CartItem = {
@@ -182,20 +183,8 @@ export default function TicketPurchasePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <div className="flex items-center">
-            <Button variant="ghost" size="icon" className="mr-1 md:mr-2 h-8 w-8 md:h-10 md:w-10" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
-            <h1 className="text-xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700">{user?.displayName || user?.username}</span>
-          </div>
-        </div>
-      </header>
+      {/* 共通ヘッダー */}
+      <CommonHeader showBackButton backTo="/" title="F education" />
 
       {/* Main Content */}
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
