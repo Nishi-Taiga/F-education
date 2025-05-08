@@ -8,7 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Loader2, PlusCircle, Search, User, GraduationCap, UsersRound, XCircle, KeyRound, CheckCircle, RefreshCw } from "lucide-react";
+import { Loader2, PlusCircle, Search, User, GraduationCap, UsersRound, XCircle, KeyRound, CheckCircle, RefreshCw } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Student, insertStudentSchema, updateUserProfileSchema } from "@shared/schema";
 import { useState, useEffect } from "react";
+import { CommonHeader } from "@/components/common-header";
 import axios from "axios";
 
 const settingsSchema = z.object({
@@ -590,20 +591,8 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <div className="flex items-center">
-            <Button variant="ghost" size="icon" className="mr-1 md:mr-2 h-8 w-8 md:h-10 md:w-10" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
-            <h1 className="text-xl md:text-2xl font-bold text-primary">F education</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm md:text-base text-gray-700">{user?.displayName || user?.username}</span>
-          </div>
-        </div>
-      </header>
+      {/* 共通ヘッダー */}
+      <CommonHeader showBackButton backTo="/" title="F education" />
 
       {/* Main Content */}
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
@@ -623,7 +612,7 @@ export default function SettingsPage() {
               生徒情報
             </TabsTrigger>
             <TabsTrigger value="password" className="text-xs md:text-sm">
-              <ArrowLeft className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4" />
+              <KeyRound className="mr-1 md:mr-2 h-3 md:h-4 w-3 md:w-4" />
               パスワード
             </TabsTrigger>
           </TabsList>
