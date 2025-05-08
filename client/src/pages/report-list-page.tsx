@@ -71,6 +71,11 @@ export default function ReportListPage() {
     } else {
       setDateSearch('');
     }
+    
+    // カレンダーが開いていたら閉じる
+    if (isCalendarOpen) {
+      setIsCalendarOpen(false);
+    }
   };
   
   // すべてのフィルターをクリアする
@@ -150,12 +155,12 @@ export default function ReportListPage() {
 
   // 検索フィルタリングを行う関数
   const filterBooking = (booking: Booking & { studentName?: string }): boolean => {
-    // 1. 生徒名でフィルタリング
+    // 1. 生徒IDによるフィルタリング
+    // 「すべての生徒」を選択、または生徒IDが一致する場合のみ表示
     const matchStudent = 
       appliedStudentId === "all" || 
       (booking.studentId !== null && booking.studentId !== undefined && 
-       (appliedStudentId === String(booking.studentId) || 
-        (booking.studentName && booking.studentName.includes(getSelectedStudentName()))));
+       String(booking.studentId) === appliedStudentId);
     
     // 2. 教科でフィルタリング
     const matchSubject = 
@@ -173,21 +178,11 @@ export default function ReportListPage() {
         bookingDate.getDate() === filterDate.getDate();
     }
     
+    // デバッグ用（検索が動作しているか確認用）
+    // console.log(`Booking ${booking.id}: student=${matchStudent}, subject=${matchSubject}, date=${matchDate}`);
+    
     // すべての条件に一致する予約のみを表示
-    return matchStudent && matchSubject && matchDate;
-  };
-  
-  // 選択された生徒の名前を取得する関数
-  const getSelectedStudentName = (): string => {
-    if (appliedStudentId === "all") return "";
-    
-    const selectedStudent = students?.find(
-      (student: Student) => String(student.id) === appliedStudentId
-    );
-    
-    return selectedStudent 
-      ? `${selectedStudent.lastName} ${selectedStudent.firstName}`
-      : "";
+    return Boolean(matchStudent && matchSubject && matchDate);
   };
   
   // フィルタリング適用済みのデータ
