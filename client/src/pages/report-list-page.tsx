@@ -60,8 +60,11 @@ export default function ReportListPage() {
   
   // 検索ボタン押下時の処理
   const applyFilters = () => {
+    // 生徒IDと教科の状態を適用
     setAppliedStudentId(selectedStudentId);
     setAppliedSubject(subjectSearch);
+    
+    // 日付の処理
     if (selectedDate) {
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       setDateSearch(formattedDate);
@@ -151,7 +154,7 @@ export default function ReportListPage() {
     const matchStudentId = 
       appliedStudentId === "all" || 
       (booking.studentId !== null && booking.studentId !== undefined && 
-       booking.studentId.toString() === appliedStudentId);
+       String(booking.studentId) === appliedStudentId);
     
     // 2. 教科でフィルタリング
     const matchSubject = 
@@ -169,8 +172,8 @@ export default function ReportListPage() {
         bookingDate.getDate() === filterDate.getDate();
     }
     
-    // デバッグ用のログ（確認用）
-    // console.log(`Booking ID:${booking.id}, StudentID:${booking.studentId}, Applied:${appliedStudentId}, Match:${matchStudentId}`);
+    // デバッグ用のログ（本番環境では削除または無効化する）
+    // console.log(`[Filter] BookingID:${booking.id}, StudentID:${booking.studentId}, AppliedID:${appliedStudentId}, Match:${matchStudentId}`);
     
     // すべての条件に一致する予約のみを表示
     return matchStudentId && matchSubject && matchDate;
@@ -244,7 +247,7 @@ export default function ReportListPage() {
               <Select 
                 value={selectedStudentId} 
                 onValueChange={(value) => {
-                  // 生徒IDが選択されたらすぐにフィルタリングに反映
+                  // 生徒IDを選択状態として記録するだけ（検索ボタンで適用する）
                   setSelectedStudentId(value);
                 }}
               >
@@ -268,7 +271,7 @@ export default function ReportListPage() {
               <Select 
                 value={subjectSearch} 
                 onValueChange={(value) => {
-                  // 教科が選択されたらすぐにフィルタリングに反映
+                  // 教科を選択状態として記録するだけ（検索ボタンで適用する）
                   setSubjectSearch(value);
                 }}
               >
@@ -333,8 +336,9 @@ export default function ReportListPage() {
                         variant="outline" 
                         size="sm" 
                         onClick={() => {
-                          // カレンダーをクリアするだけで、実際のフィルタには反映しない
+                          // カレンダーをクリアして、適用する
                           setSelectedDate(undefined);
+                          setIsCalendarOpen(false);
                         }}
                       >
                         クリア
