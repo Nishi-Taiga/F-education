@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
@@ -6,7 +6,6 @@ import { BookingCard } from "@/components/booking-card";
 import { ReportViewModal } from "@/components/report-view-modal";
 import { CommonHeader } from "@/components/common-header";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, FileText, Search, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { Booking, Student } from "@shared/schema";
@@ -16,7 +15,9 @@ import { ja } from "date-fns/locale";
 export default function ReportListPage() {
   const [_, navigate] = useLocation();
   const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [studentNameSearch, setStudentNameSearch] = useState("");
+  const [subjectSearch, setSubjectSearch] = useState("");
+  const [dateSearch, setDateSearch] = useState("");
 
   // レポート閲覧ダイアログ用の状態
   const [showReportViewDialog, setShowReportViewDialog] = useState(false);
@@ -60,16 +61,16 @@ export default function ReportListPage() {
 
   // 検索フィルタリング
   const filteredBookings = reportedBookings.filter((booking: Booking & { studentName?: string }) => {
-    if (!searchTerm) return true;
-    
-    const lowerSearchTerm = searchTerm.toLowerCase();
     const studentName = booking.studentName || '';
     const subject = booking.subject || '';
     const date = format(parseISO(booking.date), 'yyyy年MM月dd日', { locale: ja });
     
-    return studentName.toLowerCase().includes(lowerSearchTerm) || 
-           subject.toLowerCase().includes(lowerSearchTerm) ||
-           date.includes(searchTerm);
+    // 各検索条件でフィルタリング
+    const matchStudentName = !studentNameSearch || studentName.toLowerCase().includes(studentNameSearch.toLowerCase());
+    const matchSubject = !subjectSearch || subject.toLowerCase().includes(subjectSearch.toLowerCase());
+    const matchDate = !dateSearch || date.includes(dateSearch);
+    
+    return matchStudentName && matchSubject && matchDate;
   });
 
   // テスト用のデータ
@@ -120,16 +121,36 @@ export default function ReportListPage() {
           <p className="mt-1 text-sm text-gray-600">完了した授業のレポートを確認できます</p>
         </div>
         
-        {/* 検索バー */}
-        <div className="mb-4 flex items-center space-x-2">
-          <div className="relative flex-1">
+        {/* 3つの検索フィールド */}
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input 
               type="text" 
-              placeholder="生徒名・教科・日付で検索" 
+              placeholder="生徒名で検索" 
               className="pl-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={studentNameSearch}
+              onChange={(e) => setStudentNameSearch(e.target.value)}
+            />
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Input 
+              type="text" 
+              placeholder="教科で検索" 
+              className="pl-9"
+              value={subjectSearch}
+              onChange={(e) => setSubjectSearch(e.target.value)}
+            />
+          </div>
+          <div className="relative">
+            <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Input 
+              type="text" 
+              placeholder="日付で検索（例: 4月）" 
+              className="pl-9"
+              value={dateSearch}
+              onChange={(e) => setDateSearch(e.target.value)}
             />
           </div>
         </div>
