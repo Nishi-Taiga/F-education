@@ -69,7 +69,7 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center p-4 bg-white">
         <div className="w-full max-w-md">
           <div className="text-center mb-4">
-            <h1 className="text-2xl font-bold text-primary mb-2">F education 予約システム</h1>
+            <h1 className="text-2xl font-bold text-primary mb-2">F education</h1>
             <p className="text-sm text-gray-600">サービスをご利用するには、アカウントへのログインが必要です</p>
           </div>
 
@@ -225,7 +225,7 @@ export default function AuthPage() {
       </div>
       <div className="flex-1 bg-primary p-6 text-white hidden md:flex flex-col justify-center form-container">
         <div className="max-w-md">
-          <h2 className="text-2xl font-bold mb-4">F education 予約システム</h2>
+          <h2 className="text-2xl font-bold mb-4">F education</h2>
           <ul className="space-y-3">
             <li className="flex items-start">
               <svg className="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

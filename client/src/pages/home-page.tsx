@@ -772,7 +772,7 @@ export default function HomePage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
           <div className="flex items-center">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
-              {user?.role === 'tutor' ? 'ダッシュボード' : '予約システム'}
+              {user?.role === 'tutor' ? 'ダッシュボード' : 'ホーム'}
             </h2>
           </div>
           
