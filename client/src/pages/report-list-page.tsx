@@ -121,28 +121,33 @@ export default function ReportListPage() {
           <p className="mt-1 text-sm text-gray-600">完了した授業のレポートを確認できます</p>
         </div>
         
-        {/* 3つの検索フィールド */}
-        <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-            <Input 
-              type="text" 
-              placeholder="生徒名で検索" 
-              className="pl-9"
-              value={studentNameSearch}
-              onChange={(e) => setStudentNameSearch(e.target.value)}
-            />
+        {/* 検索フィールド（生徒名と教科を横に並べて、日付は下に） */}
+        <div className="mb-4 space-y-2">
+          {/* 生徒名と教科の検索欄を横に並べる */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+              <Input 
+                type="text" 
+                placeholder="生徒名で検索" 
+                className="pl-9"
+                value={studentNameSearch}
+                onChange={(e) => setStudentNameSearch(e.target.value)}
+              />
+            </div>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+              <Input 
+                type="text" 
+                placeholder="教科で検索" 
+                className="pl-9"
+                value={subjectSearch}
+                onChange={(e) => setSubjectSearch(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-            <Input 
-              type="text" 
-              placeholder="教科で検索" 
-              className="pl-9"
-              value={subjectSearch}
-              onChange={(e) => setSubjectSearch(e.target.value)}
-            />
-          </div>
+          
+          {/* 日付検索欄は下に */}
           <div className="relative">
             <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input 
