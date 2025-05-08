@@ -93,10 +93,14 @@ export default function ReportListPage() {
     : [];
 
   // 選択された日付が変更されたときにテキスト検索フィールドを更新
+  // 選択された日付が変更されたら、検索用の日付文字列も更新する
   useEffect(() => {
     if (selectedDate) {
-      const formattedDate = format(selectedDate, 'yyyy年MM月dd日', { locale: ja });
+      // yyyy-MM-dd 形式の文字列に変換（検索用）
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       setDateSearch(formattedDate);
+    } else {
+      setDateSearch('');
     }
   }, [selectedDate]);
 
@@ -119,23 +123,29 @@ export default function ReportListPage() {
 
   // 検索フィルタリング
   const filteredBookings = reportedBookings.filter((booking: Booking & { studentName?: string }) => {
-    // 生徒IDで検索
-    const matchStudentId = selectedStudentId === "all" || !selectedStudentId || 
+    // 生徒IDでフィルタリング
+    const matchStudentId = 
+      selectedStudentId === "all" || 
+      !selectedStudentId || 
       (booking.studentId !== null && booking.studentId.toString() === selectedStudentId);
     
-    // 教科で検索
-    const matchSubject = subjectSearch === "all" || !subjectSearch || booking.subject === subjectSearch;
+    // 教科でフィルタリング
+    const matchSubject = 
+      subjectSearch === "all" || 
+      !subjectSearch || 
+      booking.subject === subjectSearch;
     
-    // 日付で検索
+    // 日付でフィルタリング
     let matchDate = true;
     if (selectedDate) {
-      // 選択された日付と予約日が同じ日かチェック
       const bookingDate = parseISO(booking.date);
-      matchDate = bookingDate.getFullYear() === selectedDate.getFullYear() &&
-                  bookingDate.getMonth() === selectedDate.getMonth() &&
-                  bookingDate.getDate() === selectedDate.getDate();
+      matchDate = 
+        bookingDate.getFullYear() === selectedDate.getFullYear() &&
+        bookingDate.getMonth() === selectedDate.getMonth() &&
+        bookingDate.getDate() === selectedDate.getDate();
     }
     
+    // すべての条件に一致する予約のみを表示
     return matchStudentId && matchSubject && matchDate;
   });
 
@@ -236,7 +246,7 @@ export default function ReportListPage() {
               onClick={() => setIsCalendarOpen(!isCalendarOpen)}
             >
               <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <span className="text-muted-foreground">
+              <span className={selectedDate ? "" : "text-muted-foreground"}>
                 {selectedDate 
                   ? format(selectedDate, 'yyyy年MM月dd日', { locale: ja })
                   : "日付で検索"}
