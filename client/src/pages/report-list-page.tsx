@@ -114,32 +114,7 @@ export default function ReportListPage() {
   // レッスンレポートデータの取得
   const { data: lessonReports = [], isLoading: isLoadingReports } = useQuery<LessonReport[]>({
     queryKey: ["/api/lesson-reports"],
-    enabled: !!user && Array.isArray(students) && students.length > 0,
-    queryFn: async () => {
-      // ユーザーに紐づく生徒のレポートを取得
-      if (!Array.isArray(students) || students.length === 0) return [];
-      
-      try {
-        // すべての生徒のレポートを取得するためのプロミス配列
-        const reportPromises = students.map(async (student) => {
-          try {
-            const response = await fetch(`/api/lesson-reports/student/${student.id}`);
-            if (!response.ok) return [];
-            return await response.json();
-          } catch (error) {
-            console.error(`生徒ID ${student.id} のレポート取得エラー:`, error);
-            return [];
-          }
-        });
-        
-        // すべてのプロミスを解決して結果を結合
-        const allReportsArrays = await Promise.all(reportPromises);
-        return allReportsArrays.flat();
-      } catch (error) {
-        console.error("レッスンレポート取得エラー:", error);
-        return [];
-      }
-    }
+    enabled: !!user && Array.isArray(students) && students.length > 0
   });
 
   // 生徒名を取得する関数
@@ -189,7 +164,10 @@ export default function ReportListPage() {
       };
     }).sort((a, b) => {
       // 日付の降順でソート（最新のレポートが一番上）
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+      // nullチェックを追加
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateB - dateA;
     });
   };
   
@@ -212,8 +190,8 @@ export default function ReportListPage() {
     if (dateSearch) {
       // nullチェックを追加
       if (report.date) {
-        const reportDate = parseISO(report.date);
-        const filterDate = parseISO(dateSearch);
+        const reportDate = new Date(report.date);
+        const filterDate = new Date(dateSearch);
         matchDate = 
           reportDate.getFullYear() === filterDate.getFullYear() &&
           reportDate.getMonth() === filterDate.getMonth() &&
@@ -270,9 +248,9 @@ export default function ReportListPage() {
     
     // 3. 日付でフィルタリング
     let matchDate = true;
-    if (dateSearch) {
-      const bookingDate = parseISO(booking.date);
-      const filterDate = parseISO(dateSearch);
+    if (dateSearch && booking.date) {
+      const bookingDate = new Date(booking.date);
+      const filterDate = new Date(dateSearch);
       matchDate = 
         bookingDate.getFullYear() === filterDate.getFullYear() &&
         bookingDate.getMonth() === filterDate.getMonth() &&

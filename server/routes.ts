@@ -2293,6 +2293,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get payment transactions" });
     }
   });
+  
+  // すべてのレッスンレポート取得 (保護者向け)
+  app.get("/api/lesson-reports", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      // 保護者に紐づく生徒のIDを取得
+      const students = await storage.getStudentsByUserId(req.user!.id);
+      
+      if (!students || students.length === 0) {
+        return res.json([]);
+      }
+      
+      // すべての生徒のレポートを取得するためのプロミス配列
+      const reportPromises = students.map(student => 
+        storage.getLessonReportsByStudentId(student.id)
+      );
+      
+      // すべてのプロミスを解決
+      const reportsArrays = await Promise.all(reportPromises);
+      
+      // すべてのレポートを結合
+      const allReports = reportsArrays.flat();
+      
+      // 日付の降順でソート
+      allReports.sort((a, b) => {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+      
+      res.json(allReports);
+    } catch (error) {
+      console.error("レッスンレポート一覧取得エラー:", error);
+      res.status(500).json({ error: "レッスンレポートの取得に失敗しました" });
+    }
+  });
 
   const httpServer = createServer(app);
 
