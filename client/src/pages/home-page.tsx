@@ -769,8 +769,8 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">
         
-        {/* チケット残数表示 (ユーザーが講師でない場合) */}
-        {user?.role !== 'tutor' && studentTickets.length > 0 && (
+        {/* チケット残数表示 (ユーザーが親の場合) */}
+        {user?.role === 'parent' && studentTickets.length > 0 && (
           <div className="flex justify-end mb-4">
             <div className="flex items-center">
               <div className="mr-1 bg-green-50 p-0.5 rounded-full">
@@ -783,6 +783,19 @@ export default function HomePage() {
                     <span className="font-bold ml-1">{ticket.ticketCount}枚</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* チケット残数表示 (ユーザーが生徒の場合) */}
+        {user?.role === 'student' && studentTickets.length > 0 && (
+          <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-800">チケット残数</h3>
+              <div className="flex items-center bg-green-50 py-1 px-3 rounded-full">
+                <Ticket className="text-green-600 h-4 w-4 mr-1.5" />
+                <span className="font-bold text-green-700">{studentTickets[0]?.ticketCount || 0}枚</span>
               </div>
             </div>
           </div>

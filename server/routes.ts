@@ -2322,6 +2322,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // 生徒別チケット情報を取得するAPIエンドポイント
+  app.get("/api/student-tickets", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const role = req.user!.role;
+    
+    try {
+      let result: Array<{studentId: number, name: string, ticketCount: number}> = [];
+      
+      // 生徒アカウントの場合
+      if (role === 'student' && req.user!.studentId) {
+        const studentId = req.user!.studentId;
+        const student = await storage.getStudent(studentId);
+        
+        if (student) {
+          const ticketCount = await storage.getStudentTickets(studentId);
+          result = [{
+            studentId: student.id,
+            name: `${student.lastName} ${student.firstName}`,
+            ticketCount
+          }];
+        }
+      } 
+      // 保護者アカウントの場合
+      else {
+        const students = await storage.getStudentsByUserId(userId);
+        
+        if (students && students.length > 0) {
+          // 生徒ごとにチケット情報を取得
+          result = await Promise.all(
+            students.map(async (student) => {
+              const ticketCount = await storage.getStudentTickets(student.id);
+              return {
+                studentId: student.id,
+                name: `${student.lastName} ${student.firstName}`,
+                ticketCount
+              };
+            })
+          );
+        }
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("生徒別チケット情報取得エラー:", error);
+      res.status(500).json({ error: "チケット情報の取得に失敗しました" });
+    }
+  });
+  
   // すべてのレッスンレポート取得 (保護者/生徒向け)
   app.get("/api/lesson-reports", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
