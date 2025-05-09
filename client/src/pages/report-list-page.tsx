@@ -263,8 +263,13 @@ export default function ReportListPage() {
       }
     ];
     
+    // 日付の降順でソート（最新のものが上に来る）
+    const sortedData = data.sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    
     // 同じフィルタリング関数をテストデータにも適用
-    return data.filter(filterBooking);
+    return sortedData.filter(filterBooking);
   };
 
   // 最終的に表示するデータ
