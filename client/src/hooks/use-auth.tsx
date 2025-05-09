@@ -17,7 +17,10 @@ type AuthContextType = {
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
 };
 
-type LoginData = Pick<InsertUser, "username" | "password">;
+type LoginData = {
+  email: string;
+  password: string;
+};
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -80,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onError: (error: Error) => {
       toast({
         title: "ログインに失敗しました",
-        description: error.message || "ユーザー名またはパスワードが正しくありません",
+        description: error.message || "メールアドレスまたはパスワードが正しくありません",
         variant: "destructive",
       });
     },
@@ -101,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onError: (error: Error) => {
       toast({
         title: "アカウント作成に失敗しました",
-        description: error.message || "ユーザー名がすでに使用されている可能性があります",
+        description: error.message || "このメールアドレスは既に使用されています",
         variant: "destructive",
       });
     },
