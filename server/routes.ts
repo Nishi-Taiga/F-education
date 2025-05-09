@@ -2423,6 +2423,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 生徒チケット情報取得エンドポイント
+  app.get("/api/student-tickets", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const userId = req.user!.id;
+    const role = req.user!.role;
+    
+    try {
+      let students: Student[] = [];
+      
+      // 生徒アカウントの場合は自分の情報のみを取得
+      if (role === 'student' && req.user!.studentId) {
+        const studentId = req.user!.studentId;
+        const student = await storage.getStudent(studentId);
+        if (student) {
+          const ticketCount = await storage.getStudentTickets(studentId);
+          res.json([{ 
+            studentId: studentId,
+            name: `${student.lastName} ${student.firstName}`,
+            ticketCount: ticketCount 
+          }]);
+          return;
+        }
+      } else if (role === 'parent') {
+        // 保護者アカウントの場合は全生徒を取得
+        students = await storage.getStudentsByUserId(userId);
+        
+        const ticketData = await Promise.all(students.map(async (student) => {
+          const ticketCount = await storage.getStudentTickets(student.id);
+          return {
+            studentId: student.id,
+            name: `${student.lastName} ${student.firstName}`,
+            ticketCount: ticketCount
+          };
+        }));
+        
+        res.json(ticketData);
+        return;
+      }
+      
+      // その他のロールやエラーケースは空配列を返す
+      res.json([]);
+    } catch (error) {
+      console.error("生徒チケット情報取得エラー:", error);
+      res.status(500).json({ error: "チケット情報の取得に失敗しました" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
