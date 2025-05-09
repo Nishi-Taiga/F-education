@@ -19,6 +19,7 @@ import axios from "axios";
 
 // 保護者情報のためのスキーマ
 const parentProfileSchema = z.object({
+  parentName: z.string().min(2, { message: "氏名を入力してください" }),
   phone: z.string().min(10, { message: "電話番号は10桁以上で入力してください" }).max(15),
   postalCode: z.string().min(7, { message: "郵便番号は7桁で入力してください" }).max(8),
   prefecture: z.string().min(2, { message: "都道府県を入力してください" }),
@@ -170,6 +171,7 @@ export default function ProfileSetupPage() {
   const parentForm = useForm<ParentProfileForm>({
     resolver: zodResolver(parentProfileSchema),
     defaultValues: {
+      parentName: user?.displayName || "",
       phone: user?.phone || "",
       postalCode: user?.postalCode || "",
       prefecture: user?.prefecture || "",
@@ -290,6 +292,20 @@ export default function ProfileSetupPage() {
 
               <Form {...parentForm}>
                 <form onSubmit={parentForm.handleSubmit(onParentSubmit)} className="space-y-6">
+                  <FormField
+                    control={parentForm.control}
+                    name="parentName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>保護者氏名</FormLabel>
+                        <FormControl>
+                          <Input placeholder="山田 太郎" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={parentForm.control}
                     name="phone"
