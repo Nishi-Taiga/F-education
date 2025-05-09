@@ -582,9 +582,8 @@ export class MemStorage implements IStorage {
         }
       }
       
-      // 3. 物理削除ではなく、isActiveフラグをfalseに設定する（論理削除）
-      const updatedStudent = { ...student, isActive: false };
-      this.students.set(id, updatedStudent);
+      // 3. 完全に削除する（物理削除）
+      this.students.delete(id);
     } catch (error) {
       console.error("Error deleting student:", error);
       throw new Error(`Failed to delete student: ${error.message}`);
@@ -1191,10 +1190,9 @@ export class DatabaseStorage implements IStorage {
           .set({ studentId: null })
           .where(eq(lessonReports.studentId, id));
           
-        // 3. 論理削除: isActiveをfalseに設定
+        // 3. 生徒を完全に削除（物理削除）
         await tx
-          .update(students)
-          .set({ isActive: false })
+          .delete(students)
           .where(eq(students.id, id));
       });
     } catch (error) {
