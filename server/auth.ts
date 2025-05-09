@@ -41,13 +41,8 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // セッションを作り直すためにセッションストアをクリア
-  try {
-    storage.sessionStore.clear();
-    console.log("セッションストアをクリアしました");
-  } catch (e) {
-    console.error("セッションストアのクリアに失敗しました:", e);
-  }
+  // MemoryStoreの場合はclearメソッドがないため、直接アクセスはしない
+  console.log("新しいセッションで開始します");
   
   // セッション設定
   const sessionSettings: session.SessionOptions = {
