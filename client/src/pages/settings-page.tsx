@@ -1239,12 +1239,14 @@ export default function SettingsPage() {
             {/* 生徒追加ダイアログ */}
             <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
               <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-                <DialogHeader className="sticky top-0 bg-background z-10 pb-4">
-                  <DialogTitle>生徒情報の新規登録</DialogTitle>
-                  <DialogDescription>
-                    新しい生徒情報を追加して、兄弟・姉妹の家庭教師予約も可能になります。
-                  </DialogDescription>
-                </DialogHeader>
+                <div className="sticky top-0 bg-background z-10 pb-4">
+                  <DialogHeader>
+                    <DialogTitle>生徒情報の新規登録</DialogTitle>
+                    <DialogDescription>
+                      新しい生徒情報を追加して、兄弟・姉妹の家庭教師予約も可能になります。
+                    </DialogDescription>
+                  </DialogHeader>
+                </div>
                 
                 <Form {...studentForm}>
                   <form 
