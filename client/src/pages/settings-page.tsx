@@ -575,6 +575,23 @@ export default function SettingsPage() {
   });
 
   const onSubmitSettings = (data: SettingsForm) => {
+    // 必須フィールドが入力されているか確認
+    const requiredFields = ['displayName', 'email'];
+    const isValid = requiredFields.every(field => {
+      const value = data[field as keyof SettingsForm];
+      // 文字列型の場合のみtrim()を適用
+      return value && (typeof value === 'string' ? value.trim() !== '' : true);
+    });
+
+    if (!isValid) {
+      toast({
+        title: "入力エラー",
+        description: "保護者氏名とメールアドレスは必須項目です",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // 検証エラーがなければ更新を実行
     if (Object.keys(settingsForm.formState.errors).length === 0) {
       updateSettingsMutation.mutate(data);
@@ -1220,6 +1237,23 @@ export default function SettingsPage() {
                     onSubmit={(e) => {
                       e.preventDefault();
                       const formData = studentForm.getValues();
+                      
+                      // すべての必須項目が入力されているか確認
+                      const isValid = Object.keys(formData).every(key => {
+                        const value = formData[key as keyof typeof formData];
+                        // 文字列型の場合のみtrim()を適用
+                        return value && (typeof value === 'string' ? value.trim() !== '' : true);
+                      });
+
+                      if (!isValid) {
+                        toast({
+                          title: "入力エラー",
+                          description: "すべての項目を入力してください",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
                       // userId を追加
                       const data = {
                         ...formData,
