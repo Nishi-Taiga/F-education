@@ -110,6 +110,37 @@ export default function ReportListPage() {
     queryKey: ["/api/tutors"],
     enabled: !!user,
   });
+  
+  // レッスンレポートデータの取得
+  const { data: lessonReports = [], isLoading: isLoadingReports } = useQuery<LessonReport[]>({
+    queryKey: ["/api/lesson-reports"],
+    enabled: !!user && Array.isArray(students) && students.length > 0,
+    queryFn: async () => {
+      // ユーザーに紐づく生徒のレポートを取得
+      if (!Array.isArray(students) || students.length === 0) return [];
+      
+      try {
+        // すべての生徒のレポートを取得するためのプロミス配列
+        const reportPromises = students.map(async (student) => {
+          try {
+            const response = await fetch(`/api/lesson-reports/student/${student.id}`);
+            if (!response.ok) return [];
+            return await response.json();
+          } catch (error) {
+            console.error(`生徒ID ${student.id} のレポート取得エラー:`, error);
+            return [];
+          }
+        });
+        
+        // すべてのプロミスを解決して結果を結合
+        const allReportsArrays = await Promise.all(reportPromises);
+        return allReportsArrays.flat();
+      } catch (error) {
+        console.error("レッスンレポート取得エラー:", error);
+        return [];
+      }
+    }
+  });
 
   // 生徒名を取得する関数
   const getStudentName = (studentId: number): string => {
@@ -129,19 +160,72 @@ export default function ReportListPage() {
     setShowReportViewDialog(true);
   };
 
-  // レポートがある予約のみをフィルタリング
-  const reportedBookings = Array.isArray(bookings) 
-    ? bookings
-        .filter((booking: Booking) => booking.reportStatus === 'completed')
-        .map((booking: Booking) => ({
-          ...booking,
-          studentName: booking.studentId ? getStudentName(booking.studentId) : undefined,
-          tutorName: booking.tutorId ? getTutorName(booking.tutorId) : undefined
-        }))
-        .sort((a: Booking & { studentName?: string; tutorName?: string }, 
-               b: Booking & { studentName?: string; tutorName?: string }) => 
-          new Date(b.date).getTime() - new Date(a.date).getTime()) // 日付の降順でソート
-    : [];
+  // レッスンレポートから表示用のデータを作成
+  type ReportWithNames = LessonReport & {
+    studentName?: string;
+    tutorName?: string;
+    subject?: string;
+  };
+  
+  const getReportsWithNames = (): ReportWithNames[] => {
+    if (!Array.isArray(lessonReports) || lessonReports.length === 0) {
+      return [];
+    }
+    
+    // レポートデータに生徒名と講師名を追加
+    return lessonReports.map((report: LessonReport) => {
+      // レポートに対応する予約を検索して科目情報を取得
+      const booking = Array.isArray(bookings) 
+        ? bookings.find((b: Booking) => b.id === report.bookingId) 
+        : null;
+      
+      return {
+        ...report,
+        // 予約から科目情報を取得
+        subject: booking?.subject,
+        // 生徒名と講師名を追加
+        studentName: report.studentId ? getStudentName(report.studentId) : undefined,
+        tutorName: report.tutorId ? getTutorName(report.tutorId) : undefined
+      };
+    }).sort((a, b) => {
+      // 日付の降順でソート（最新のレポートが一番上）
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+  };
+  
+  // レポートのフィルタリング関数
+  const filterReport = (report: ReportWithNames): boolean => {
+    // 1. 生徒IDによるフィルタリング
+    // 「すべての生徒」を選択、または生徒IDが一致する場合のみ表示
+    const matchStudent = 
+      appliedStudentId === "all" || 
+      (report.studentId !== null && report.studentId !== undefined && 
+       String(report.studentId) === appliedStudentId);
+    
+    // 2. 教科でフィルタリング
+    const matchSubject = 
+      appliedSubject === "all" || 
+      (report.subject && report.subject === appliedSubject);
+    
+    // 3. 日付でフィルタリング
+    let matchDate = true;
+    if (dateSearch) {
+      // nullチェックを追加
+      if (report.date) {
+        const reportDate = parseISO(report.date);
+        const filterDate = parseISO(dateSearch);
+        matchDate = 
+          reportDate.getFullYear() === filterDate.getFullYear() &&
+          reportDate.getMonth() === filterDate.getMonth() &&
+          reportDate.getDate() === filterDate.getDate();
+      } else {
+        matchDate = false;
+      }
+    }
+    
+    // すべての条件に一致するレポートのみを表示
+    return Boolean(matchStudent && matchSubject && matchDate);
+  };
 
   // ページ読み込み時に初期値を設定
   useEffect(() => {
@@ -199,84 +283,43 @@ export default function ReportListPage() {
     return Boolean(matchStudent && matchSubject && matchDate);
   };
   
-  // フィルタリング適用済みのデータ
-  const filteredBookings = reportedBookings.filter(filterBooking);
-
-  // テスト用のデータ（フィルタリングに対応）
-  const getTestReportedBookings = (): (Booking & { studentName?: string, tutorName?: string })[] => {
-    // 生徒のID情報を取得（デバッグを少し削減）
-    const taroIdObj = students.find(s => s.lastName === "テスト" && s.firstName === "太郎");
-    const hanakoIdObj = students.find(s => s.lastName === "テスト" && s.firstName === "花子");
+  // レッスンレポートを加工
+  const reportsWithNames = getReportsWithNames();
+  
+  // フィルタリング適用済みのレポートデータ
+  const filteredReports = reportsWithNames.filter(filterReport);
+  
+  // コンソールにレポートデータを表示（デバッグ用）
+  console.log("レポートデータ:", reportsWithNames);
+  
+  // BookingCard用に表示形式に変換する関数
+  const convertReportToBooking = (report: ReportWithNames): Booking & { studentName?: string; tutorName?: string } => {
+    // 対応する予約データを検索
+    const booking = Array.isArray(bookings) 
+      ? bookings.find((b: Booking) => b.id === report.bookingId) 
+      : null;
     
-    // 実際の生徒IDを使用（デフォルト値は4と5）
-    const taroId = taroIdObj?.id || 4;
-    const hanakoId = hanakoIdObj?.id || 5;
-    
-    const data = [
-      {
-        id: 9001,
-        createdAt: new Date(),
-        userId: user ? user.id : 0,
-        tutorId: 1,
-        studentId: taroId, // テスト太郎のID
-        tutorShiftId: 1,
-        date: "2025-04-15",
-        timeSlot: "16:00-17:30",
-        subject: "数学",
-        status: "confirmed" as const,
-        reportStatus: "completed" as const,
-        reportContent: "中学1年の方程式\n授業中は集中して取り組めていました。解説を聞いて理解しようとする姿勢が素晴らしいです。\n次回までに教科書p.45-46の問題を解いてきてください。",
-        studentName: "テスト 太郎",
-        tutorName: "佐藤 先生"
-      },
-      {
-        id: 9002,
-        createdAt: new Date(),
-        userId: user ? user.id : 0,
-        tutorId: 1,
-        studentId: taroId, // テスト太郎のID
-        tutorShiftId: 1,
-        date: "2025-04-01",
-        timeSlot: "16:00-17:30",
-        subject: "英語",
-        status: "confirmed" as const,
-        reportStatus: "completed" as const,
-        reportContent: "中学1年の不定詞\n文法の理解が進んでいます。演習問題では8割以上正解できていました。\n次回までに教科書p.32の例文を音読練習してきてください。",
-        studentName: "テスト 太郎",
-        tutorName: "田中 先生" 
-      },
-      {
-        id: 9003,
-        createdAt: new Date(),
-        userId: user ? user.id : 0,
-        tutorId: 1,
-        studentId: hanakoId, // テスト花子のID
-        tutorShiftId: 1,
-        date: "2025-04-10",
-        timeSlot: "16:00-17:30",
-        subject: "国語",
-        status: "confirmed" as const,
-        reportStatus: "completed" as const,
-        reportContent: "小学6年の読解問題\n丁寧に読み進め、要点をまとめる力がついてきています。\n次回までに教科書p.78-79の新出漢字を練習してきてください。",
-        studentName: "テスト 花子",
-        tutorName: "鈴木 先生"
-      }
-    ];
-    
-    // 日付の降順でソート（最新のものが上に来る）
-    const sortedData = data.sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-    
-    // 同じフィルタリング関数をテストデータにも適用
-    return sortedData.filter(filterBooking);
+    // レポートデータと予約データを組み合わせて、BookingCardで表示可能な形式に変換
+    return {
+      id: report.bookingId,
+      createdAt: report.createdAt,
+      userId: booking?.userId || 0,
+      tutorId: report.tutorId || 0,
+      studentId: report.studentId || 0,
+      tutorShiftId: booking?.tutorShiftId || 0,
+      date: report.date || "",
+      timeSlot: report.timeSlot || "",
+      subject: report.subject || "",
+      status: "confirmed",
+      reportStatus: "completed",
+      reportContent: `【単元】\n${report.unitContent || ""}\n\n【伝言事項】\n${report.messageContent || ""}\n\n【来週までの目標(課題)】\n${report.goalContent || ""}`,
+      studentName: report.studentName,
+      tutorName: report.tutorName
+    };
   };
-
-  // 最終的に表示するデータ
-  // 実際のデータがある場合はフィルター結果を、無い場合はフィルタリング適用済みのテストデータを表示
-  const hasRealData = reportedBookings.length > 0;
-  const testFilteredBookings = getTestReportedBookings();
-  const displayBookings = hasRealData ? filteredBookings : testFilteredBookings;
+  
+  // 表示用のデータを予約形式に変換
+  const displayBookings = filteredReports.map(convertReportToBooking);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
