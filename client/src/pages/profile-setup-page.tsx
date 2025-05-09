@@ -197,11 +197,41 @@ export default function ProfileSetupPage() {
 
   // 保護者情報の送信
   const onParentSubmit = (values: ParentProfileForm) => {
+    // parentProfileSchemaによる検証は既に行われていますが、念のためフォームのバリデーションを実行
+    const isValid = Object.keys(values).every(key => {
+      const value = values[key as keyof ParentProfileForm];
+      return value && value.trim() !== '';
+    });
+
+    if (!isValid) {
+      toast({
+        title: "入力エラー",
+        description: "すべての項目を入力してください",
+        variant: "destructive",
+      });
+      return;
+    }
+
     updateProfileMutation.mutate(values);
   };
 
   // 生徒情報の送信
   const onStudentSubmit = (values: StudentForm) => {
+    // studentSchemaによるバリデーションは既に行われていますが、念のため空欄チェックを実施
+    const isValid = Object.keys(values).every(key => {
+      const value = values[key as keyof StudentForm];
+      return value && value.trim() !== '';
+    });
+
+    if (!isValid) {
+      toast({
+        title: "入力エラー",
+        description: "すべての項目を入力してください",
+        variant: "destructive",
+      });
+      return;
+    }
+
     addStudentMutation.mutate(values);
   };
 
