@@ -85,7 +85,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     const userId = req.user!.id;
-    const bookings = await storage.getBookingsByUserId(userId);
+    const role = req.user!.role;
+    
+    // 生徒アカウントの場合、studentIdと一致する予約のみ取得
+    let bookings;
+    if (role === 'student' && req.user!.studentId) {
+      // 保護者に紐づく予約を取得した後、生徒IDでフィルタリング
+      const allBookings = await storage.getBookingsByUserId(userId);
+      bookings = allBookings.filter(booking => booking.studentId === req.user!.studentId);
+    } else {
+      // 保護者アカウントまたは講師アカウントの場合は全ての予約を表示
+      bookings = await storage.getBookingsByUserId(userId);
+    }
     
     // 講師情報を追加
     const bookingsWithTutorNames = await Promise.all(
@@ -216,21 +227,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     const userId = req.user!.id;
+    const role = req.user!.role;
     const user = await storage.getUser(userId);
     
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Make sure user has enough tickets (at least 1)
-    if (user.ticketCount <= 0) {
-      return res.status(400).json({ message: "Insufficient tickets" });
+    // 生徒アカウントの場合、生徒IDとして自分のIDを使う
+    let studentId = req.body.studentId;
+    if (role === 'student' && req.user!.studentId) {
+      studentId = req.user!.studentId;
+    }
+    
+    // チケット数のチェック
+    // 生徒アカウントの場合は生徒のチケット、保護者アカウントの場合は生徒または全体のチケットをチェック
+    if (studentId) {
+      // 特定の生徒のチケットをチェック
+      const ticketCount = await storage.getStudentTickets(studentId);
+      if (ticketCount <= 0) {
+        return res.status(400).json({ message: "生徒のチケットが不足しています" });
+      }
+    } else if (user.ticketCount <= 0) {
+      // ユーザー全体のチケット数をチェック
+      return res.status(400).json({ message: "チケットが不足しています" });
     }
     
     try {
+      // 生徒アカウントの場合はstudentIdを強制的に設定
       const bookingData = insertBookingSchema.parse({
         ...req.body,
-        userId
+        userId,
+        studentId: studentId || req.body.studentId
       });
       
       // Validate timeSlot
@@ -2294,13 +2322,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // すべてのレッスンレポート取得 (保護者向け)
+  // すべてのレッスンレポート取得 (保護者/生徒向け)
   app.get("/api/lesson-reports", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
+      const userId = req.user!.id;
+      const role = req.user!.role;
+      
+      // 生徒アカウントの場合は自分のレポートのみ取得
+      if (role === 'student' && req.user!.studentId) {
+        const studentId = req.user!.studentId;
+        const reports = await storage.getLessonReportsByStudentId(studentId);
+        
+        // 日付の降順でソート
+        reports.sort((a, b) => {
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
+        
+        return res.json(reports);
+      }
+      
       // 保護者に紐づく生徒のIDを取得
-      const students = await storage.getStudentsByUserId(req.user!.id);
+      const students = await storage.getStudentsByUserId(userId);
       
       if (!students || students.length === 0) {
         return res.json([]);
