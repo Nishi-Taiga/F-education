@@ -63,6 +63,22 @@ export async function seedDatabase() {
       birthDate: "2015-08-23",
       isActive: true
     }).returning();
+
+    // 生徒アカウント（直接ログイン用）を作成
+    const studentPassword = await hashPassword("student123");
+    const [studentUser] = await db.insert(users).values({
+      username: "student1_account",
+      password: studentPassword,
+      displayName: "生徒アカウント",
+      email: "student@example.com",
+      role: "student",
+      profileCompleted: true
+    }).returning();
+
+    // 生徒アカウントとstudent1を関連付ける
+    await db.update(students)
+      .set({ studentAccountId: studentUser.id })
+      .where(sql`id = ${student1.id}`);
     
     // テスト講師ユーザーを作成
     const [tutorUser] = await db.insert(users).values({
@@ -118,6 +134,7 @@ export async function seedDatabase() {
         `${student1.lastName} ${student1.firstName}`,
         `${student2.lastName} ${student2.firstName}`
       ],
+      studentAccount: studentUser.username,
       tutor: `${tutor.lastName} ${tutor.firstName}`
     });
   } catch (error) {
