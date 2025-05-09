@@ -24,7 +24,8 @@ export interface IStorage {
   updateTicketCount(userId: number, ticketCount: number): Promise<User>;
   updateUserSettings(userId: number, settings: Partial<User>): Promise<User>;
   updateUserProfile(
-    userId: number, 
+    userId: number,
+    parentName: string,
     phone: string, 
     postalCode: string,
     prefecture: string,
@@ -614,7 +615,8 @@ export class MemStorage implements IStorage {
   }
 
   async updateUserProfile(
-    userId: number, 
+    userId: number,
+    parentName: string,
     phone: string, 
     postalCode: string,
     prefecture: string,
@@ -627,7 +629,8 @@ export class MemStorage implements IStorage {
     }
     
     const updatedUser = { 
-      ...user, 
+      ...user,
+      displayName: parentName,
       phone, 
       postalCode,
       prefecture,
@@ -1225,7 +1228,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserProfile(
-    userId: number, 
+    userId: number,
+    parentName: string,
     phone: string, 
     postalCode: string,
     prefecture: string,
@@ -1235,6 +1239,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ 
+        displayName: parentName,
         phone, 
         postalCode, 
         prefecture, 

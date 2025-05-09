@@ -277,6 +277,7 @@ export const insertBookingSchema = createInsertSchema(bookings).pick({
 });
 
 export const updateUserProfileSchema = z.object({
+  parentName: z.string().min(2, "氏名を入力してください"),
   phone: z.string().min(10).max(15),
   postalCode: z.string().min(7).max(8),
   prefecture: z.string().min(2),

@@ -663,10 +663,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     const userId = req.user!.id;
-    const { phone, postalCode, prefecture, city, address } = req.body;
+    const { parentName, phone, postalCode, prefecture, city, address } = req.body;
     
     try {
       // バリデーション
+      if (!parentName || parentName.length < 2) {
+        return res.status(400).json({ message: "Valid parent name is required" });
+      }
+      
       if (!phone || phone.length < 10) {
         return res.status(400).json({ message: "Valid phone number is required" });
       }
