@@ -171,12 +171,12 @@ export default function ProfileSetupPage() {
   const parentForm = useForm<ParentProfileForm>({
     resolver: zodResolver(parentProfileSchema),
     defaultValues: {
-      parentName: user?.displayName || "",
-      phone: user?.phone || "",
-      postalCode: user?.postalCode || "",
-      prefecture: user?.prefecture || "",
-      city: user?.city || "",
-      address: user?.address || "",
+      parentName: "",
+      phone: "",
+      postalCode: "",
+      prefecture: "",
+      city: "",
+      address: "",
     },
   });
 
