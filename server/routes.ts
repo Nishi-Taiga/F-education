@@ -2430,21 +2430,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = req.user!.id;
     const role = req.user!.role;
     
+    console.log(`チケット情報取得 - ユーザーID: ${userId}, ロール: ${role}, 生徒ID: ${req.user!.studentId || 'なし'}`);
+    
     try {
       let students: Student[] = [];
       
       // 生徒アカウントの場合は自分の情報のみを取得
       if (role === 'student' && req.user!.studentId) {
         const studentId = req.user!.studentId;
+        console.log(`生徒アカウント - 生徒ID: ${studentId} のチケット情報を取得します`);
         const student = await storage.getStudent(studentId);
         if (student) {
+          console.log(`生徒情報取得成功: ${student.lastName} ${student.firstName}`);
           const ticketCount = await storage.getStudentTickets(studentId);
+          console.log(`チケット残数: ${ticketCount}枚`);
           res.json([{ 
             studentId: studentId,
             name: `${student.lastName} ${student.firstName}`,
             ticketCount: ticketCount 
           }]);
           return;
+        } else {
+          console.log(`生徒ID: ${studentId} の情報が見つかりませんでした`);
         }
       } else if (role === 'parent') {
         // 保護者アカウントの場合は全生徒を取得

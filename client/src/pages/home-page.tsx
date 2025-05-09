@@ -789,13 +789,18 @@ export default function HomePage() {
         )}
         
         {/* チケット残数表示 (ユーザーが生徒の場合) */}
-        {user?.role === 'student' && studentTickets.length > 0 && (
+        {user?.role === 'student' && (
           <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-gray-800">チケット残数</h3>
               <div className="flex items-center bg-green-50 py-1 px-3 rounded-full">
                 <Ticket className="text-green-600 h-4 w-4 mr-1.5" />
-                <span className="font-bold text-green-700">{studentTickets[0]?.ticketCount || 0}枚</span>
+                <span className="font-bold text-green-700">
+                  {isLoadingStudentTickets 
+                    ? <Loader2 className="h-3 w-3 animate-spin text-green-600" /> 
+                    : `${studentTickets.length > 0 ? studentTickets[0]?.ticketCount : 0}枚`
+                  }
+                </span>
               </div>
             </div>
           </div>
