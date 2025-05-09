@@ -983,6 +983,21 @@ export default function SettingsPage() {
                       e.preventDefault();
                       const formData = studentForm.getValues();
                       
+                      // 少なくとも1つのフィールドが入力されているか確認
+                      const hasInputs = Object.keys(formData).some(key => {
+                        const value = formData[key as keyof typeof formData];
+                        return value && (typeof value === 'string' ? value.trim() !== '' : true);
+                      });
+                      
+                      if (!hasInputs) {
+                        toast({
+                          title: "入力エラー",
+                          description: "少なくとも1つの項目を入力してください",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
                       // 未入力フィールドを除外した更新データを作成
                       const updateData: Partial<StudentForm> & { id: number } = {
                         id: editingStudentId as number,
