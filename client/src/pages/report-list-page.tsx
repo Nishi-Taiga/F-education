@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import type { Booking, Student, Tutor } from "@shared/schema";
+import type { Booking, Student, Tutor, LessonReport } from "@shared/schema";
 import { format, parseISO, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
 
