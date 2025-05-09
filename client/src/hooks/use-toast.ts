@@ -6,7 +6,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1500 // 表示時間を1.5秒（1500ミリ秒）に変更
+const TOAST_REMOVE_DELAY = 1500 // 表示時間
 
 type ToasterToast = ToastProps & {
   id: string

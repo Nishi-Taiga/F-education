@@ -157,8 +157,7 @@ export default function TutorProfilePage() {
       university: "",
       birthDate: "",
       selectedSubjects: [],
-      subjects: "", // 追加
-      bio: "",
+      subjects: "",
       email: user?.email || ""
     }
   });
@@ -176,8 +175,7 @@ export default function TutorProfilePage() {
         university: tutorProfile.university || "",
         birthDate: tutorProfile.birthDate || "",
         selectedSubjects: subjects,
-        subjects: tutorProfile.subjects || "", // 追加
-        bio: tutorProfile.bio || "",
+        subjects: tutorProfile.subjects || "",
         email: tutorProfile.email || user?.email || ""
       });
       
@@ -249,7 +247,6 @@ export default function TutorProfilePage() {
         university: data.university,
         birthDate: data.birthDate,
         subjects, // 選択された科目の文字列
-        bio: data.bio || "", // 自己紹介がある場合は送信、なければ空文字
         email: data.email, // メールアドレス（予約通知用）
         profileCompleted: true // プロフィール完了フラグを明示的に設定
       };
