@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import type { Booking, Student } from "@shared/schema";
+import type { Booking, Student, Tutor } from "@shared/schema";
 import { format, parseISO, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
 
@@ -104,11 +104,23 @@ export default function ReportListPage() {
     queryKey: ["/api/students"],
     enabled: !!user,
   });
+  
+  // 講師データの取得
+  const { data: tutors = [], isLoading: isLoadingTutors } = useQuery<Tutor[]>({
+    queryKey: ["/api/tutors"],
+    enabled: !!user,
+  });
 
   // 生徒名を取得する関数
   const getStudentName = (studentId: number): string => {
     const student = students?.find((s: Student) => s.id === studentId);
     return student ? `${student.lastName} ${student.firstName}` : `生徒ID: ${studentId}`;
+  };
+  
+  // 講師名を取得する関数
+  const getTutorName = (tutorId: number): string => {
+    const tutor = tutors?.find((t: Tutor) => t.id === tutorId);
+    return tutor ? `${tutor.lastName} ${tutor.firstName}` : `講師ID: ${tutorId}`;
   };
 
   // レポート閲覧ボタンのハンドラ
@@ -123,9 +135,11 @@ export default function ReportListPage() {
         .filter((booking: Booking) => booking.reportStatus === 'completed')
         .map((booking: Booking) => ({
           ...booking,
-          studentName: booking.studentId ? getStudentName(booking.studentId) : undefined
+          studentName: booking.studentId ? getStudentName(booking.studentId) : undefined,
+          tutorName: booking.tutorId ? getTutorName(booking.tutorId) : undefined
         }))
-        .sort((a: Booking & { studentName?: string }, b: Booking & { studentName?: string }) => 
+        .sort((a: Booking & { studentName?: string; tutorName?: string }, 
+               b: Booking & { studentName?: string; tutorName?: string }) => 
           new Date(b.date).getTime() - new Date(a.date).getTime()) // 日付の降順でソート
     : [];
 
@@ -189,7 +203,7 @@ export default function ReportListPage() {
   const filteredBookings = reportedBookings.filter(filterBooking);
 
   // テスト用のデータ（フィルタリングに対応）
-  const getTestReportedBookings = (): (Booking & { studentName?: string })[] => {
+  const getTestReportedBookings = (): (Booking & { studentName?: string, tutorName?: string })[] => {
     // 生徒のID情報を取得（デバッグを少し削減）
     const taroIdObj = students.find(s => s.lastName === "テスト" && s.firstName === "太郎");
     const hanakoIdObj = students.find(s => s.lastName === "テスト" && s.firstName === "花子");
@@ -212,7 +226,8 @@ export default function ReportListPage() {
         status: "confirmed" as const,
         reportStatus: "completed" as const,
         reportContent: "中学1年の方程式\n授業中は集中して取り組めていました。解説を聞いて理解しようとする姿勢が素晴らしいです。\n次回までに教科書p.45-46の問題を解いてきてください。",
-        studentName: "テスト 太郎"
+        studentName: "テスト 太郎",
+        tutorName: "佐藤 先生"
       },
       {
         id: 9002,
@@ -227,7 +242,8 @@ export default function ReportListPage() {
         status: "confirmed" as const,
         reportStatus: "completed" as const,
         reportContent: "中学1年の不定詞\n文法の理解が進んでいます。演習問題では8割以上正解できていました。\n次回までに教科書p.32の例文を音読練習してきてください。",
-        studentName: "テスト 太郎"
+        studentName: "テスト 太郎",
+        tutorName: "田中 先生" 
       },
       {
         id: 9003,
@@ -242,7 +258,8 @@ export default function ReportListPage() {
         status: "confirmed" as const,
         reportStatus: "completed" as const,
         reportContent: "小学6年の読解問題\n丁寧に読み進め、要点をまとめる力がついてきています。\n次回までに教科書p.78-79の新出漢字を練習してきてください。",
-        studentName: "テスト 花子"
+        studentName: "テスト 花子",
+        tutorName: "鈴木 先生"
       }
     ];
     

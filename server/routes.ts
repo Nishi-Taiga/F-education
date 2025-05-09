@@ -11,6 +11,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
   
+  // すべての講師情報を取得するAPIエンドポイント
+  app.get("/api/tutors", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const tutors = await db.query.tutors.findMany();
+      res.json(tutors);
+    } catch (error) {
+      console.error("すべての講師情報取得エラー:", error);
+      res.status(500).json({ error: "講師情報の取得に失敗しました" });
+    }
+  });
+  
   // 科目、日付、時間帯、学校区分に基づいて利用可能な講師を取得するAPIエンドポイント
   app.get("/api/tutors/available", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
