@@ -22,7 +22,7 @@ import { CommonHeader } from "@/components/common-header";
 import axios from "axios";
 
 const settingsSchema = z.object({
-  displayName: z.string().min(1, "お名前は必須です"),
+  displayName: z.string().min(2, "保護者の氏名は必須です"),
   email: z.string().email("有効なメールアドレスを入力してください"),
   phone: z.string().optional(),
   postalCode: z.string().optional(),
@@ -634,9 +634,9 @@ export default function SettingsPage() {
                           name="displayName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>氏名</FormLabel>
+                              <FormLabel>保護者氏名</FormLabel>
                               <FormControl>
-                                <Input placeholder="田中 花子" {...field} />
+                                <Input placeholder="山田 太郎" {...field} />
                               </FormControl>
                             </FormItem>
                           )}
