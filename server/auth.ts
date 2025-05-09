@@ -41,6 +41,14 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  // セッションを作り直すためにセッションストアをクリア
+  try {
+    storage.sessionStore.clear();
+    console.log("セッションストアをクリアしました");
+  } catch (e) {
+    console.error("セッションストアのクリアに失敗しました:", e);
+  }
+  
   // セッション設定
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "tutorial-service-secret",
@@ -84,9 +92,16 @@ export function setupAuth(app: Express) {
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
     try {
+      console.log("デシリアライズ試行 ID:", id);
       const user = await storage.getUser(id);
+      if (!user) {
+        console.log("ユーザーが見つかりません:", id);
+        return done(null, false);
+      }
+      console.log("ユーザーをデシリアライズしました:", id);
       done(null, user);
     } catch (error) {
+      console.error("デシリアライズエラー:", error);
       done(error, null);
     }
   });

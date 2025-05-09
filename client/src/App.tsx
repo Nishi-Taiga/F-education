@@ -22,6 +22,8 @@ import { useEffect } from "react";
 function Router() {
   return (
     <Switch>
+      <Route path="/auth" component={AuthPage} />
+      <Route path="/debug" component={DebugPage} />
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/tickets" component={TicketPurchasePage} />
       <ProtectedRoute path="/booking" component={BookingPage} />
@@ -33,8 +35,6 @@ function Router() {
       <ProtectedRoute path="/tutor/schedule" component={TutorSchedulePage} />
       {/* レポート編集画面 */}
       <ProtectedRoute path="/report-edit" component={ReportEditPage} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/debug" component={DebugPage} />
       <Route component={NotFound} />
     </Switch>
   );
