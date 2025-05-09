@@ -91,7 +91,7 @@ export default function ReportListPage() {
 
   // レポート閲覧ダイアログ用の状態
   const [showReportViewDialog, setShowReportViewDialog] = useState(false);
-  const [viewReportBooking, setViewReportBooking] = useState<(Booking & { studentName?: string }) | null>(null);
+  const [viewReportBooking, setViewReportBooking] = useState<(Booking & { studentName?: string; tutorName?: string }) | null>(null);
 
   // 予約データの取得
   const { data: bookings = [], isLoading: isLoadingBookings } = useQuery<Booking[]>({
@@ -124,7 +124,7 @@ export default function ReportListPage() {
   };
 
   // レポート閲覧ボタンのハンドラ
-  const handleViewReportClick = (booking: Booking & { studentName?: string }) => {
+  const handleViewReportClick = (booking: Booking & { studentName?: string; tutorName?: string }) => {
     setViewReportBooking(booking);
     setShowReportViewDialog(true);
   };
@@ -168,7 +168,7 @@ export default function ReportListPage() {
   }, [isCalendarOpen]);
 
   // 検索フィルタリングを行う関数
-  const filterBooking = (booking: Booking & { studentName?: string }): boolean => {
+  const filterBooking = (booking: Booking & { studentName?: string; tutorName?: string }): boolean => {
     // 1. 生徒IDによるフィルタリング
     // 「すべての生徒」を選択、または生徒IDが一致する場合のみ表示
     const matchStudent = 
@@ -411,7 +411,7 @@ export default function ReportListPage() {
             </div>
           ) : displayBookings.length > 0 ? (
             <div className="space-y-3">
-              {displayBookings.map((booking: Booking & { studentName?: string }) => (
+              {displayBookings.map((booking: Booking & { studentName?: string; tutorName?: string }) => (
                 <div key={booking.id} className="group relative">
                   <BookingCard 
                     booking={booking}
