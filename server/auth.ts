@@ -33,7 +33,6 @@ async function comparePasswords(supplied: string, stored: string) {
     const hashedBuf = Buffer.from(hashed, "hex");
     const suppliedBuf = (await scryptPromise(supplied, salt, 64)) as Buffer;
     
-    // パフォーマンス最適化：不要なデバッグログを削除
     return timingSafeEqual(hashedBuf, suppliedBuf);
   } catch (error) {
     console.error("Error comparing passwords:", error);
@@ -42,16 +41,16 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // セッション設定の最適化（SameSite警告対応）
+  // セッション設定
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "tutorial-service-secret",
-    resave: false, // 不要な保存を減らす
-    saveUninitialized: false, // 未初期化セッションを保存しない
+    resave: false,
+    saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // 本番環境ではTLS/SSLを使用
-      httpOnly: true, // JavaScriptからのアクセスを防止
-      sameSite: 'lax', // クロスサイトリクエスト制限を緩和
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 24 // 24時間
     }
   };
@@ -61,68 +60,98 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // メールアドレスでのログインに対応するために、usernameFieldを指定
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
-        return done(null, false);
-      } else {
+    new LocalStrategy({
+      usernameField: 'email', // メールアドレスをユーザー名として使用
+      passwordField: 'password'
+    }, async (email, password, done) => {
+      try {
+        // ユーザー名（メールアドレス）でユーザーを検索
+        const user = await storage.getUserByEmail(email);
+        
+        if (!user || !(await comparePasswords(password, user.password))) {
+          return done(null, false, { message: "メールアドレスまたはパスワードが正しくありません" });
+        }
+        
         return done(null, user);
+      } catch (error) {
+        return done(error);
       }
     }),
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      done(error, null);
+    }
   });
 
   app.post("/api/register", async (req, res, next) => {
-    const existingUser = await storage.getUserByUsername(req.body.username);
-    if (existingUser) {
-      return res.status(400).json({ message: "このユーザー名は既に使用されています" });
+    try {
+      const { email, password, username, displayName } = req.body;
+      
+      // メールアドレスが既に存在するか確認
+      const existingUserByEmail = await storage.getUserByEmail(email);
+      if (existingUserByEmail) {
+        return res.status(400).json({ message: "このメールアドレスは既に使用されています" });
+      }
+      
+      // ユーザー名が指定されていない場合はメールアドレスを使用
+      const finalUsername = username || email;
+      
+      // ユーザー名が既に存在するか確認
+      const existingUserByUsername = await storage.getUserByUsername(finalUsername);
+      if (existingUserByUsername) {
+        return res.status(400).json({ message: "このユーザー名は既に使用されています" });
+      }
+
+      // 新規ユーザーを作成
+      const user = await storage.createUser({
+        username: finalUsername,
+        email,
+        password: await hashPassword(password),
+        displayName: displayName || email.split('@')[0], // 表示名がない場合はメールアドレスの最初の部分を使用
+        role: "user" // デフォルトはユーザーロール
+      });
+
+      // 自動的にログイン
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.status(201).json(user);
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      return res.status(500).json({ message: "アカウント作成中にエラーが発生しました" });
     }
-
-    const user = await storage.createUser({
-      ...req.body,
-      password: await hashPassword(req.body.password),
-    });
-
-    req.login(user, (err) => {
-      if (err) return next(err);
-      res.status(201).json(user);
-    });
   });
 
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
-      // エラー処理を最適化
       if (err) {
-        // 重大なエラーのみログ出力
         console.error("Login error:", err);
         return next(err);
       }
       
-      // 認証失敗
       if (!user) {
-        // 本番環境ではログ出力しない
         if (process.env.NODE_ENV === 'development') {
-          console.log("Login failed for username:", req.body.username);
+          console.log("Login failed for email:", req.body.email);
         }
-        return res.status(401).json({ message: "ユーザー名またはパスワードが正しくありません" });
+        return res.status(401).json({ message: info?.message || "メールアドレスまたはパスワードが正しくありません" });
       }
       
-      // セッション作成処理
       req.login(user, (loginErr) => {
         if (loginErr) {
           console.error("Session save error:", loginErr);
           return next(loginErr);
         }
         
-        // 本番環境ではログ出力しない
         if (process.env.NODE_ENV === 'development') {
-          console.log("Login successful for:", user.username);
+          console.log("Login successful for:", user.email);
         }
         return res.status(200).json(user);
       });
