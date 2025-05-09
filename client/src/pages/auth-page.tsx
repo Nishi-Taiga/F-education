@@ -11,16 +11,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 
+// メールアドレスとパスワードでログインするスキーマに変更
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("有効なメールアドレスを入力してください"),
+  password: z.string().min(1, "パスワードは必須です"),
 });
 
+// 新規アカウント作成ではメールアドレスとパスワードのみ
 const registerSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters").max(50),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  displayName: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
+  email: z.string().email("有効なメールアドレスを入力してください"),
+  password: z.string().min(6, "パスワードは6文字以上必要です"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -34,7 +34,7 @@ export default function AuthPage() {
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -42,19 +42,23 @@ export default function AuthPage() {
   const registerForm = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      username: "",
-      password: "",
-      displayName: "",
       email: "",
+      password: "",
     },
   });
 
   const onLoginSubmit = (data: LoginForm) => {
+    // email, passwordで認証
     loginMutation.mutate(data);
   };
 
   const onRegisterSubmit = (data: RegisterForm) => {
-    registerMutation.mutate(data);
+    // メールアドレスをユーザー名として設定して登録
+    registerMutation.mutate({
+      ...data,
+      username: data.email, // メールアドレスをユーザー名として設定
+      displayName: data.email.split('@')[0], // 初期表示名はメールアドレスのローカル部分
+    });
   };
 
   // Redirect if already logged in
@@ -84,7 +88,7 @@ export default function AuthPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">アカウントにログイン</CardTitle>
                   <CardDescription className="text-xs">
-                    既存のアカウント情報を入力してください
+                    メールアドレスとパスワードを入力してください
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pb-2">
@@ -92,12 +96,12 @@ export default function AuthPage() {
                     <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-3">
                       <FormField
                         control={loginForm.control}
-                        name="username"
+                        name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>ユーザー名</FormLabel>
+                            <FormLabel>メールアドレス</FormLabel>
                             <FormControl>
-                              <Input placeholder="username" {...field} />
+                              <Input placeholder="example@email.com" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -142,38 +146,12 @@ export default function AuthPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">新規アカウント作成</CardTitle>
                   <CardDescription className="text-xs">
-                    新しいアカウントを作成してサービスを利用開始しましょう
+                    メールアドレスとパスワードを入力してアカウントを作成
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pb-2">
                   <Form {...registerForm}>
                     <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-3">
-                      <FormField
-                        control={registerForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>ユーザー名</FormLabel>
-                            <FormControl>
-                              <Input placeholder="username" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="displayName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>氏名</FormLabel>
-                            <FormControl>
-                              <Input placeholder="田中 花子" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                       <FormField
                         control={registerForm.control}
                         name="email"
