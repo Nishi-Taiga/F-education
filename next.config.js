@@ -8,6 +8,7 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@supabase/supabase-js'],
   },
+  output: 'standalone',
 }
 
 module.exports = nextConfig
