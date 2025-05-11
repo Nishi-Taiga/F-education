@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "framework": null,
+  "framework": "nextjs",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
@@ -8,6 +8,7 @@
   "regions": ["hnd1"],
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://odokliluhbzqsdzdyyho.supabase.co",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kb2tsaWx1aGJ6cXNkemR5eWhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxMzEzMDIsImV4cCI6MjA2MDcwNzMwMn0.im_yTwxZRQLSGSrFW4XlD5fvxv3msPFYrDGDJboFeqw"
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kb2tsaWx1aGJ6cXNkemR5eWhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxMzEzMDIsImV4cCI6MjA2MDcwNzMwMn0.im_yTwxZRQLSGSrFW4XlD5fvxv3msPFYrDGDJboFeqw",
+    "NODE_VERSION": "18.x"
   }
 }
