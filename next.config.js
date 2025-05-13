@@ -2,7 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  transpilePackages: ["@radix-ui/react-toast"],
   typescript: {
     // TypeScriptエラーを無視してビルドを通す
     ignoreBuildErrors: true,
@@ -11,9 +10,9 @@ const nextConfig = {
     // ESLintエラーも無視
     ignoreDuringBuilds: true,
   },
-  // 静的エクスポートを削除
+  // 画像ドメインを正しいSupabaseプロジェクトに更新
   images: {
-    domains: ['odokliluhbzqsdzdyyho.supabase.co'],
+    domains: ['iknunqtcfpdpwkovggqr.supabase.co'],
   },
   // APIルート処理のための設定
   trailingSlash: true,
@@ -26,7 +25,12 @@ const nextConfig = {
     "@radix-ui/react-radio-group",
     "@radix-ui/react-slot",
     "date-fns"
-  ]
+  ],
+  // 環境変数を確実にクライアントに渡す
+  env: {
+    NEXT_PUBLIC_SUPABASE_URL: 'https://iknunqtcfpdpwkovggqr.supabase.co',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrbnVucXRjZnBkcHdrb3ZnZ3FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5MjA2ODQsImV4cCI6MjA2MjQ5NjY4NH0.H8BKyngllaBTTz6VBg4y1nd-6udqFq5yr16rK5XtCTY',
+  }
 }
 
 module.exports = nextConfig
