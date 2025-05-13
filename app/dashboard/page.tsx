@@ -11,23 +11,30 @@ import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 
-// 生徒情報の型
+// Supabase用の定数
+const USERS_TABLE = 'users';
+const BOOKINGS_TABLE = 'bookings';
+const TICKETS_TABLE = 'student_tickets';
+
+// ユーザー情報の型
 type UserDetails = {
-  id: number;
-  firstName?: string;
-  lastName?: string;
+  id: string;
+  auth_user_id: string;
+  first_name?: string;
+  last_name?: string;
   role?: string;
   email: string;
+  profile_completed?: boolean;
 };
 
 // 予約情報の型
 type Booking = {
   id: number;
   date: string;
-  startTime: string;
-  endTime: string;
+  start_time: string;
+  end_time: string;
   status: string;
-  tutorName?: string;
+  tutor_name?: string;
 };
 
 // チケット情報の型
@@ -35,7 +42,7 @@ type Ticket = {
   id: number;
   quantity: number;
   description?: string;
-  createdAt: string;
+  created_at: string;
 };
 
 export default function Dashboard() {
@@ -45,6 +52,7 @@ export default function Dashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // セッションとユーザー情報の取得
   useEffect(() => {
@@ -57,19 +65,31 @@ export default function Dashboard() {
         
         if (!session) {
           // 未ログインの場合はホームに戻す
+          console.log("No session found, redirecting to home");
           router.push('/');
           return;
         }
         
+        console.log("Session found, user email:", session.user.email);
+        
         // ユーザー情報の取得
         const { data: userData, error: userError } = await supabase
-          .from('users')
+          .from(USERS_TABLE)
           .select('*')
-          .eq('email', session.user.email)
+          .eq('auth_user_id', session.user.id)
           .single();
           
         if (userError) {
           console.error("ユーザー情報取得エラー:", userError);
+          
+          if (userError.code === 'PGRST116') {
+            // ユーザーが存在しない場合、プロフィール設定に誘導
+            console.log("User not found, redirecting to profile setup");
+            setIsRedirecting(true);
+            router.push('/profile-setup');
+            return;
+          }
+          
           toast({
             title: "エラー",
             description: "ユーザー情報の取得に失敗しました",
@@ -78,34 +98,44 @@ export default function Dashboard() {
           return;
         }
         
-        setUser({
-          id: userData.id,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          role: userData.role,
-          email: session.user.email || ""
-        });
+        console.log("User data:", userData);
         
-        // 予約情報の取得（例）
+        // プロフィール未設定の場合、設定ページへリダイレクト
+        if (!userData.first_name || !userData.last_name || !userData.profile_completed) {
+          console.log("Profile not completed, redirecting to profile setup");
+          setIsRedirecting(true);
+          router.push('/profile-setup');
+          return;
+        }
+        
+        setUser(userData);
+        
+        // 予約情報の取得
         const { data: bookingsData, error: bookingsError } = await supabase
-          .from('bookings')
+          .from(BOOKINGS_TABLE)
           .select('*')
-          .eq('studentId', userData.id)
+          .eq('student_id', userData.id)
           .order('date', { ascending: true });
           
         if (!bookingsError && bookingsData) {
+          console.log("Bookings loaded:", bookingsData.length);
           setBookings(bookingsData);
+        } else if (bookingsError) {
+          console.error("予約取得エラー:", bookingsError);
         }
         
-        // チケット情報の取得（例）
+        // チケット情報の取得
         const { data: ticketsData, error: ticketsError } = await supabase
-          .from('student_tickets')
+          .from(TICKETS_TABLE)
           .select('*')
-          .eq('studentId', userData.id)
-          .order('createdAt', { ascending: false });
+          .eq('student_id', userData.id)
+          .order('created_at', { ascending: false });
           
         if (!ticketsError && ticketsData) {
+          console.log("Tickets loaded:", ticketsData.length);
           setTickets(ticketsData);
+        } else if (ticketsError) {
+          console.error("チケット取得エラー:", ticketsError);
         }
         
       } catch (error) {
@@ -120,8 +150,10 @@ export default function Dashboard() {
       }
     };
     
-    fetchUserData();
-  }, [router, toast]);
+    if (!isRedirecting) {
+      fetchUserData();
+    }
+  }, [router, toast, isRedirecting]);
   
   // ログアウト処理
   const handleLogout = async () => {
@@ -139,10 +171,33 @@ export default function Dashboard() {
   // 合計チケット数
   const totalTickets = tickets.reduce((total, ticket) => total + ticket.quantity, 0);
   
-  if (isLoading) {
+  if (isLoading || isRedirecting) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="loader">読み込み中...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        <div className="animate-pulse text-blue-600 font-semibold mb-4">
+          {isRedirecting ? "プロフィール設定ページに移動中..." : "読み込み中..."}
+        </div>
+        <div className="text-sm text-gray-500">
+          {isRedirecting ? "ユーザー情報の設定が必要です" : "ユーザー情報を取得しています"}
+        </div>
+      </div>
+    );
+  }
+
+  // ユーザー情報がない場合
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        <div className="text-red-600 font-semibold mb-4">ユーザー情報が見つかりません</div>
+        <p className="text-gray-700 mb-6">ログインし直すか、プロフィール設定を完了してください</p>
+        <div className="flex space-x-4">
+          <Button onClick={() => router.push('/')}>
+            ホームに戻る
+          </Button>
+          <Button onClick={() => router.push('/profile-setup')} variant="outline">
+            プロフィール設定へ
+          </Button>
+        </div>
       </div>
     );
   }
@@ -153,7 +208,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">ダッシュボード</h1>
           <p className="text-gray-500">
-            こんにちは、{user?.lastName} {user?.firstName}さん
+            こんにちは、{user?.last_name} {user?.first_name}さん
           </p>
         </div>
         
@@ -212,8 +267,8 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="font-medium">名前:</p>
-                <p>{user.firstName && user.lastName 
-                  ? `${user.lastName} ${user.firstName}` 
+                <p>{user.first_name && user.last_name 
+                  ? `${user.last_name} ${user.first_name}` 
                   : "未設定"}</p>
               </div>
               <div>
@@ -228,7 +283,7 @@ export default function Dashboard() {
               </div>
               <div className="md:col-span-2 mt-2">
                 <Button onClick={() => router.push('/profile-setup')}>
-                  プロフィール設定
+                  プロフィール編集
                 </Button>
               </div>
             </div>
@@ -270,8 +325,8 @@ export default function Dashboard() {
                            booking.status === 'pending' ? '保留中' : 'キャンセル済み'}
                         </span>
                       </div>
-                      <p>時間: {booking.startTime} - {booking.endTime}</p>
-                      <p>講師: {booking.tutorName || "情報なし"}</p>
+                      <p>時間: {booking.start_time} - {booking.end_time}</p>
+                      <p>講師: {booking.tutor_name || "情報なし"}</p>
                     </div>
                   ))}
                 </div>
@@ -307,7 +362,7 @@ export default function Dashboard() {
                       <div className="flex justify-between mb-2">
                         <p className="font-medium">チケット数: {ticket.quantity}</p>
                         <p className="text-sm text-gray-500">
-                          {new Date(ticket.createdAt).toLocaleDateString()}
+                          {new Date(ticket.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       {ticket.description && (
