@@ -9,10 +9,10 @@ import { z } from "zod";
 const createBookingSchema = z.object({
   studentId: z.number().optional(),
   tutorId: z.number(),
-  tutorShiftId: z.number(),
   date: z.string(),
-  timeSlot: z.string(),
-  subject: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
+  notes: z.string().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -45,12 +45,12 @@ export async function GET(request: NextRequest) {
         .select({
           id: bookings.id,
           date: bookings.date,
-          timeSlot: bookings.timeSlot,
-          subject: bookings.subject,
+          startTime: bookings.startTime,
+          endTime: bookings.endTime,
           status: bookings.status,
           tutorId: bookings.tutorId,
           studentId: bookings.studentId,
-          reportStatus: bookings.reportStatus,
+          notes: bookings.notes,
         })
         .from(bookings)
         .where(eq(bookings.studentId, userDetails.studentId));
@@ -69,30 +69,44 @@ export async function GET(request: NextRequest) {
         .select({
           id: bookings.id,
           date: bookings.date,
-          timeSlot: bookings.timeSlot,
-          subject: bookings.subject,
+          startTime: bookings.startTime,
+          endTime: bookings.endTime,
           status: bookings.status,
           tutorId: bookings.tutorId,
           studentId: bookings.studentId,
-          reportStatus: bookings.reportStatus,
+          notes: bookings.notes,
         })
         .from(bookings)
         .where(eq(bookings.tutorId, tutorDetails.id));
     } else {
-      // Parent/regular account - get all bookings created by this user
+      // Parent/regular account - get all bookings for their students
+      const studentsList = await db
+        .select()
+        .from(students)
+        .where(and(
+          eq(students.userId, userDetails.id),
+          eq(students.isActive, true)
+        ));
+      
+      const studentIds = studentsList.map(student => student.id);
+      
+      if (studentIds.length === 0) {
+        return NextResponse.json([]);
+      }
+      
       userBookings = await db
         .select({
           id: bookings.id,
           date: bookings.date,
-          timeSlot: bookings.timeSlot,
-          subject: bookings.subject,
+          startTime: bookings.startTime,
+          endTime: bookings.endTime,
           status: bookings.status,
           tutorId: bookings.tutorId,
           studentId: bookings.studentId,
-          reportStatus: bookings.reportStatus,
+          notes: bookings.notes,
         })
         .from(bookings)
-        .where(eq(bookings.userId, userDetails.id));
+        .where(eq(bookings.studentId, studentIds[0])); // Simplified for now
     }
     
     // Enhance bookings with tutor and student names
@@ -177,37 +191,22 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const { studentId, tutorId, tutorShiftId, date, timeSlot, subject } = result.data;
-    
-    // Check if the user has enough tickets
-    if (userDetails.ticketCount <= 0) {
-      return NextResponse.json({ error: "Not enough tickets" }, { status: 400 });
-    }
+    const { studentId, tutorId, date, startTime, endTime, notes } = result.data;
     
     // Create the booking
     const [newBooking] = await db
       .insert(bookings)
       .values({
-        userId: userDetails.id,
-        studentId,
+        studentId: studentId || 0,
         tutorId,
-        tutorShiftId,
         date,
-        timeSlot,
-        subject,
+        startTime,
+        endTime,
         status: "confirmed",
-        reportStatus: "pending",
-        reportContent: null,
+        notes: notes || null,
+        ticketsUsed: 1
       })
       .returning();
-    
-    // Deduct one ticket from the user
-    await db
-      .update(users)
-      .set({
-        ticketCount: userDetails.ticketCount - 1
-      })
-      .where(eq(users.id, userDetails.id));
     
     return NextResponse.json(newBooking);
   } catch (error) {
