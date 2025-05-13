@@ -4,6 +4,13 @@ import { db } from "@/lib/db";
 import { eq, and, sql } from "drizzle-orm";
 import { users, students, studentTickets } from "@/shared/schema";
 
+// 型定義を追加
+interface TicketResult {
+  studentId: number;
+  name: string;
+  ticketCount: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClient();
@@ -25,8 +32,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
     
-    // Get student tickets based on role
-    let result = [];
+    // 型を明示的に指定して初期化
+    let result: TicketResult[] = [];
     
     if (userDetails.role === 'student' && userDetails.studentId) {
       // Student account - get own tickets
