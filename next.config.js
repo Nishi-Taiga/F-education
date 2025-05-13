@@ -11,12 +11,11 @@ const nextConfig = {
     // ESLintエラーも無視
     ignoreDuringBuilds: true,
   },
-  // 静的エクスポートの制限を緩和
-  output: 'export',
+  // 静的エクスポートモードを削除し、サーバーサイドレンダリングを有効化
   images: {
-    unoptimized: true,
+    domains: ['odokliluhbzqsdzdyyho.supabase.co'],
   },
-  // APIs を処理するための設定
+  // API処理用設定
   trailingSlash: true
 }
 
