@@ -17,10 +17,14 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [networkError, setNetworkError] = useState<string | null>(null);
 
   // メールとパスワードで新規登録
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ネットワークエラーをリセット
+    setNetworkError(null);
     
     if (!email || !password) {
       toast({
@@ -56,6 +60,38 @@ export default function SignupPage() {
       const redirectUrl = `${window.location.origin}/auth/callback`;
       console.log("Redirect URL:", redirectUrl);
       
+      // 独自のネットワークチェック
+      try {
+        const testResponse = await fetch('https://www.google.com', { 
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-cache',
+          timeout: 5000
+        });
+        console.log('Network connectivity test successful');
+      } catch (networkTestError) {
+        console.error('Network connectivity test failed:', networkTestError);
+        setNetworkError('ネットワーク接続に問題があります。インターネット接続を確認してください。');
+        throw new Error('Network connectivity test failed');
+      }
+      
+      // Supabase URLの確認
+      console.log('Testing Supabase URL availability');
+      try {
+        const supabaseUrlTest = await fetch('https://odokliluhbzqsdzdyyho.supabase.co', { 
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-cache',
+          timeout: 5000
+        });
+        console.log('Supabase URL test successful');
+      } catch (supabaseUrlTestError) {
+        console.error('Supabase URL test failed:', supabaseUrlTestError);
+        setNetworkError('Supabaseサーバーに接続できません。しばらく経ってからお試しください。');
+        throw new Error('Supabase URL test failed');
+      }
+      
+      // 最終的なサインアップ試行
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -83,9 +119,25 @@ export default function SignupPage() {
       router.push('/');
     } catch (error: any) {
       console.error("登録エラー:", error);
+      
+      // エラーメッセージを設定
+      let errorMessage = "登録に失敗しました";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      if (error.message && error.message.includes("fetch")) {
+        errorMessage = "ネットワーク接続に問題があります。インターネット接続を確認してください。";
+      }
+      
+      if (networkError) {
+        errorMessage = networkError;
+      }
+      
       toast({
         title: "登録エラー",
-        description: error.message || "登録に失敗しました",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -97,6 +149,7 @@ export default function SignupPage() {
   const handleGoogleSignup = async () => {
     try {
       setIsLoading(true);
+      setNetworkError(null);
       
       const redirectUrl = `${window.location.origin}/auth/callback`;
       console.log("Google OAuth Redirect URL:", redirectUrl);
@@ -116,9 +169,20 @@ export default function SignupPage() {
       
     } catch (error: any) {
       console.error("Google登録エラー:", error);
+      
+      let errorMessage = "Google登録に失敗しました";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      if (error.message && error.message.includes("fetch")) {
+        errorMessage = "ネットワーク接続に問題があります。インターネット接続を確認してください。";
+      }
+      
       toast({
         title: "登録エラー",
-        description: error.message || "Google登録に失敗しました",
+        description: errorMessage,
         variant: "destructive",
       });
       setIsLoading(false);
@@ -136,6 +200,13 @@ export default function SignupPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {networkError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+                <p className="text-sm font-medium">{networkError}</p>
+                <p className="text-xs mt-1">接続を確認して再度お試しください。</p>
+              </div>
+            )}
+            
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">メールアドレス</Label>
