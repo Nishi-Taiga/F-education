@@ -23,6 +23,8 @@ ensureDirectoryExists('./app/api/user/me');
 ensureDirectoryExists('./app/api/student-tickets');
 ensureDirectoryExists('./app/dashboard');
 ensureDirectoryExists('./app/profile-setup');
+ensureDirectoryExists('./app/auth');
+ensureDirectoryExists('./app/auth/callback');
 
 // 重要なディレクトリの存在を確認
 const dirs = [
@@ -448,6 +450,20 @@ export async function POST(request: NextRequest) {
 }
 `);
 
+  // auth/callback API
+  fs.writeFileSync('./app/auth/callback/route.ts', `
+import { NextRequest, NextResponse } from "next/server";
+
+// 静的エクスポート用に簡略化したバージョン
+export async function GET(request: NextRequest) {
+  // メンテナンスモードではダッシュボードにリダイレクト
+  return NextResponse.redirect("/dashboard");
+}
+
+// 静的ファイルを生成するためのオプション指定
+export const dynamic = 'force-static';
+`);
+
   // Create Dashboard Page
   fs.writeFileSync('./app/dashboard/page.tsx', `
 "use client";
@@ -582,6 +598,10 @@ export function cn(...classes: any[]) {
       // Copy the index.html to other essential pages
       fs.copyFileSync('./out/index.html', './out/dashboard.html');
       fs.copyFileSync('./out/index.html', './out/profile-setup.html');
+      fs.copyFileSync('./out/index.html', './out/auth/callback.html');
+      
+      // Ensure auth/callback directory exists
+      ensureDirectoryExists('./out/auth');
       
       console.log('Created static fallback files');
     }
@@ -592,6 +612,7 @@ export function cn(...classes: any[]) {
     console.log('Creating minimal static fallback');
     
     ensureDirectoryExists('./out');
+    ensureDirectoryExists('./out/auth');
     
     fs.writeFileSync('./out/index.html', `
 <!DOCTYPE html>
@@ -625,6 +646,11 @@ export function cn(...classes: any[]) {
 </body>
 </html>
     `);
+    
+    // Copy the index.html to other essential pages
+    fs.copyFileSync('./out/index.html', './out/dashboard.html');
+    fs.copyFileSync('./out/index.html', './out/profile-setup.html');
+    fs.copyFileSync('./out/index.html', './out/auth/callback.html');
   }
   
   console.log('Build process completed');
@@ -634,13 +660,12 @@ export function cn(...classes: any[]) {
   // 最終的なフォールバックとして、静的HTMLを出力する
   console.log('Creating emergency fallback HTML');
   
-  // .next ディレクトリが存在しない場合は作成
-  if (!fs.existsSync('./.next')) {
-    fs.mkdirSync('./.next', { recursive: true });
-  }
+  // 出力ディレクトリを確認
+  ensureDirectoryExists('./out');
+  ensureDirectoryExists('./out/auth');
   
   // 最低限のHTMLを作成
-  fs.writeFileSync('./.next/index.html', `
+  fs.writeFileSync('./out/index.html', `
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -659,12 +684,10 @@ export function cn(...classes: any[]) {
 </html>
   `);
   
-  // outディレクトリも作成
-  if (!fs.existsSync('./out')) {
-    fs.mkdirSync('./out', { recursive: true });
-  }
-  
-  fs.copyFileSync('./.next/index.html', './out/index.html');
+  // 重要なページにもコピー
+  fs.copyFileSync('./out/index.html', './out/dashboard.html');
+  fs.copyFileSync('./out/index.html', './out/profile-setup.html');
+  fs.copyFileSync('./out/index.html', './out/auth/callback.html');
   
   console.log('Emergency fallback created');
   process.exit(0); // エラーでも成功として終了
