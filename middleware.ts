@@ -16,6 +16,6 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     // Apply to all routes except those that start with:
-    "/((?!_next/static|_next/image|favicon.ico|api/auth/callback).*)",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
