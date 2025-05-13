@@ -24,11 +24,15 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+// Supabase URLとテーブル名
+const SUPABASE_URL = 'https://iknunqtcfpdpwkovggqr.supabase.co';
+const USERS_TABLE = 'users';
+
 export default function ProfileSetup() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState<number | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   
   // フォーム設定
   const form = useForm<ProfileFormValues>({
@@ -51,15 +55,22 @@ export default function ProfileSetup() {
         
         if (!session) {
           // 未ログインの場合はホームに戻す
+          console.log("No session found, redirecting to home");
           router.push('/');
           return;
         }
         
+        console.log("Session found, user email:", session.user.email);
+        console.log("Auth user ID:", session.user.id);
+        
+        // ユーザーIDを保存
+        setUserId(session.user.id);
+        
         // ユーザー情報の取得
         const { data: userData, error: userError } = await supabase
-          .from('users')
+          .from(USERS_TABLE)
           .select('*')
-          .eq('email', session.user.email)
+          .eq('auth_user_id', session.user.id)
           .single();
           
         if (userError && userError.code !== 'PGRST116') {
@@ -69,27 +80,30 @@ export default function ProfileSetup() {
             description: "ユーザー情報の取得に失敗しました",
             variant: "destructive",
           });
+          // エラーがあってもフォームは表示
+          setIsLoading(false);
           return;
         }
         
         // ユーザーが存在する場合はフォームに入力
         if (userData) {
-          setUserId(userData.id);
+          console.log("Existing user data found:", userData);
           form.reset({
-            firstName: userData.firstName || "",
-            lastName: userData.lastName || "",
+            firstName: userData.first_name || "",
+            lastName: userData.last_name || "",
             role: userData.role || "parent",
           });
         } else {
           // 新規ユーザーの場合、認証情報からユーザーレコードを作成
+          console.log("Creating new user record for:", session.user.email);
           const { data: newUser, error: createError } = await supabase
-            .from('users')
+            .from(USERS_TABLE)
             .insert([{ 
+              auth_user_id: session.user.id,
               email: session.user.email,
               role: 'parent'
             }])
-            .select()
-            .single();
+            .select();
             
           if (createError) {
             console.error("ユーザー作成エラー:", createError);
@@ -98,10 +112,9 @@ export default function ProfileSetup() {
               description: "ユーザーの作成に失敗しました",
               variant: "destructive",
             });
-            return;
+          } else {
+            console.log("New user created:", newUser);
           }
-          
-          setUserId(newUser.id);
         }
       } catch (error) {
         console.error("データ取得エラー:", error);
@@ -120,20 +133,31 @@ export default function ProfileSetup() {
 
   // フォーム送信処理
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!userId) return;
+    if (!userId) {
+      toast({
+        title: "エラー",
+        description: "ユーザーIDが見つかりません",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       setIsLoading(true);
       
+      console.log("Updating profile for user ID:", userId);
+      console.log("Form data:", data);
+      
       // ユーザー情報の更新
       const { error } = await supabase
-        .from('users')
+        .from(USERS_TABLE)
         .update({
-          firstName: data.firstName,
-          lastName: data.lastName,
+          first_name: data.firstName,
+          last_name: data.lastName,
           role: data.role,
+          profile_completed: true
         })
-        .eq('id', userId);
+        .eq('auth_user_id', userId);
         
       if (error) {
         console.error("プロフィール更新エラー:", error);
@@ -145,12 +169,13 @@ export default function ProfileSetup() {
         return;
       }
       
+      console.log("Profile updated successfully");
       toast({
         title: "成功",
         description: "プロフィールを更新しました",
       });
       
-      // ダッシュボードに戻る
+      // ダッシュボードに移動
       router.push('/dashboard');
     } catch (error) {
       console.error("送信エラー:", error);
@@ -169,10 +194,11 @@ export default function ProfileSetup() {
     router.push('/dashboard');
   };
 
+  // ローディング表示
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="loader">読み込み中...</div>
+        <div className="animate-pulse text-blue-600 font-semibold">データを読み込み中...</div>
       </div>
     );
   }
