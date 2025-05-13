@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// フォールバック値の定義
-const FALLBACK_SUPABASE_URL = 'https://odokliluhbzqsdzdyyho.supabase.co';
-const FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kb2tsaWx1aGJ6cXNkemR5eWhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTQ2NjkwMDYsImV4cCI6MjAzMDI0NTAwNn0.cTQ-t_Uh7XmItWRdPm18w1iq1tGABcDkYw6KnRKkv9o';
+// フォールバック値の定義（新しい正しい値）
+const FALLBACK_SUPABASE_URL = 'https://iknunqtcfpdpwkovggqr.supabase.co';
+const FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrbnVucXRjZnBkcHdrb3ZnZ3FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5MjA2ODQsImV4cCI6MjA2MjQ5NjY4NH0.H8BKyngllaBTTz6VBg4y1nd-6udqFq5yr16rK5XtCTY';
 
 export function createServerClient() {
   // 環境変数から値を取得し、フォールバックを使用
