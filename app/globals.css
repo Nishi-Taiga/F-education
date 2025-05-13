@@ -1,3 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Simplified CSS */
 body {
@@ -14,4 +17,3 @@ a {
 * {
   box-sizing: border-box;
 }
-  
