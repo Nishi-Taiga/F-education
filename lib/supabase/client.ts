@@ -1,14 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-// ここでハードコードされた値をフォールバックとして使用
-const FALLBACK_SUPABASE_URL = 'https://odokliluhbzqsdzdyyho.supabase.co';
-const FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kb2tsaWx1aGJ6cXNkemR5eWhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTQ2NjkwMDYsImV4cCI6MjAzMDI0NTAwNn0.cTQ-t_Uh7XmItWRdPm18w1iq1tGABcDkYw6KnRKkv9o';
+// ここでハードコードされた値をフォールバックとして使用（新しい正しい値）
+const FALLBACK_SUPABASE_URL = 'https://iknunqtcfpdpwkovggqr.supabase.co';
+const FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrbnVucXRjZnBkcHdrb3ZnZ3FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5MjA2ODQsImV4cCI6MjA2MjQ5NjY4NH0.H8BKyngllaBTTz6VBg4y1nd-6udqFq5yr16rK5XtCTY';
 
 // 環境変数から値を取得し、フォールバックを使用
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || FALLBACK_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY;
 
-// 環境変数チェックと情報をログに出力（開発環境用）
+// 環境変数チェックと情報をログに出力
 if (typeof window !== 'undefined') {
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Missing Supabase environment variables in client');
