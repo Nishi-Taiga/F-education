@@ -4,12 +4,26 @@ const { execSync } = require('child_process');
 
 console.log('Starting simplified build process');
 
-// 1. Remove problematic files
+// 事前にapp関連のディレクトリが存在することを確認
+if (!fs.existsSync('./app')) {
+  fs.mkdirSync('./app', { recursive: true });
+}
+
 try {
   console.log('Removing postcss.config.js');
   if (fs.existsSync('./postcss.config.js')) {
     fs.unlinkSync('./postcss.config.js');
   }
+  
+  console.log('Creating simplified postcss.config.js');
+  fs.writeFileSync('./postcss.config.js', `
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  }
+}
+  `);
   
   console.log('Creating simplified next.config.js');
   fs.writeFileSync('./next.config.js', `
@@ -17,14 +31,22 @@ try {
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  experimental: {
+    appDir: true,
+  },
+  transpilePackages: ["@radix-ui/react-toast"],
 }
 
 module.exports = nextConfig
   `);
   
-  // 2. Create empty CSS file
+  // 2. Create globals CSS file
   console.log('Creating simplified globals.css');
   fs.writeFileSync('./app/globals.css', `
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Simplified CSS */
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -45,13 +67,20 @@ a {
   // 3. Create simplified layout
   console.log('Creating simplified layout.tsx');
   fs.writeFileSync('./app/layout.tsx', `
+import './globals.css';
+
+export const metadata = {
+  title: 'F-education',
+  description: 'F-education platform',
+};
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="ja">
       <body>{children}</body>
     </html>
   )
@@ -64,16 +93,45 @@ export default function RootLayout({
 export default function Home() {
   return (
     <main style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1>Feducation</h1>
-      <p>Welcome to Feducation. The site is under maintenance.</p>
+      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>F-education</h1>
+      <p>Webサイトは現在メンテナンス中です。</p>
+      <p>しばらくお待ちください。</p>
     </main>
   )
 }
   `);
+
+  // 重要なディレクトリの存在を確認
+  const dirs = ['./components', './components/ui', './lib', './lib/supabase', './contexts'];
+  dirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      console.log(`Creating directory: ${dir}`);
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+  
+  // 基本的なフォールバックコンポーネントを作成
+  console.log('Creating minimal required components');
+  
+  // Supabaseクライアント
+  fs.writeFileSync('./lib/supabase/client.ts', `
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+`);
+
+  // Utils
+  fs.writeFileSync('./lib/utils.ts', `
+export function cn(...classes: any[]) {
+  return classes.filter(Boolean).join(' ')
+}
+`);
   
   // 5. Run build
   console.log('Running next build');
-  // 直接Node.jsのrequireを使用してnextのビルドスクリプトを呼び出す
   try {
     console.log('Method 1: Using npx next build');
     execSync('npx next build', { stdio: 'inherit' });
@@ -84,10 +142,13 @@ export default function Home() {
       execSync('./node_modules/.bin/next build', { stdio: 'inherit' });
     } catch (e2) {
       console.log('Method 2 failed, trying final method');
-      console.log('Method 3: Using require("next/dist/cli/next-build")');
-      // 最後の手段: 直接next-buildをrequireして実行
-      const nextBuild = require('next/dist/cli/next-build').default;
-      nextBuild();
+      console.log('Method 3: Using NODE_OPTIONS=--openssl-legacy-provider npx next build');
+      try {
+        execSync('NODE_OPTIONS=--openssl-legacy-provider npx next build', { stdio: 'inherit' });
+      } catch (e3) {
+        console.log('All build methods failed');
+        throw e3;
+      }
     }
   }
   
