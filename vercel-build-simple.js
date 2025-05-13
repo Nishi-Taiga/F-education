@@ -9,6 +9,11 @@ if (!fs.existsSync('./app')) {
   fs.mkdirSync('./app', { recursive: true });
 }
 
+// API関連のディレクトリチェックとダミーファイル
+if (!fs.existsSync('./app/api')) {
+  fs.mkdirSync('./app/api', { recursive: true });
+}
+
 try {
   console.log('Removing postcss.config.js');
   if (fs.existsSync('./postcss.config.js')) {
@@ -31,9 +36,6 @@ module.exports = {
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  experimental: {
-    appDir: true,
-  },
   transpilePackages: ["@radix-ui/react-toast"],
 }
 
@@ -102,7 +104,7 @@ export default function Home() {
   `);
 
   // 重要なディレクトリの存在を確認
-  const dirs = ['./components', './components/ui', './lib', './lib/supabase', './contexts'];
+  const dirs = ['./components', './components/ui', './lib', './lib/supabase', './lib/db', './contexts', './shared', './shared/schema'];
   dirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
       console.log(`Creating directory: ${dir}`);
@@ -121,6 +123,73 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+`);
+
+  // Supabaseサーバーサイド
+  fs.writeFileSync('./lib/supabase/server.ts', `
+import { createClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
+
+export function createServerClient() {
+  const cookieStore = cookies();
+  
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name) {
+        return cookieStore.get(name)?.value;
+      },
+    },
+  });
+}
+`);
+
+  // DB
+  fs.writeFileSync('./lib/db.ts', `
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+
+// データベース接続を初期化
+const connectionString = process.env.DATABASE_URL || '';
+const client = postgres(connectionString);
+export const db = drizzle(client);
+`);
+
+  // スキーマ
+  fs.writeFileSync('./shared/schema.ts', `
+import { pgTable, serial, text, integer, boolean, timestamp } from 'drizzle-orm/pg-core';
+
+// ユーザーテーブル
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull(),
+  role: text('role').notNull().default('parent'),
+  studentId: integer('student_id'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// 生徒テーブル
+export const students = pgTable('students', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// 生徒チケットテーブル
+export const studentTickets = pgTable('student_tickets', {
+  id: serial('id').primaryKey(),
+  studentId: integer('student_id').notNull(),
+  quantity: integer('quantity').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
 `);
 
   // Utils
