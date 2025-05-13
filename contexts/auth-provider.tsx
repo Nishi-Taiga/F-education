@@ -1,18 +1,21 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
-import { User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useState } from 'react';
 
-type UserDetails = {
-  id: string;
+// 基本的なユーザー型定義
+type User = {
+  id: number;
   email: string;
   role: string;
-  profileCompleted: boolean;
-  name?: string;
-  phone?: string;
 };
 
+type UserDetails = {
+  firstName?: string;
+  lastName?: string;
+  role?: string;
+};
+
+// AuthContextの型定義
 type AuthContextType = {
   user: User | null;
   userDetails: UserDetails | null;
@@ -21,84 +24,42 @@ type AuthContextType = {
   refreshUserDetails: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// デフォルト値を持つコンテキストを作成
+export const AuthContext = createContext<AuthContextType>({
+  user: null,
+  userDetails: null,
+  loading: false,
+  signOut: async () => {},
+  refreshUserDetails: async () => {},
+});
 
+// AuthProviderコンポーネント
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  async function fetchUserDetails(userId: string) {
+  // ログアウト関数
+  const signOut = async () => {
+    // メンテナンスモードなので実際の処理は省略
+    setUser(null);
+    setUserDetails(null);
+  };
+
+  // ユーザー詳細を更新する関数
+  const refreshUserDetails = async () => {
+    // メンテナンスモードなので実際の処理は省略
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, email, role, profile_completed, name, phone')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        setUserDetails({
-          id: data.id,
-          email: data.email,
-          role: data.role,
-          profileCompleted: data.profile_completed,
-          name: data.name,
-          phone: data.phone,
-        });
-      }
+      // 実際はAPIからデータを取得
     } catch (error) {
-      console.error('Error fetching user details:', error);
-    }
-  }
-
-  async function refreshUserDetails() {
-    if (user) {
-      await fetchUserDetails(user.id);
-    }
-  }
-
-  useEffect(() => {
-    async function initAuth() {
-      setLoading(true);
-      
-      // Check if there's an active session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        setUser(session.user);
-        await fetchUserDetails(session.user.id);
-      }
-      
-      // Listen for auth changes
-      const { data: { subscription } } = await supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (session?.user) {
-            setUser(session.user);
-            await fetchUserDetails(session.user.id);
-          } else {
-            setUser(null);
-            setUserDetails(null);
-          }
-        }
-      );
-      
+      console.error('Failed to refresh user details:', error);
+    } finally {
       setLoading(false);
-      
-      // Cleanup
-      return () => {
-        subscription.unsubscribe();
-      };
     }
-    
-    initAuth();
-  }, []);
-  
-  async function signOut() {
-    await supabase.auth.signOut();
-  }
-  
+  };
+
+  // コンテキスト値の作成
   const value = {
     user,
     userDetails,
@@ -106,14 +67,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     refreshUserDetails,
   };
-  
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+
+  // AuthContextのプロバイダーを返す
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
+// AuthContextを使用するためのカスタムフック
 export function useAuth() {
   const context = useContext(AuthContext);
+  
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
+  
   return context;
 }
