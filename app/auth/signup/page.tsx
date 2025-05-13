@@ -52,17 +52,26 @@ export default function SignupPage() {
     try {
       setIsLoading(true);
       
-      const { error } = await supabase.auth.signUp({
+      // 実際のURLを指定
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      console.log("Redirect URL:", redirectUrl);
+      
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: redirectUrl,
+          data: {
+            email: email,
+          }
         },
       });
       
       if (error) {
         throw error;
       }
+      
+      console.log("Registration response:", data);
       
       // 登録成功
       toast({
@@ -89,16 +98,21 @@ export default function SignupPage() {
     try {
       setIsLoading(true);
       
-      const { error } = await supabase.auth.signInWithOAuth({
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      console.log("Google OAuth Redirect URL:", redirectUrl);
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
         },
       });
       
       if (error) {
         throw error;
       }
+      
+      console.log("Google OAuth response:", data);
       
     } catch (error: any) {
       console.error("Google登録エラー:", error);
