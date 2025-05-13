@@ -1,24 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
 
+// 静的エクスポート用に簡易化したバージョン
 export function createServerClient() {
-  const cookieStore = cookies();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: { path: string; maxAge: number; domain?: string }) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name: string, options: { path: string; domain?: string }) {
-          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
-        },
-      },
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
     }
-  );
+  });
 }
