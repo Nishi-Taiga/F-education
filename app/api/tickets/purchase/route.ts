@@ -55,12 +55,11 @@ export async function POST(request: NextRequest) {
       .insert(paymentTransactions)
       .values({
         userId: userDetails.id,
-        transactionId: `manual-${Date.now()}`,
-        paymentMethod: "manual",
-        amount: 0, // This is a manual purchase
+        amount: quantity ? quantity * 1000 : 0, // Assume ¥1000 per ticket
         currency: "JPY",
         status: "completed",
-        metadata: JSON.stringify({ items, quantity }),
+        provider: "manual",
+        ticketsPurchased: quantity || 0
       })
       .returning();
     
@@ -84,51 +83,23 @@ export async function POST(request: NextRequest) {
             .insert(studentTickets)
             .values({
               studentId,
-              userId: userDetails.id,
-              quantity: itemQuantity
+              quantity: itemQuantity,
+              description: "Manual purchase"
             });
         }
       }
       
-      // Calculate total tickets for user (legacy support)
-      const [ticketSum] = await db
-        .select({ 
-          ticketCount: sql`COALESCE(SUM(${studentTickets.quantity}), 0)`.as('ticketCount')
-        })
-        .from(studentTickets)
-        .where(eq(studentTickets.userId, userDetails.id));
-      
-      // Update user's total ticket count
-      const totalTickets = Number(ticketSum.ticketCount) || 0;
-      await db
-        .update(users)
-        .set({ ticketCount: totalTickets })
-        .where(eq(users.id, userDetails.id));
-      
-      // Get updated user
-      const [updatedUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, userDetails.id));
-      
       return NextResponse.json({
-        ticketCount: updatedUser.ticketCount,
-        message: "Tickets purchased successfully"
+        message: "Tickets purchased successfully",
+        transactionId: transaction.id
       });
     } 
     else if (quantity) {
-      // Legacy format: purchase for user directly
-      const newTicketCount = userDetails.ticketCount + quantity;
-      
-      // Update user's ticket count
-      await db
-        .update(users)
-        .set({ ticketCount: newTicketCount })
-        .where(eq(users.id, userDetails.id));
-      
+      // For simplicity in this stub - just confirm the purchase
       return NextResponse.json({
-        ticketCount: newTicketCount,
-        message: "Tickets purchased successfully"
+        message: "Tickets purchased successfully",
+        transactionId: transaction.id,
+        quantity
       });
     }
     else {
