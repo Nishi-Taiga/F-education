@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "buildCommand": "node vercel-build-simple.js",
+  "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "outputDirectory": ".next",
@@ -20,8 +20,5 @@
       "DATABASE_URL": "postgresql://postgres:password@db.odokliluhbzqsdzdyyho.supabase.co:5432/postgres",
       "NEXT_PUBLIC_BASE_URL": "https://f-education.vercel.app"
     }
-  },
-  "routes": [
-    { "src": "/(.*)", "dest": "/" }
-  ]
+  }
 }
