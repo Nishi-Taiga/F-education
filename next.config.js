@@ -10,7 +10,14 @@ const nextConfig = {
   eslint: {
     // ESLintエラーも無視
     ignoreDuringBuilds: true,
-  }
+  },
+  // 静的エクスポートの制限を緩和
+  output: 'export',
+  images: {
+    unoptimized: true,
+  },
+  // APIs を処理するための設定
+  trailingSlash: true
 }
 
 module.exports = nextConfig
