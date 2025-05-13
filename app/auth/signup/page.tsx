@@ -65,8 +65,7 @@ export default function SignupPage() {
         const testResponse = await fetch('https://www.google.com', { 
           method: 'HEAD',
           mode: 'no-cors',
-          cache: 'no-cache',
-          timeout: 5000
+          cache: 'no-cache'
         });
         console.log('Network connectivity test successful');
       } catch (networkTestError) {
@@ -75,14 +74,13 @@ export default function SignupPage() {
         throw new Error('Network connectivity test failed');
       }
       
-      // Supabase URLの確認
+      // Supabase URLの確認（更新された正しいURL）
       console.log('Testing Supabase URL availability');
       try {
-        const supabaseUrlTest = await fetch('https://odokliluhbzqsdzdyyho.supabase.co', { 
+        const supabaseUrlTest = await fetch('https://iknunqtcfpdpwkovggqr.supabase.co', { 
           method: 'HEAD',
           mode: 'no-cors',
-          cache: 'no-cache',
-          timeout: 5000
+          cache: 'no-cache'
         });
         console.log('Supabase URL test successful');
       } catch (supabaseUrlTestError) {
