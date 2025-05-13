@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
 
 // 生徒情報の型
 type UserDetails = {
@@ -126,11 +129,16 @@ export default function Dashboard() {
     router.push('/');
   };
   
-  // プロフィール設定へ移動
-  const goToProfileSetup = () => {
-    router.push('/profile-setup');
-  };
-
+  // 今日の日付
+  const today = new Date();
+  const todayStr = format(today, 'yyyy-MM-dd');
+  
+  // 今後の予約を取得
+  const upcomingBookings = bookings.filter(booking => booking.date >= todayStr);
+  
+  // 合計チケット数
+  const totalTickets = tickets.reduce((total, ticket) => total + ticket.quantity, 0);
+  
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -141,10 +149,54 @@ export default function Dashboard() {
 
   return (
     <div className="container mx-auto p-4 md:py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold">ダッシュボード</h1>
-        <Button onClick={handleLogout} variant="outline">ログアウト</Button>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">ダッシュボード</h1>
+          <p className="text-gray-500">
+            こんにちは、{user?.lastName} {user?.firstName}さん
+          </p>
+        </div>
+        
+        <div className="flex space-x-2 mt-4 md:mt-0">
+          <Button onClick={handleLogout} variant="outline">ログアウト</Button>
+          <Button onClick={() => router.push('/settings')}>設定</Button>
+        </div>
       </div>
+      
+      {/* ナビゲーションカード */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>メニュー</CardTitle>
+          <CardDescription>メイン機能</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Link href="/booking" className="w-full">
+              <Button className="w-full" variant="outline">
+                授業予約
+              </Button>
+            </Link>
+            
+            <Link href="/tickets" className="w-full">
+              <Button className="w-full" variant="outline">
+                チケット購入
+              </Button>
+            </Link>
+            
+            <Link href="/reports" className="w-full">
+              <Button className="w-full" variant="outline">
+                レポート一覧
+              </Button>
+            </Link>
+            
+            <Link href="/settings" className="w-full">
+              <Button className="w-full" variant="outline">
+                アカウント設定
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
       
       {user && (
         <Card className="mb-8">
@@ -170,8 +222,12 @@ export default function Dashboard() {
                    user.role === 'student' ? '生徒' : 
                    user.role === 'tutor' ? '講師' : '不明'}</p>
               </div>
+              <div>
+                <p className="font-medium">チケット残数:</p>
+                <p>{totalTickets} 枚</p>
+              </div>
               <div className="md:col-span-2 mt-2">
-                <Button onClick={goToProfileSetup}>
+                <Button onClick={() => router.push('/profile-setup')}>
                   プロフィール設定
                 </Button>
               </div>
@@ -189,16 +245,22 @@ export default function Dashboard() {
         <TabsContent value="bookings">
           <Card>
             <CardHeader>
-              <CardTitle>予約一覧</CardTitle>
-              <CardDescription>あなたの予約状況</CardDescription>
+              <CardTitle>今後の予約</CardTitle>
+              <CardDescription>
+                {upcomingBookings.length > 0 
+                  ? `${upcomingBookings.length}件の予約があります` 
+                  : "予約はありません"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {bookings.length > 0 ? (
+              {upcomingBookings.length > 0 ? (
                 <div className="space-y-4">
-                  {bookings.map((booking) => (
+                  {upcomingBookings.map((booking) => (
                     <div key={booking.id} className="border rounded-lg p-4">
                       <div className="flex justify-between mb-2">
-                        <p className="font-medium">{booking.date}</p>
+                        <p className="font-medium">
+                          {booking.date && format(new Date(booking.date), 'yyyy/MM/dd (EEE)', { locale: ja })}
+                        </p>
                         <span className={`px-2 py-1 rounded text-xs ${
                           booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                           booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -214,11 +276,18 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">予約はありません</p>
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">予約がありません</p>
+                  <Link href="/booking">
+                    <Button>新規予約を作成</Button>
+                  </Link>
+                </div>
               )}
               
               <div className="mt-6">
-                <Button>新規予約を作成</Button>
+                <Link href="/booking">
+                  <Button>予約画面へ</Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
@@ -228,7 +297,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader>
               <CardTitle>チケット情報</CardTitle>
-              <CardDescription>利用可能なチケット</CardDescription>
+              <CardDescription>利用可能なチケット: {totalTickets}枚</CardDescription>
             </CardHeader>
             <CardContent>
               {tickets.length > 0 ? (
@@ -248,11 +317,18 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">チケットはありません</p>
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">チケットがありません</p>
+                  <Link href="/tickets">
+                    <Button>チケットを購入</Button>
+                  </Link>
+                </div>
               )}
               
               <div className="mt-6">
-                <Button>チケットを購入</Button>
+                <Link href="/tickets">
+                  <Button>チケット購入</Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
