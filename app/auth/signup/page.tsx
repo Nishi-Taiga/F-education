@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 
+// 正しいSupabase URL
+const SUPABASE_URL = 'https://iknunqtcfpdpwkovggqr.supabase.co';
+
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -18,6 +21,13 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [networkError, setNetworkError] = useState<string | null>(null);
+
+  // SupabaseのURLを確認（コンポーネントマウント時）
+  useEffect(() => {
+    // スーパーベース接続情報をコンソールに表示
+    console.log('Current Supabase URL from ENV:', process.env.NEXT_PUBLIC_SUPABASE_URL || 'Not available');
+    console.log('Using hardcoded URL fallback:', SUPABASE_URL);
+  }, []);
 
   // メールとパスワードで新規登録
   const handleSignup = async (e: React.FormEvent) => {
@@ -60,43 +70,28 @@ export default function SignupPage() {
       const redirectUrl = `${window.location.origin}/auth/callback`;
       console.log("Redirect URL:", redirectUrl);
       
-      // 独自のネットワークチェック
+      // 独自のネットワークチェック（省略可能）
       try {
-        const testResponse = await fetch('https://www.google.com', { 
+        console.log('Testing network connectivity...');
+        await fetch('https://www.google.com', { 
           method: 'HEAD',
-          mode: 'no-cors',
-          cache: 'no-cache'
+          mode: 'no-cors'
         });
         console.log('Network connectivity test successful');
-      } catch (networkTestError) {
-        console.error('Network connectivity test failed:', networkTestError);
-        setNetworkError('ネットワーク接続に問題があります。インターネット接続を確認してください。');
-        throw new Error('Network connectivity test failed');
-      }
-      
-      // Supabase URLの確認（更新された正しいURL）
-      console.log('Testing Supabase URL availability');
-      try {
-        const supabaseUrlTest = await fetch('https://iknunqtcfpdpwkovggqr.supabase.co', { 
-          method: 'HEAD',
-          mode: 'no-cors',
-          cache: 'no-cache'
-        });
-        console.log('Supabase URL test successful');
-      } catch (supabaseUrlTestError) {
-        console.error('Supabase URL test failed:', supabaseUrlTestError);
-        setNetworkError('Supabaseサーバーに接続できません。しばらく経ってからお試しください。');
-        throw new Error('Supabase URL test failed');
+      } catch (err) {
+        console.error('Network test failed:', err);
+        // フェールしても続行
       }
       
       // 最終的なサインアップ試行
+      console.log(`Attempting signup with Supabase at ${SUPABASE_URL}`);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            email: email,
+            email,
           }
         },
       });
