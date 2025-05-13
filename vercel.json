@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "buildCommand": "npm run build",
+  "buildCommand": "node vercel-build-simple.js",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "outputDirectory": ".next",
@@ -9,6 +9,14 @@
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://odokliluhbzqsdzdyyho.supabase.co",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kb2tsaWx1aGJ6cXNkemR5eWhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxMzEzMDIsImV4cCI6MjA2MDcwNzMwMn0.im_yTwxZRQLSGSrFW4XlD5fvxv3msPFYrDGDJboFeqw",
-    "NODE_VERSION": "18.x"
+    "NODE_VERSION": "18.17.0",
+    "DATABASE_URL": "postgresql://postgres:password@db.odokliluhbzqsdzdyyho.supabase.co:5432/postgres"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_SUPABASE_URL": "https://odokliluhbzqsdzdyyho.supabase.co",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kb2tsaWx1aGJ6cXNkemR5eWhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxMzEzMDIsImV4cCI6MjA2MDcwNzMwMn0.im_yTwxZRQLSGSrFW4XlD5fvxv3msPFYrDGDJboFeqw",
+      "DATABASE_URL": "postgresql://postgres:password@db.odokliluhbzqsdzdyyho.supabase.co:5432/postgres"
+    }
   }
 }
