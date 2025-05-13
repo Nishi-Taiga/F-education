@@ -1,3 +1,9 @@
+import './globals.css';
+
+export const metadata = {
+  title: 'F-education',
+  description: 'F-education platform',
+};
 
 export default function RootLayout({
   children,
@@ -5,9 +11,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="ja">
       <body>{children}</body>
     </html>
   )
 }
-  
