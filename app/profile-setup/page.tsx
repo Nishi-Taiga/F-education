@@ -47,9 +47,43 @@ export default function ProfileSetup() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [isFormSubmitting, setIsFormSubmitting] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [role, setRole] = useState<string | null>(null);
+  const [databaseUserId, setDatabaseUserId] = useState<number | null>(null);
+  const [role, setRole] = useState<string>('parent'); // デフォルトで'parent'に設定
   
+  // 保護者・生徒用フォーム
+  const parentForm = useForm<z.infer<typeof parentProfileSchema>>({
+    resolver: zodResolver(parentProfileSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone: "",
+      postalCode: "",
+      prefecture: "",
+      city: "",
+      address: "",
+    },
+  });
+
+  // 講師用フォーム
+  const tutorForm = useForm<z.infer<typeof tutorProfileSchema>>({
+    resolver: zodResolver(tutorProfileSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone: "",
+      postalCode: "",
+      prefecture: "",
+      city: "",
+      address: "",
+      bio: "",
+      subjects: "",
+      education: "",
+      experience: "",
+    },
+  });
+
   // ユーザー情報の取得
   useEffect(() => {
     const fetchUserData = async () => {
@@ -79,22 +113,30 @@ export default function ProfileSetup() {
           .eq('auth_user_id', session.user.id)
           .single();
           
-        if (userError && userError.code !== 'PGRST116') {
-          console.error("ユーザー情報取得エラー:", userError);
-          toast({
-            title: "エラー",
-            description: "ユーザー情報の取得に失敗しました",
-            variant: "destructive",
-          });
+        if (userError) {
+          if (userError.code === 'PGRST116') {
+            console.log("No user found in database, creating a new one");
+            // ユーザーが存在しない場合は新規作成
+            await createNewUser(session.user.id, session.user.email || "");
+          } else {
+            console.error("ユーザー情報取得エラー:", userError);
+            toast({
+              title: "エラー",
+              description: "ユーザー情報の取得に失敗しました",
+              variant: "destructive",
+            });
+          }
           setIsLoading(false);
           return;
         }
         
-        // ユーザーが存在する場合はフォームに入力
+        // ユーザーが存在する場合
         if (userData) {
           console.log("Existing user data found:", userData);
           setRole(userData.role || "parent");
+          setDatabaseUserId(userData.id);
           
+          // ロールに応じたフォームリセット
           if (userData.role === 'tutor') {
             // 講師情報を取得
             const { data: tutorData } = await supabase
@@ -129,29 +171,6 @@ export default function ProfileSetup() {
               address: userData.address || "",
             });
           }
-        } else {
-          // 新規ユーザーの場合、認証情報からユーザーレコードを作成
-          console.log("Creating new user record for:", session.user.email);
-          const { data: newUser, error: createError } = await supabase
-            .from(USERS_TABLE)
-            .insert([{ 
-              auth_user_id: session.user.id,
-              email: session.user.email,
-              role: 'parent'
-            }])
-            .select();
-            
-          if (createError) {
-            console.error("ユーザー作成エラー:", createError);
-            toast({
-              title: "エラー",
-              description: "ユーザーの作成に失敗しました",
-              variant: "destructive",
-            });
-          } else {
-            console.log("New user created:", newUser);
-            setRole('parent');
-          }
         }
       } catch (error) {
         console.error("データ取得エラー:", error);
@@ -168,37 +187,45 @@ export default function ProfileSetup() {
     fetchUserData();
   }, [router, toast]);
 
-  // 保護者・生徒用フォーム
-  const parentForm = useForm<z.infer<typeof parentProfileSchema>>({
-    resolver: zodResolver(parentProfileSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      phone: "",
-      postalCode: "",
-      prefecture: "",
-      city: "",
-      address: "",
-    },
-  });
-
-  // 講師用フォーム
-  const tutorForm = useForm<z.infer<typeof tutorProfileSchema>>({
-    resolver: zodResolver(tutorProfileSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      phone: "",
-      postalCode: "",
-      prefecture: "",
-      city: "",
-      address: "",
-      bio: "",
-      subjects: "",
-      education: "",
-      experience: "",
-    },
-  });
+  // 新規ユーザー作成
+  const createNewUser = async (authUserId: string, email: string) => {
+    try {
+      // 新規ユーザーレコードを作成
+      const { data: newUser, error: createError } = await supabase
+        .from(USERS_TABLE)
+        .insert([{ 
+          auth_user_id: authUserId,
+          email: email,
+          role: 'parent'
+        }])
+        .select();
+        
+      if (createError) {
+        console.error("ユーザー作成エラー:", createError);
+        toast({
+          title: "エラー",
+          description: "ユーザーの作成に失敗しました",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("New user created:", newUser);
+      if (newUser && newUser.length > 0) {
+        setDatabaseUserId(newUser[0].id);
+      }
+      
+      // デフォルトでparentロールを設定
+      setRole('parent');
+    } catch (error) {
+      console.error("ユーザー作成エラー:", error);
+      toast({
+        title: "エラー",
+        description: "ユーザーの作成に失敗しました",
+        variant: "destructive",
+      });
+    }
+  };
 
   // 保護者・生徒用フォーム送信
   async function onParentSubmit(data: z.infer<typeof parentProfileSchema>) {
@@ -212,7 +239,7 @@ export default function ProfileSetup() {
     }
     
     try {
-      setIsLoading(true);
+      setIsFormSubmitting(true);
       
       console.log("Updating profile for user ID:", userId);
       console.log("Form data:", data);
@@ -258,7 +285,7 @@ export default function ProfileSetup() {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsFormSubmitting(false);
     }
   }
 
@@ -274,7 +301,7 @@ export default function ProfileSetup() {
     }
     
     try {
-      setIsLoading(true);
+      setIsFormSubmitting(true);
       
       console.log("Updating tutor profile for user ID:", userId);
       console.log("Form data:", data);
@@ -385,9 +412,19 @@ export default function ProfileSetup() {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsFormSubmitting(false);
     }
   }
+
+  // 講師ロールに切り替え
+  const switchToTutorRole = () => {
+    setRole('tutor');
+  };
+  
+  // 保護者ロールに切り替え
+  const switchToParentRole = () => {
+    setRole('parent');
+  };
 
   // 講師用のフォーム
   const TutorProfileForm = () => (
@@ -401,7 +438,7 @@ export default function ProfileSetup() {
               <FormItem>
                 <FormLabel>姓</FormLabel>
                 <FormControl>
-                  <Input placeholder="例：田中" {...field} disabled={isLoading} />
+                  <Input placeholder="例：田中" {...field} disabled={isFormSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -415,7 +452,7 @@ export default function ProfileSetup() {
               <FormItem>
                 <FormLabel>名</FormLabel>
                 <FormControl>
-                  <Input placeholder="例：太郎" {...field} disabled={isLoading} />
+                  <Input placeholder="例：太郎" {...field} disabled={isFormSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -430,7 +467,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>電話番号</FormLabel>
               <FormControl>
-                <Input placeholder="09012345678" {...field} disabled={isLoading} />
+                <Input placeholder="09012345678" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormDescription>ハイフンなしで入力してください</FormDescription>
               <FormMessage />
@@ -445,7 +482,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>郵便番号</FormLabel>
               <FormControl>
-                <Input placeholder="1234567" {...field} disabled={isLoading} />
+                <Input placeholder="1234567" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormDescription>ハイフンなしで入力してください</FormDescription>
               <FormMessage />
@@ -460,7 +497,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>都道府県</FormLabel>
               <FormControl>
-                <Input placeholder="東京都" {...field} disabled={isLoading} />
+                <Input placeholder="東京都" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -474,7 +511,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>市区町村</FormLabel>
               <FormControl>
-                <Input placeholder="渋谷区" {...field} disabled={isLoading} />
+                <Input placeholder="渋谷区" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -488,7 +525,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>番地・建物名等</FormLabel>
               <FormControl>
-                <Input placeholder="神南1-2-3 ○○マンション101" {...field} disabled={isLoading} />
+                <Input placeholder="神南1-2-3 ○○マンション101" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -502,7 +539,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>指導可能科目</FormLabel>
               <FormControl>
-                <Input placeholder="数学、英語、理科" {...field} disabled={isLoading} />
+                <Input placeholder="数学、英語、理科" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormDescription>カンマ区切りで複数入力可能</FormDescription>
               <FormMessage />
@@ -517,7 +554,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>学歴</FormLabel>
               <FormControl>
-                <Input placeholder="○○大学△△学部 卒業" {...field} disabled={isLoading} />
+                <Input placeholder="○○大学△△学部 卒業" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -531,7 +568,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>指導経験</FormLabel>
               <FormControl>
-                <Input placeholder="家庭教師3年、塾講師2年" {...field} disabled={isLoading} />
+                <Input placeholder="家庭教師3年、塾講師2年" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -548,7 +585,7 @@ export default function ProfileSetup() {
                 <Textarea 
                   placeholder="生徒への自己紹介文を入力してください" 
                   {...field} 
-                  disabled={isLoading}
+                  disabled={isFormSubmitting}
                   className="min-h-24"
                 />
               </FormControl>
@@ -557,9 +594,24 @@ export default function ProfileSetup() {
           )}
         />
         
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "処理中..." : "講師プロフィールを保存する"}
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={switchToParentRole} 
+            disabled={isFormSubmitting}
+            className="flex-1"
+          >
+            保護者として登録
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={isFormSubmitting}
+            className="flex-1"
+          >
+            {isFormSubmitting ? "処理中..." : "講師として登録"}
+          </Button>
+        </div>
       </form>
     </Form>
   );
@@ -576,7 +628,7 @@ export default function ProfileSetup() {
               <FormItem>
                 <FormLabel>姓</FormLabel>
                 <FormControl>
-                  <Input placeholder="例：田中" {...field} disabled={isLoading} />
+                  <Input placeholder="例：田中" {...field} disabled={isFormSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -590,7 +642,7 @@ export default function ProfileSetup() {
               <FormItem>
                 <FormLabel>名</FormLabel>
                 <FormControl>
-                  <Input placeholder="例：太郎" {...field} disabled={isLoading} />
+                  <Input placeholder="例：太郎" {...field} disabled={isFormSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -605,7 +657,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>電話番号</FormLabel>
               <FormControl>
-                <Input placeholder="09012345678" {...field} disabled={isLoading} />
+                <Input placeholder="09012345678" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormDescription>ハイフンなしで入力してください</FormDescription>
               <FormMessage />
@@ -620,7 +672,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>郵便番号</FormLabel>
               <FormControl>
-                <Input placeholder="1234567" {...field} disabled={isLoading} />
+                <Input placeholder="1234567" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormDescription>ハイフンなしで入力してください</FormDescription>
               <FormMessage />
@@ -635,7 +687,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>都道府県</FormLabel>
               <FormControl>
-                <Input placeholder="東京都" {...field} disabled={isLoading} />
+                <Input placeholder="東京都" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -649,7 +701,7 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>市区町村</FormLabel>
               <FormControl>
-                <Input placeholder="渋谷区" {...field} disabled={isLoading} />
+                <Input placeholder="渋谷区" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -663,25 +715,43 @@ export default function ProfileSetup() {
             <FormItem>
               <FormLabel>番地・建物名等</FormLabel>
               <FormControl>
-                <Input placeholder="神南1-2-3 ○○マンション101" {...field} disabled={isLoading} />
+                <Input placeholder="神南1-2-3 ○○マンション101" {...field} disabled={isFormSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "処理中..." : "保存する"}
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            type="submit" 
+            disabled={isFormSubmitting}
+            className="flex-1"
+          >
+            {isFormSubmitting ? "処理中..." : "保護者として登録"}
+          </Button>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={switchToTutorRole} 
+            disabled={isFormSubmitting}
+            className="flex-1"
+          >
+            講師として登録
+          </Button>
+        </div>
       </form>
     </Form>
   );
 
   // ローディング表示
-  if (isLoading || !role) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-blue-600 font-semibold">データを読み込み中...</div>
+        <div className="text-center">
+          <div className="animate-pulse text-blue-600 font-semibold mb-2">データを読み込み中...</div>
+          <p className="text-sm text-gray-500">少々お待ちください</p>
+        </div>
       </div>
     );
   }
@@ -690,7 +760,7 @@ export default function ProfileSetup() {
     <div className="container mx-auto p-4 md:py-8 max-w-md">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl md:text-3xl font-bold">プロフィール設定</h1>
-        <Button onClick={() => router.push('/dashboard')} variant="outline">戻る</Button>
+        <Button onClick={() => router.push('/')} variant="outline">戻る</Button>
       </div>
       
       <Card>
