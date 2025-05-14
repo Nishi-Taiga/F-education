@@ -18,9 +18,9 @@ export default function ProfileSelectionPage() {
   // プロフィール選択が完了している場合は、適切なページにリダイレクト
   if (isProfileSelected) {
     if (user.role === "parent") {
-      navigate("/profile-setup/parent");
+      navigate("/parent-profile");
     } else if (user.role === "tutor") {
-      navigate("/profile-setup/tutor");
+      navigate("/tutor-profile");
     }
     return null;
   }
@@ -44,7 +44,7 @@ export default function ProfileSelectionPage() {
       }
       
       // 保護者用プロフィール設定ページに移動
-      navigate("/profile-setup/parent");
+      navigate("/parent-profile");
     } catch (error) {
       console.error("保護者登録エラー:", error);
       toast({
@@ -76,7 +76,7 @@ export default function ProfileSelectionPage() {
       }
       
       // 講師用プロフィール設定ページに移動
-      navigate("/profile-setup/tutor");
+      navigate("/tutor-profile");
     } catch (error) {
       console.error("講師登録エラー:", error);
       toast({
