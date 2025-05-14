@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
 
 // Supabaseクライアントの設定
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,6 +22,7 @@ export default function TutorProfilePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [existingProfile, setExistingProfile] = useState(null);
 
   useEffect(() => {
     // 現在のユーザーを取得
@@ -46,6 +48,7 @@ export default function TutorProfilePage() {
           if (data) {
             console.log('Found existing profile data:', data);
             setProfile(data);
+            setExistingProfile(data);
           }
         } catch (err) {
           console.error('Error fetching profile:', err);
@@ -77,60 +80,77 @@ export default function TutorProfilePage() {
       // テーブル確認とデバッグログ
       console.log(`Attempting to save to ${TABLE_NAME} table`);
       
-      // サーバーエラーの可能性を確認するためSupabaseスキーマ情報をログに出力
-      const { data: tableInfo, error: tableError } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_name', TABLE_NAME)
-        .single();
+      // テーブル構造を確認
+      const { data: columns, error: columnsError } = await supabase
+        .from('information_schema.columns')
+        .select('column_name, data_type, is_nullable')
+        .eq('table_name', TABLE_NAME);
         
-      if (tableError) {
-        console.warn(`Table schema check: ${tableError.message}`);
-      } else {
-        console.log(`Table exists: ${tableInfo ? 'Yes' : 'No'}`);
+      if (!columnsError && columns) {
+        console.log('Table columns:', columns);
       }
       
-      // user_idを含めて保存データを準備
-      const profileData = {
-        ...profile,
-        user_id: user.id,
-        updated_at: new Date()
-      };
+      // 既存のプロファイルを使用するか、新しいIDを生成
+      let profileData;
+      
+      if (existingProfile) {
+        // 既存のプロファイルを更新する場合は、そのIDを保持
+        profileData = {
+          ...profile,
+          id: existingProfile.id,
+          user_id: user.id,
+          updated_at: new Date()
+        };
+        console.log('Updating existing profile with ID:', existingProfile.id);
+      } else {
+        // 新規作成の場合はIDを生成
+        profileData = {
+          ...profile,
+          id: uuidv4(), // UUIDを生成
+          user_id: user.id,
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+        console.log('Creating new profile with generated ID:', profileData.id);
+      }
       
       console.log('Saving profile data:', profileData);
       
-      // upsert操作（挿入または更新）
-      const { data, error: upsertError } = await supabase
-        .from(TABLE_NAME)
-        .upsert(profileData, { 
-          onConflict: 'user_id',  // user_idがユニーク制約がある場合
-          returning: 'minimal'    // 応答データを最小限に
-        });
+      // 既存プロファイルの場合は更新、新規の場合は挿入
+      let result;
       
-      if (upsertError) {
-        console.error('Save error:', upsertError);
-        setError(`保存中にエラーが発生しました: ${upsertError.message}`);
+      if (existingProfile) {
+        // 更新
+        result = await supabase
+          .from(TABLE_NAME)
+          .update(profileData)
+          .eq('id', existingProfile.id);
+      } else {
+        // 挿入
+        result = await supabase
+          .from(TABLE_NAME)
+          .insert(profileData);
+      }
+      
+      if (result.error) {
+        console.error('Save error:', result.error);
+        setError(`データ保存エラー: ${result.error.message}`);
         
-        // 詳細なエラー情報
-        if (upsertError.details) {
-          console.error('Error details:', upsertError.details);
-        }
-        
-        // テーブル構造の問題かもしれないので列情報を確認
-        const { data: columns, error: columnsError } = await supabase
-          .from('information_schema.columns')
-          .select('column_name, data_type')
-          .eq('table_name', TABLE_NAME);
-          
-        if (!columnsError && columns) {
-          console.log('Table columns:', columns);
+        // エラー詳細
+        if (result.error.details) {
+          console.error('Error details:', result.error.details);
         }
       } else {
-        console.log('Profile saved successfully');
+        console.log('Save to tutor_profiles result:', result);
         setSuccess(true);
+        
+        // 新規作成の場合は、作成されたプロファイルを既存プロファイルとして設定
+        if (!existingProfile) {
+          setExistingProfile(profileData);
+        }
       }
     } catch (err) {
-      console.error('Exception during save:', err);
+      console.error('プロフィール設定エラー:', err);
       setError(`予期せぬエラーが発生しました: ${err.message}`);
     } finally {
       setLoading(false);
