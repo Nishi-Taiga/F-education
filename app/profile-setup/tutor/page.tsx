@@ -70,6 +70,58 @@ export default function TutorProfileSetup() {
     });
   };
 
+  // 利用可能なテーブルを確認する関数
+  const checkTables = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tutors')
+        .select('*')
+        .limit(1);
+
+      console.log("Tutors table check result:", { data, error });
+      return !error;
+    } catch (e) {
+      console.error("Error checking tutors table:", e);
+      return false;
+    }
+  };
+
+  // テーブルの場所を判断してデータを保存する関数
+  const saveProfile = async (userId: string, profileData: any) => {
+    // まずtutorsテーブルを試す
+    const tutorsCheck = await checkTables();
+    
+    if (tutorsCheck) {
+      // tutorsテーブルが存在する場合
+      console.log("Trying to save to tutors table");
+      const { data, error } = await supabase
+        .from('tutors')
+        .insert([profileData])
+        .select();
+        
+      console.log("Save to tutors result:", { data, error });
+      
+      if (!error) {
+        return { success: true, table: 'tutors', data };
+      }
+    }
+    
+    // tutorsが失敗した場合はtutor_profilesテーブルを試す
+    console.log("Trying to save to tutor_profiles table");
+    const { data, error } = await supabase
+      .from('tutor_profiles')
+      .insert([profileData])
+      .select();
+      
+    console.log("Save to tutor_profiles result:", { data, error });
+    
+    if (error) {
+      return { success: false, error };
+    }
+    
+    return { success: true, table: 'tutor_profiles', data };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -98,41 +150,51 @@ export default function TutorProfileSetup() {
         throw new Error("ユーザー認証情報が見つかりません");
       }
 
+      console.log("Current user:", user);
+
       // 科目の配列をカンマ区切りの文字列に変換
       const subjects = formData.selectedSubjects.join(",");
 
-      // tutorsテーブルにプロフィール情報を保存
-      const { error } = await supabase
-        .from('tutors')
-        .insert([
-          {
-            user_id: user.id,
-            last_name: formData.lastName,
-            first_name: formData.firstName,
-            last_name_furigana: formData.lastNameFurigana,
-            first_name_furigana: formData.firstNameFurigana,
-            university: formData.university,
-            birth_date: formData.birthDate,
-            subjects: subjects,
-            email: user.email, // ログイン時のメールアドレスを使用
-            profile_completed: true
-          }
-        ]);
+      // プロフィールデータを構築
+      const profileData = {
+        user_id: user.id,
+        last_name: formData.lastName,
+        first_name: formData.firstName,
+        last_name_furigana: formData.lastNameFurigana,
+        first_name_furigana: formData.firstNameFurigana,
+        university: formData.university,
+        birth_date: formData.birthDate,
+        subjects: subjects,
+        email: user.email,
+        profile_completed: true
+      };
 
-      // エラーをチェック
-      if (error) {
-        console.error("データ保存エラー:", error);
-        throw error;
+      console.log("Profile data to save:", profileData);
+
+      // データ保存を試行
+      const saveResult = await saveProfile(user.id, profileData);
+      
+      if (!saveResult.success) {
+        throw new Error(`データ保存エラー: ${saveResult.error?.message || "Unknown error"}`);
       }
 
-      // usersテーブルのプロフィール完了フラグを更新
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ profile_completed: true })
-        .eq('id', user.id);
+      console.log(`Successfully saved to ${saveResult.table} table:`, saveResult.data);
 
-      if (updateError) {
-        console.error("ユーザーデータ更新エラー:", updateError);
+      // usersテーブルのプロフィール完了フラグを更新する試行
+      try {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ profile_completed: true })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error("User update error:", updateError);
+        } else {
+          console.log("Successfully updated user profile_completed flag");
+        }
+      } catch (userUpdateError) {
+        console.error("Failed to update user profile_completed:", userUpdateError);
+        // このエラーは致命的ではないので、処理を続行
       }
 
       // 成功通知
