@@ -19,6 +19,11 @@ import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { useEffect } from "react";
 
+// 新しいページをインポート
+import ProfileSelectionPage from "@/pages/profile-selection-page";
+import ParentProfileSetupPage from "@/pages/parent-profile-setup-page";
+import TutorProfileSetupPage from "@/pages/tutor-profile-setup-page";
+
 function Router() {
   return (
     <Switch>
@@ -29,10 +34,19 @@ function Router() {
       <ProtectedRoute path="/booking" component={BookingPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/reports" component={ReportListPage} />
-      <ProtectedRoute path="/profile-setup" component={ProfileSetupPage} skipProfileCheck={true} />
+      
+      {/* プロフィール設定関連のルート */}
+      <ProtectedRoute path="/profile-setup" component={ProfileSelectionPage} skipProfileCheck={true} />
+      <ProtectedRoute path="/profile-setup/parent" component={ParentProfileSetupPage} skipProfileCheck={true} />
+      <ProtectedRoute path="/profile-setup/tutor" component={TutorProfileSetupPage} skipProfileCheck={true} />
+      
+      {/* 後方互換性のために一時的に残しておく古いルート */}
+      <ProtectedRoute path="/profile-setup-old" component={ProfileSetupPage} skipProfileCheck={true} />
+      
       {/* 講師関連のルート */}
       <ProtectedRoute path="/tutor/profile" component={TutorProfilePage} />
       <ProtectedRoute path="/tutor/schedule" component={TutorSchedulePage} />
+      
       {/* レポート編集画面 */}
       <ProtectedRoute path="/report-edit" component={ReportEditPage} />
       <Route component={NotFound} />
@@ -72,5 +86,3 @@ function App() {
     </QueryClientProvider>
   );
 }
-
-export default App;
