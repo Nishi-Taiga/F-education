@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Save, Loader2 } from "lucide-react";
 
 // 高校科目のカテゴリー
 const highSchoolCategories = {
@@ -100,9 +101,9 @@ export default function TutorProfileSetup() {
       // 科目の配列をカンマ区切りの文字列に変換
       const subjects = formData.selectedSubjects.join(",");
 
-      // プロフィール情報を保存
+      // tutorsテーブルにプロフィール情報を保存
       const { error } = await supabase
-        .from('tutor_profiles')
+        .from('tutors')
         .insert([
           {
             user_id: user.id,
@@ -118,7 +119,21 @@ export default function TutorProfileSetup() {
           }
         ]);
 
-      if (error) throw error;
+      // エラーをチェック
+      if (error) {
+        console.error("データ保存エラー:", error);
+        throw error;
+      }
+
+      // usersテーブルのプロフィール完了フラグを更新
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ profile_completed: true })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error("ユーザーデータ更新エラー:", updateError);
+      }
 
       // 成功通知
       toast({
@@ -314,13 +329,23 @@ export default function TutorProfileSetup() {
                 </div>
               </div>
               
-              <div className="pt-4">
+              <div className="pt-6 flex justify-center md:justify-end">
                 <Button
                   type="submit"
-                  className="w-full md:w-auto"
+                  className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-md flex items-center justify-center gap-2 shadow-md transition-all hover:shadow-lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? "保存中..." : "プロフィールを保存"}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>保存中...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-5 w-5" />
+                      <span>プロフィールを保存</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
