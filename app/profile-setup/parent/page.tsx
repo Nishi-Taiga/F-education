@@ -9,23 +9,99 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Search, Loader2 } from "lucide-react";
+import axios from "axios";
 
 export default function ParentProfileSetup() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   
   const [formData, setFormData] = useState({
-    name: "",
+    parentName: "",
     phone: "",
+    postalCode: "",
+    prefecture: "",
+    city: "",
     address: "",
-    emergencyContact: "",
-    notes: "",
     students: [
-      { name: "", grade: "", school: "", subjects: "" }
+      { 
+        lastName: "", 
+        firstName: "", 
+        lastNameFurigana: "", 
+        firstNameFurigana: "", 
+        gender: "", 
+        school: "", 
+        grade: "", 
+        birthDate: "" 
+      }
     ]
   });
+
+  // 郵便番号から住所を検索する関数
+  const searchAddressByPostalCode = async () => {
+    if (!formData.postalCode || formData.postalCode.length < 7) {
+      toast({
+        title: "郵便番号エラー",
+        description: "正しい郵便番号を入力してください",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      setIsSearchingAddress(true);
+      // 郵便番号から「-」を除去
+      const cleanPostalCode = formData.postalCode.replace(/-/g, '');
+      const response = await axios.get(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${cleanPostalCode}`);
+      
+      if (response.data.results && response.data.results.length > 0) {
+        const result = response.data.results[0];
+        // 住所情報をセット
+        setFormData({
+          ...formData,
+          prefecture: result.address1,
+          city: result.address2 + result.address3
+        });
+        
+        toast({
+          title: "住所が見つかりました",
+          description: `${result.address1}${result.address2}${result.address3}`,
+        });
+      } else {
+        toast({
+          title: "住所が見つかりませんでした",
+          description: "正しい郵便番号を入力してください",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "エラー",
+        description: "住所検索に失敗しました",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearchingAddress(false);
+    }
+  };
+
+  // 学年の選択肢
+  const gradeOptions = [
+    { value: "小学1年生", label: "小学1年生" },
+    { value: "小学2年生", label: "小学2年生" },
+    { value: "小学3年生", label: "小学3年生" },
+    { value: "小学4年生", label: "小学4年生" },
+    { value: "小学5年生", label: "小学5年生" },
+    { value: "小学6年生", label: "小学6年生" },
+    { value: "中学1年生", label: "中学1年生" },
+    { value: "中学2年生", label: "中学2年生" },
+    { value: "中学3年生", label: "中学3年生" },
+    { value: "高校1年生", label: "高校1年生" },
+    { value: "高校2年生", label: "高校2年生" },
+    { value: "高校3年生", label: "高校3年生" },
+  ];
 
   const handleStudentChange = (index: number, field: string, value: string) => {
     const updatedStudents = [...formData.students];
@@ -39,7 +115,16 @@ export default function ParentProfileSetup() {
   const addStudent = () => {
     setFormData({
       ...formData,
-      students: [...formData.students, { name: "", grade: "", school: "", subjects: "" }]
+      students: [...formData.students, {
+        lastName: "", 
+        firstName: "", 
+        lastNameFurigana: "", 
+        firstNameFurigana: "", 
+        gender: "", 
+        school: "", 
+        grade: "", 
+        birthDate: ""
+      }]
     });
   };
 
@@ -61,6 +146,26 @@ export default function ParentProfileSetup() {
     setIsLoading(true);
 
     try {
+      // 入力バリデーション
+      const { parentName, phone, postalCode, prefecture, city, address, students } = formData;
+      
+      if (!parentName || !phone || !postalCode || !prefecture || !city || !address) {
+        throw new Error("保護者情報の必須項目が入力されていません");
+      }
+      
+      // 生徒情報のバリデーション
+      for (const student of students) {
+        const {
+          lastName, firstName, lastNameFurigana, firstNameFurigana,
+          gender, school, grade, birthDate
+        } = student;
+        
+        if (!lastName || !firstName || !lastNameFurigana || !firstNameFurigana ||
+            !gender || !school || !grade || !birthDate) {
+          throw new Error("生徒情報の必須項目が入力されていません");
+        }
+      }
+
       // ユーザーセッションを取得
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -74,11 +179,13 @@ export default function ParentProfileSetup() {
         .insert([
           {
             user_id: user.id,
-            name: formData.name,
-            phone: formData.phone,
-            address: formData.address,
-            emergency_contact: formData.emergencyContact,
-            notes: formData.notes
+            parent_name: parentName,
+            phone: phone,
+            postal_code: postalCode,
+            prefecture: prefecture,
+            city: city,
+            address: address,
+            profile_completed: true
           }
         ])
         .select();
@@ -86,16 +193,20 @@ export default function ParentProfileSetup() {
       if (profileError) throw profileError;
 
       // 生徒情報を保存
-      const studentPromises = formData.students.map(student => {
+      const studentPromises = students.map(student => {
         return supabase
           .from('students')
           .insert([
             {
               parent_id: profileData[0].id,
-              name: student.name,
-              grade: student.grade,
+              last_name: student.lastName,
+              first_name: student.firstName,
+              last_name_furigana: student.lastNameFurigana,
+              first_name_furigana: student.firstNameFurigana,
+              gender: student.gender,
               school: student.school,
-              subjects_of_interest: student.subjects
+              grade: student.grade,
+              birth_date: student.birthDate
             }
           ]);
       });
@@ -134,75 +245,105 @@ export default function ParentProfileSetup() {
           <CardHeader>
             <CardTitle className="text-2xl">保護者プロフィール設定</CardTitle>
             <CardDescription>
-              保護者としてのプロフィール情報を入力してください。
-              生徒の情報も合わせて登録します。
+              保護者としての情報と生徒情報を入力してください。
+              サービスを利用するために必要な情報です。
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* 保護者情報 */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">保護者情報</h3>
                 
+                <div className="space-y-2">
+                  <Label htmlFor="parentName">保護者氏名</Label>
+                  <Input
+                    id="parentName"
+                    value={formData.parentName}
+                    onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
+                    placeholder="例：山田 太郎"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">電話番号</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="例：090-1234-5678"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="postalCode">郵便番号</Label>
+                  <div className="flex space-x-2">
+                    <Input
+                      id="postalCode"
+                      value={formData.postalCode}
+                      onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                      placeholder="例：123-4567"
+                      required
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon"
+                      onClick={searchAddressByPostalCode}
+                      disabled={isSearchingAddress || !formData.postalCode || formData.postalCode.length < 7}
+                    >
+                      {isSearchingAddress ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Search className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">お名前</Label>
+                    <Label htmlFor="prefecture">都道府県</Label>
                     <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="田中 花子"
+                      id="prefecture"
+                      value={formData.prefecture}
+                      onChange={(e) => setFormData({ ...formData, prefecture: e.target.value })}
+                      placeholder="例：東京都"
                       required
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone">電話番号</Label>
+                    <Label htmlFor="city">市区町村</Label>
                     <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="090-1234-5678"
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="例：渋谷区"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address">住所</Label>
+                  <Label htmlFor="address">番地・マンション名等</Label>
                   <Input
                     id="address"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="東京都渋谷区渋谷　1-1-1"
+                    placeholder="例：1-2-3 ○○マンション101"
                     required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyContact">緊急連絡先</Label>
-                  <Input
-                    id="emergencyContact"
-                    value={formData.emergencyContact}
-                    onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
-                    placeholder="携帯30-1234-5678（父・田中太郎）"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="notes">備考・特記事項</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="講師への特別なリクエストや考慮点があればご記入ください"
-                    rows={3}
                   />
                 </div>
               </div>
 
-              <div className="space-y-4 pt-4">
+              <hr className="my-6" />
+
+              {/* 生徒情報 */}
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium">生徒情報</h3>
                   <Button
@@ -229,50 +370,110 @@ export default function ParentProfileSetup() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                     <h4 className="font-medium mb-3">生徒 {index + 1}</h4>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor={`student-name-${index}`}>生徒名</Label>
+                        <Label htmlFor={`student-lastName-${index}`}>姓</Label>
                         <Input
-                          id={`student-name-${index}`}
-                          value={student.name}
-                          onChange={(e) => handleStudentChange(index, 'name', e.target.value)}
-                          placeholder="田中 太郎"
+                          id={`student-lastName-${index}`}
+                          value={student.lastName}
+                          onChange={(e) => handleStudentChange(index, 'lastName', e.target.value)}
+                          placeholder="例：山田"
                           required
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`student-grade-${index}`}>学年</Label>
+                        <Label htmlFor={`student-firstName-${index}`}>名</Label>
                         <Input
-                          id={`student-grade-${index}`}
-                          value={student.grade}
-                          onChange={(e) => handleStudentChange(index, 'grade', e.target.value)}
-                          placeholder="中学2年"
+                          id={`student-firstName-${index}`}
+                          value={student.firstName}
+                          onChange={(e) => handleStudentChange(index, 'firstName', e.target.value)}
+                          placeholder="例：太郎"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor={`student-lastNameFurigana-${index}`}>姓（ふりがな）</Label>
+                        <Input
+                          id={`student-lastNameFurigana-${index}`}
+                          value={student.lastNameFurigana}
+                          onChange={(e) => handleStudentChange(index, 'lastNameFurigana', e.target.value)}
+                          placeholder="例：やまだ"
                           required
                         />
                       </div>
 
+                      <div className="space-y-2">
+                        <Label htmlFor={`student-firstNameFurigana-${index}`}>名（ふりがな）</Label>
+                        <Input
+                          id={`student-firstNameFurigana-${index}`}
+                          value={student.firstNameFurigana}
+                          onChange={(e) => handleStudentChange(index, 'firstNameFurigana', e.target.value)}
+                          placeholder="例：たろう"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <Label htmlFor={`student-gender-${index}`}>性別</Label>
+                      <select
+                        id={`student-gender-${index}`}
+                        value={student.gender}
+                        onChange={(e) => handleStudentChange(index, 'gender', e.target.value)}
+                        className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        required
+                      >
+                        <option value="">選択してください</option>
+                        <option value="男性">男性</option>
+                        <option value="女性">女性</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       <div className="space-y-2">
                         <Label htmlFor={`student-school-${index}`}>学校名</Label>
                         <Input
                           id={`student-school-${index}`}
                           value={student.school}
                           onChange={(e) => handleStudentChange(index, 'school', e.target.value)}
-                          placeholder="渋谷中学校"
+                          placeholder="例：○○小学校"
                           required
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor={`student-subjects-${index}`}>希望科目</Label>
-                        <Input
-                          id={`student-subjects-${index}`}
-                          value={student.subjects}
-                          onChange={(e) => handleStudentChange(index, 'subjects', e.target.value)}
-                          placeholder="数学、英語"
+                        <Label htmlFor={`student-grade-${index}`}>学年</Label>
+                        <select
+                          id={`student-grade-${index}`}
+                          value={student.grade}
+                          onChange={(e) => handleStudentChange(index, 'grade', e.target.value)}
+                          className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                           required
-                        />
+                        >
+                          <option value="">選択してください</option>
+                          {gradeOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <Label htmlFor={`student-birthDate-${index}`}>生年月日</Label>
+                      <Input
+                        id={`student-birthDate-${index}`}
+                        type="date"
+                        value={student.birthDate}
+                        onChange={(e) => handleStudentChange(index, 'birthDate', e.target.value)}
+                        required
+                      />
                     </div>
                   </Card>
                 ))}
