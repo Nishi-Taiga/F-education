@@ -369,7 +369,6 @@ export default function ParentProfileSetup() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                    <h4 className="font-medium mb-3">生徒 {index + 1}</h4>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
