@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid';
 
 // Supabaseクライアントの設定
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,20 +14,22 @@ const TABLE_NAME = 'tutor_profiles';
 
 export default function TutorProfilePage() {
   const [formData, setFormData] = useState({
-    id: '',  // 明示的にidを含める
-    user_id: '',
+    // idはinteger型なので、文字列ではなく数値型にする
+    // 空欄のままにして、サーバー側での自動採番に任せる
     last_name: '',
     first_name: '',
     last_name_furigana: '',
     first_name_furigana: '',
     bio: '',
     subjects: '',
+    university: '',
+    birth_date: '',
     email: '',
-    profile_completed: false,
-    created_at: null,
-    updated_at: null
+    profile_completed: true,
+    is_active: true
   });
   
+  const [profileId, setProfileId] = useState(null); // integer型のIDを保存
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -64,26 +65,30 @@ export default function TutorProfilePage() {
             console.error('プロファイル検索エラー:', error);
           } else if (data) {
             console.log('既存のプロファイルを読み込みました:', data);
-            // 既存データをそのまますべて使用
-            setFormData(data);
+            // IDを別変数で保存
+            setProfileId(data.id);
+            
+            // フォームデータにプロファイル情報をセット
+            setFormData({
+              last_name: data.last_name || '',
+              first_name: data.first_name || '',
+              last_name_furigana: data.last_name_furigana || '',
+              first_name_furigana: data.first_name_furigana || '',
+              bio: data.bio || '',
+              subjects: data.subjects || '',
+              university: data.university || '',
+              birth_date: data.birth_date || '',
+              email: data.email || session.user.email || '',
+              profile_completed: true,
+              is_active: data.is_active !== false
+            });
           } else {
             console.log('プロファイルが見つかりません。新規作成モードです。');
-            // 新しいUUIDを生成
-            const newId = uuidv4();
-            console.log('生成された新しいプロファイルID:', newId);
-            
-            // 現在の日時
-            const now = new Date().toISOString();
-            
             // 新規プロファイル用の初期データを設定
-            setFormData({
-              ...formData,
-              id: newId,
-              user_id: session.user.id,
-              email: session.user.email || '',
-              created_at: now,
-              updated_at: now
-            });
+            setFormData(prev => ({
+              ...prev,
+              email: session.user.email || ''
+            }));
           }
         } catch (err) {
           console.error('プロファイル検索中のエラー:', err);
@@ -104,57 +109,6 @@ export default function TutorProfilePage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Fetch APIを使用した直接的な保存
-  const directSave = async (data) => {
-    try {
-      // APIエンドポイント
-      const endpoint = `${supabaseUrl}/rest/v1/${TABLE_NAME}`;
-      
-      // セッションからトークンを取得
-      const token = supabase.auth.session()?.access_token || userSession?.access_token;
-      
-      if (!token) {
-        console.error('認証トークンが見つかりません');
-        return { error: { message: '認証トークンが見つかりません' } };
-      }
-      
-      // 既存のプロファイルかどうかをチェック
-      const isUpdate = Boolean(data.id && formData.created_at);
-      
-      // HTTPメソッドとエンドポイント
-      const method = isUpdate ? 'PATCH' : 'POST';
-      const url = isUpdate ? `${endpoint}?id=eq.${data.id}` : endpoint;
-      
-      console.log(`${method} リクエストを実行します:`, url);
-      console.log('保存するデータ:', data);
-      
-      // リクエスト実行
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${token}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(data)
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`HTTP エラー ${response.status}:`, errorText);
-        return { error: { message: `HTTP エラー ${response.status}: ${errorText}` } };
-      }
-      
-      const result = await response.json();
-      console.log('保存成功:', result);
-      return { data: result };
-    } catch (err) {
-      console.error('直接保存エラー:', err);
-      return { error: { message: err.message } };
-    }
-  };
-
   // フォーム送信処理
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -162,96 +116,67 @@ export default function TutorProfilePage() {
     setError(null);
     setSuccess(false);
     
-    if (!formData.user_id) {
+    if (!userSession) {
       setError('ユーザー情報が見つかりません。再度ログインしてください。');
       setSaveLoading(false);
       return;
     }
     
     try {
-      // 保存前にIDが確実に含まれていることを確認
-      if (!formData.id) {
-        const newId = uuidv4();
-        console.log('IDが見つからないため、新たに生成します:', newId);
-        setFormData(prev => ({ ...prev, id: newId }));
-      }
-      
-      // 更新日時を設定
-      const now = new Date().toISOString();
-      const updatedData = {
+      // 保存するデータを準備
+      const saveData = {
         ...formData,
-        updated_at: now,
-        profile_completed: true
+        user_id: userSession.user.id
       };
       
-      // 新規作成の場合は作成日時も設定
-      if (!formData.created_at) {
-        updatedData.created_at = now;
+      console.log('保存するデータ:', saveData);
+      
+      let result;
+      
+      if (profileId) {
+        // 既存プロファイルの更新
+        console.log(`プロファイルID ${profileId} を更新します`);
+        result = await supabase
+          .from(TABLE_NAME)
+          .update(saveData)
+          .eq('id', profileId)
+          .select();
+      } else {
+        // 新規プロファイルの作成
+        // idフィールドなしで挿入（自動採番させる）
+        console.log('新規プロファイルを作成します');
+        result = await supabase
+          .from(TABLE_NAME)
+          .insert(saveData)
+          .select();
       }
       
-      console.log('保存するデータを準備:', updatedData);
+      const { data, error: saveError } = result;
       
-      // データベースにレコードが存在するか確認し、IDがSupabaseによって自動生成されていないか確認
-      const { count, error: countError } = await supabase
-        .from(TABLE_NAME)
-        .select('id', { count: 'exact', head: true })
-        .eq('id', formData.id);
-      
-      if (countError) {
-        console.warn('レコード存在確認エラー:', countError);
-      }
-      
-      const recordExists = count && count > 0;
-      console.log(`レコードID ${formData.id} の存在: ${recordExists ? '存在する' : '存在しない'}`);
-      
-      // 直接的な保存を試みる
-      const { data, error } = await directSave(updatedData);
-      
-      if (error) {
-        console.error('直接保存に失敗:', error);
+      if (saveError) {
+        console.error('プロファイル保存エラー:', saveError);
         
-        // SQL文を使った挿入を最終手段として試みる
-        try {
-          console.log('RPC経由で保存を試みます');
-          
-          // テーブル構造を出力
-          const { data: tableInfo } = await supabase
-            .rpc('get_table_structure', { table_name: TABLE_NAME });
-          
-          console.log('テーブル構造:', tableInfo);
-          
-          // データ配列を準備
-          const values = [
-            updatedData.id,
-            updatedData.user_id,
-            updatedData.first_name,
-            updatedData.last_name,
-            updatedData.first_name_furigana,
-            updatedData.last_name_furigana,
-            updatedData.bio || '',
-            updatedData.subjects || '',
-            updatedData.email,
-            updatedData.profile_completed,
-            updatedData.created_at,
-            updatedData.updated_at
-          ];
-          
-          console.log('SQL挿入値:', values);
-          
-          // SQL実行 - ここでは実際に実行しませんが、最終手段の例として示します
-          setError(`データ保存エラー: ${error.message}`);
-        } catch (rpcErr) {
-          console.error('RPC実行エラー:', rpcErr);
-          setError(`データ保存エラー: ${error.message}`);
-        }
+        // エラーメッセージの詳細表示
+        const errorDetails = saveError.details 
+          ? `詳細: ${saveError.details}` 
+          : '';
+        
+        setError(`データ保存エラー: ${saveError.message} ${errorDetails}`);
+        
+        // テーブル構造のデバッグ情報を表示
+        const { data: columns } = await supabase
+          .from('information_schema.columns')
+          .select('column_name, data_type, is_nullable')
+          .eq('table_name', TABLE_NAME);
+        
+        console.log('テーブル構造:', columns);
       } else {
         console.log('プロファイルが保存されました:', data);
         setSuccess(true);
         
-        // 返されたデータでフォームを更新
-        if (data && (Array.isArray(data) ? data[0] : data)) {
-          const savedData = Array.isArray(data) ? data[0] : data;
-          setFormData(savedData);
+        // 新規作成の場合、返されたIDを保存
+        if (!profileId && data && data[0]) {
+          setProfileId(data[0].id);
         }
       }
     } catch (err) {
@@ -308,9 +233,8 @@ export default function TutorProfilePage() {
       
       {/* デバッグ情報 */}
       <div className="mb-4 p-2 bg-gray-100 text-xs text-gray-600 rounded">
-        <div><strong>ユーザーID:</strong> {formData.user_id}</div>
-        <div><strong>プロファイルID:</strong> {formData.id || '新規作成'}</div>
-        <div><strong>作成日時:</strong> {formData.created_at || '-'}</div>
+        <div><strong>ユーザーID:</strong> {userSession?.user?.id || '-'}</div>
+        <div><strong>プロファイルID:</strong> {profileId ? profileId : '新規作成'}</div>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -364,6 +288,32 @@ export default function TutorProfilePage() {
           </div>
         </div>
         
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-700 mb-2">大学名</label>
+            <input
+              type="text"
+              name="university"
+              value={formData.university || ''}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-gray-700 mb-2">生年月日</label>
+            <input
+              type="date"
+              name="birth_date"
+              value={formData.birth_date || ''}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded"
+              required
+            />
+          </div>
+        </div>
+        
         <div>
           <label className="block text-gray-700 mb-2">メールアドレス</label>
           <input
@@ -396,6 +346,7 @@ export default function TutorProfilePage() {
             onChange={handleChange}
             className="w-full p-2 border border-gray-300 rounded"
             placeholder="数学、英語、プログラミングなど（カンマ区切りで入力）"
+            required
           />
         </div>
         
