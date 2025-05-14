@@ -35,10 +35,15 @@ function Router() {
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/reports" component={ReportListPage} />
       
-      {/* プロフィール設定関連のルート */}
+      {/* プロフィール設定関連のルート - 正確なパスマッチングを修正 */}
       <ProtectedRoute path="/profile-setup" component={ProfileSelectionPage} skipProfileCheck={true} />
+      
+      {/* パスの末尾にスラッシュがついている場合も対応するように修正 */}
       <ProtectedRoute path="/profile-setup/parent" component={ParentProfileSetupPage} skipProfileCheck={true} />
+      <ProtectedRoute path="/profile-setup/parent/" component={ParentProfileSetupPage} skipProfileCheck={true} />
+      
       <ProtectedRoute path="/profile-setup/tutor" component={TutorProfileSetupPage} skipProfileCheck={true} />
+      <ProtectedRoute path="/profile-setup/tutor/" component={TutorProfileSetupPage} skipProfileCheck={true} />
       
       {/* 後方互換性のために一時的に残しておく古いルート */}
       <ProtectedRoute path="/profile-setup-old" component={ProfileSetupPage} skipProfileCheck={true} />
