@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, GraduationCap } from "lucide-react";
+import { User, GraduationCap, ArrowRight } from "lucide-react";
 
 export default function UserTypeSelection() {
   const router = useRouter();
@@ -54,8 +54,9 @@ export default function UserTypeSelection() {
                   <li>授業チケットの購入</li>
                   <li>授業レポートの閲覧</li>
                 </ul>
-                <Button className="w-full mt-6" onClick={goToParentProfile}>
-                  保護者として登録する
+                <Button className="w-full mt-6 flex items-center justify-center" onClick={goToParentProfile}>
+                  <span>登録へ進む</span>
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardContent>
             </Card>
@@ -80,8 +81,9 @@ export default function UserTypeSelection() {
                   <li>授業レポートの作成</li>
                   <li>指導可能時間の設定</li>
                 </ul>
-                <Button className="w-full mt-6" onClick={goToTutorProfile}>
-                  講師として登録する
+                <Button className="w-full mt-6 flex items-center justify-center" onClick={goToTutorProfile}>
+                  <span>登録へ進む</span>
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardContent>
             </Card>
