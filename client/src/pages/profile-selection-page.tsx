@@ -4,10 +4,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { User, GraduationCap } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProfileSelectionPage() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   
   // プロフィール選択が完了しているかチェック
   const isProfileSelected = !!user && !!user.role;
@@ -25,6 +28,8 @@ export default function ProfileSelectionPage() {
   // 保護者として登録
   const registerAsParent = async () => {
     try {
+      setIsLoading(true);
+      
       // ロールを保護者に設定するAPIリクエスト
       const response = await fetch("/api/user/role", {
         method: "POST",
@@ -42,13 +47,21 @@ export default function ProfileSelectionPage() {
       navigate("/profile-setup/parent");
     } catch (error) {
       console.error("保護者登録エラー:", error);
-      // エラー処理（実際の実装ではtoastなどでユーザーに通知）
+      toast({
+        title: "エラーが発生しました",
+        description: "保護者登録に失敗しました。もう一度お試しください。",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
   
   // 講師として登録
   const registerAsTutor = async () => {
     try {
+      setIsLoading(true);
+      
       // ロールを講師に設定するAPIリクエスト
       const response = await fetch("/api/user/role", {
         method: "POST",
@@ -66,7 +79,13 @@ export default function ProfileSelectionPage() {
       navigate("/profile-setup/tutor");
     } catch (error) {
       console.error("講師登録エラー:", error);
-      // エラー処理（実際の実装ではtoastなどでユーザーに通知）
+      toast({
+        title: "エラーが発生しました",
+        description: "講師登録に失敗しました。もう一度お試しください。",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -105,8 +124,9 @@ export default function ProfileSelectionPage() {
                 <Button 
                   className="w-full" 
                   onClick={registerAsParent}
+                  disabled={isLoading}
                 >
-                  保護者として続ける
+                  {isLoading ? '処理中...' : '保護者として続ける'}
                 </Button>
               </CardFooter>
             </Card>
@@ -131,8 +151,9 @@ export default function ProfileSelectionPage() {
                 <Button 
                   className="w-full"
                   onClick={registerAsTutor}
+                  disabled={isLoading}
                 >
-                  講師として続ける
+                  {isLoading ? '処理中...' : '講師として続ける'}
                 </Button>
               </CardFooter>
             </Card>
