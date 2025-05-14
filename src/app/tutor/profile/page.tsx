@@ -15,22 +15,25 @@ const TABLE_NAME = 'tutor_profiles';
 
 export default function TutorProfilePage() {
   const [formData, setFormData] = useState({
+    id: '',  // 明示的にidを含める
+    user_id: '',
     last_name: '',
     first_name: '',
     last_name_furigana: '',
     first_name_furigana: '',
     bio: '',
     subjects: '',
-    email: ''
+    email: '',
+    profile_completed: false,
+    created_at: null,
+    updated_at: null
   });
   
-  const [profileId, setProfileId] = useState('');
-  const [userId, setUserId] = useState('');
-  const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [userSession, setUserSession] = useState(null);
 
   // 初期化
   useEffect(() => {
@@ -46,12 +49,8 @@ export default function TutorProfilePage() {
           return;
         }
         
+        setUserSession(session);
         console.log('Session found, user email:', session.user.email);
-        
-        // ユーザー情報を設定
-        setUserId(session.user.id);
-        setUserEmail(session.user.email || '');
-        setFormData(prev => ({ ...prev, email: session.user.email || '' }));
         
         // 既存のプロファイルを検索
         try {
@@ -65,22 +64,26 @@ export default function TutorProfilePage() {
             console.error('プロファイル検索エラー:', error);
           } else if (data) {
             console.log('既存のプロファイルを読み込みました:', data);
-            setProfileId(data.id || '');
-            setFormData({
-              last_name: data.last_name || '',
-              first_name: data.first_name || '',
-              last_name_furigana: data.last_name_furigana || '',
-              first_name_furigana: data.first_name_furigana || '',
-              bio: data.bio || '',
-              subjects: data.subjects || '',
-              email: data.email || session.user.email || ''
-            });
+            // 既存データをそのまますべて使用
+            setFormData(data);
           } else {
             console.log('プロファイルが見つかりません。新規作成モードです。');
             // 新しいUUIDを生成
             const newId = uuidv4();
             console.log('生成された新しいプロファイルID:', newId);
-            setProfileId(newId);
+            
+            // 現在の日時
+            const now = new Date().toISOString();
+            
+            // 新規プロファイル用の初期データを設定
+            setFormData({
+              ...formData,
+              id: newId,
+              user_id: session.user.id,
+              email: session.user.email || '',
+              created_at: now,
+              updated_at: now
+            });
           }
         } catch (err) {
           console.error('プロファイル検索中のエラー:', err);
@@ -101,6 +104,57 @@ export default function TutorProfilePage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Fetch APIを使用した直接的な保存
+  const directSave = async (data) => {
+    try {
+      // APIエンドポイント
+      const endpoint = `${supabaseUrl}/rest/v1/${TABLE_NAME}`;
+      
+      // セッションからトークンを取得
+      const token = supabase.auth.session()?.access_token || userSession?.access_token;
+      
+      if (!token) {
+        console.error('認証トークンが見つかりません');
+        return { error: { message: '認証トークンが見つかりません' } };
+      }
+      
+      // 既存のプロファイルかどうかをチェック
+      const isUpdate = Boolean(data.id && formData.created_at);
+      
+      // HTTPメソッドとエンドポイント
+      const method = isUpdate ? 'PATCH' : 'POST';
+      const url = isUpdate ? `${endpoint}?id=eq.${data.id}` : endpoint;
+      
+      console.log(`${method} リクエストを実行します:`, url);
+      console.log('保存するデータ:', data);
+      
+      // リクエスト実行
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${token}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`HTTP エラー ${response.status}:`, errorText);
+        return { error: { message: `HTTP エラー ${response.status}: ${errorText}` } };
+      }
+      
+      const result = await response.json();
+      console.log('保存成功:', result);
+      return { data: result };
+    } catch (err) {
+      console.error('直接保存エラー:', err);
+      return { error: { message: err.message } };
+    }
+  };
+
   // フォーム送信処理
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -108,94 +162,96 @@ export default function TutorProfilePage() {
     setError(null);
     setSuccess(false);
     
-    if (!userId) {
+    if (!formData.user_id) {
       setError('ユーザー情報が見つかりません。再度ログインしてください。');
       setSaveLoading(false);
       return;
     }
     
     try {
-      // データを保存する前に、IDをまだ持っていない場合は新しく生成
-      const currentProfileId = profileId || uuidv4();
-      console.log('使用するプロファイルID:', currentProfileId);
+      // 保存前にIDが確実に含まれていることを確認
+      if (!formData.id) {
+        const newId = uuidv4();
+        console.log('IDが見つからないため、新たに生成します:', newId);
+        setFormData(prev => ({ ...prev, id: newId }));
+      }
       
-      // ダイレクトSQL実行による保存（低レベルAPIを使用）
-      const { data, error } = await supabase.rpc('save_tutor_profile', {
-        p_id: currentProfileId,
-        p_user_id: userId,
-        p_first_name: formData.first_name,
-        p_last_name: formData.last_name,
-        p_first_name_furigana: formData.first_name_furigana,
-        p_last_name_furigana: formData.last_name_furigana,
-        p_bio: formData.bio,
-        p_subjects: formData.subjects,
-        p_email: formData.email,
-        p_profile_completed: true
-      });
+      // 更新日時を設定
+      const now = new Date().toISOString();
+      const updatedData = {
+        ...formData,
+        updated_at: now,
+        profile_completed: true
+      };
+      
+      // 新規作成の場合は作成日時も設定
+      if (!formData.created_at) {
+        updatedData.created_at = now;
+      }
+      
+      console.log('保存するデータを準備:', updatedData);
+      
+      // データベースにレコードが存在するか確認し、IDがSupabaseによって自動生成されていないか確認
+      const { count, error: countError } = await supabase
+        .from(TABLE_NAME)
+        .select('id', { count: 'exact', head: true })
+        .eq('id', formData.id);
+      
+      if (countError) {
+        console.warn('レコード存在確認エラー:', countError);
+      }
+      
+      const recordExists = count && count > 0;
+      console.log(`レコードID ${formData.id} の存在: ${recordExists ? '存在する' : '存在しない'}`);
+      
+      // 直接的な保存を試みる
+      const { data, error } = await directSave(updatedData);
       
       if (error) {
-        console.error('プロシージャ実行エラー:', error);
+        console.error('直接保存に失敗:', error);
         
-        // 代替方法: 直接RawSQL実行 (RPCが使えない場合のフォールバック)
-        const timestamp = new Date().toISOString();
-        const { data: rawData, error: rawError } = await supabase.from(TABLE_NAME).insert({
-          id: currentProfileId,
-          user_id: userId,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          first_name_furigana: formData.first_name_furigana,
-          last_name_furigana: formData.last_name_furigana,
-          bio: formData.bio,
-          subjects: formData.subjects,
-          email: formData.email,
-          profile_completed: true,
-          created_at: timestamp,
-          updated_at: timestamp
-        }).select();
-        
-        if (rawError) {
-          console.error('直接挿入エラー:', rawError);
+        // SQL文を使った挿入を最終手段として試みる
+        try {
+          console.log('RPC経由で保存を試みます');
           
-          // 最終手段: 既存のレコードがあれば更新、なければ挿入
-          if (profileId) {
-            // 既存レコードの更新
-            const { error: updateError } = await supabase
-              .from(TABLE_NAME)
-              .update({
-                first_name: formData.first_name,
-                last_name: formData.last_name,
-                first_name_furigana: formData.first_name_furigana,
-                last_name_furigana: formData.last_name_furigana,
-                bio: formData.bio,
-                subjects: formData.subjects,
-                email: formData.email,
-                profile_completed: true,
-                updated_at: timestamp
-              })
-              .eq('id', profileId);
-            
-            if (updateError) {
-              console.error('更新エラー:', updateError);
-              setError(`データ保存エラー: ${updateError.message}`);
-            } else {
-              console.log('プロファイルが更新されました');
-              setSuccess(true);
-            }
-          } else {
-            setError(`データ保存エラー: ${rawError.message}`);
-          }
-        } else {
-          console.log('プロファイルが保存されました:', rawData);
-          setSuccess(true);
-          if (!profileId) {
-            setProfileId(currentProfileId);
-          }
+          // テーブル構造を出力
+          const { data: tableInfo } = await supabase
+            .rpc('get_table_structure', { table_name: TABLE_NAME });
+          
+          console.log('テーブル構造:', tableInfo);
+          
+          // データ配列を準備
+          const values = [
+            updatedData.id,
+            updatedData.user_id,
+            updatedData.first_name,
+            updatedData.last_name,
+            updatedData.first_name_furigana,
+            updatedData.last_name_furigana,
+            updatedData.bio || '',
+            updatedData.subjects || '',
+            updatedData.email,
+            updatedData.profile_completed,
+            updatedData.created_at,
+            updatedData.updated_at
+          ];
+          
+          console.log('SQL挿入値:', values);
+          
+          // SQL実行 - ここでは実際に実行しませんが、最終手段の例として示します
+          setError(`データ保存エラー: ${error.message}`);
+        } catch (rpcErr) {
+          console.error('RPC実行エラー:', rpcErr);
+          setError(`データ保存エラー: ${error.message}`);
         }
       } else {
-        console.log('プロシージャ実行成功:', data);
+        console.log('プロファイルが保存されました:', data);
         setSuccess(true);
-        if (!profileId) {
-          setProfileId(currentProfileId);
+        
+        // 返されたデータでフォームを更新
+        if (data && (Array.isArray(data) ? data[0] : data)) {
+          const savedData = Array.isArray(data) ? data[0] : data;
+          setFormData(savedData);
         }
       }
     } catch (err) {
@@ -222,7 +278,7 @@ export default function TutorProfilePage() {
   }
 
   // ログインしていない場合の表示
-  if (!userId) {
+  if (!userSession) {
     return (
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">講師プロフィール設定</h1>
@@ -252,8 +308,9 @@ export default function TutorProfilePage() {
       
       {/* デバッグ情報 */}
       <div className="mb-4 p-2 bg-gray-100 text-xs text-gray-600 rounded">
-        ユーザーID: {userId}<br />
-        プロファイルID: {profileId || '新規作成'}
+        <div><strong>ユーザーID:</strong> {formData.user_id}</div>
+        <div><strong>プロファイルID:</strong> {formData.id || '新規作成'}</div>
+        <div><strong>作成日時:</strong> {formData.created_at || '-'}</div>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -263,7 +320,7 @@ export default function TutorProfilePage() {
             <input
               type="text"
               name="last_name"
-              value={formData.last_name}
+              value={formData.last_name || ''}
               onChange={handleChange}
               className="w-full p-2 border border-gray-300 rounded"
               required
@@ -275,7 +332,7 @@ export default function TutorProfilePage() {
             <input
               type="text"
               name="first_name"
-              value={formData.first_name}
+              value={formData.first_name || ''}
               onChange={handleChange}
               className="w-full p-2 border border-gray-300 rounded"
               required
@@ -287,7 +344,7 @@ export default function TutorProfilePage() {
             <input
               type="text"
               name="last_name_furigana"
-              value={formData.last_name_furigana}
+              value={formData.last_name_furigana || ''}
               onChange={handleChange}
               className="w-full p-2 border border-gray-300 rounded"
               required
@@ -299,7 +356,7 @@ export default function TutorProfilePage() {
             <input
               type="text"
               name="first_name_furigana"
-              value={formData.first_name_furigana}
+              value={formData.first_name_furigana || ''}
               onChange={handleChange}
               className="w-full p-2 border border-gray-300 rounded"
               required
@@ -312,7 +369,7 @@ export default function TutorProfilePage() {
           <input
             type="email"
             name="email"
-            value={formData.email}
+            value={formData.email || ''}
             readOnly
             className="w-full p-2 border border-gray-300 rounded bg-gray-100"
           />
@@ -323,7 +380,7 @@ export default function TutorProfilePage() {
           <label className="block text-gray-700 mb-2">自己紹介</label>
           <textarea
             name="bio"
-            value={formData.bio}
+            value={formData.bio || ''}
             onChange={handleChange}
             className="w-full p-2 border border-gray-300 rounded"
             rows="4"
@@ -335,7 +392,7 @@ export default function TutorProfilePage() {
           <input
             type="text"
             name="subjects"
-            value={formData.subjects}
+            value={formData.subjects || ''}
             onChange={handleChange}
             className="w-full p-2 border border-gray-300 rounded"
             placeholder="数学、英語、プログラミングなど（カンマ区切りで入力）"
