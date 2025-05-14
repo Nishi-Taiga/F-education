@@ -649,10 +649,6 @@ export default function TutorProfileSetupPage() {
                       type="submit" 
                       className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
                       disabled={isSaving || saveProfileMutation.isPending}
-                      onClick={() => {
-                        // ボタンクリック時もフォームエラーをコンソールに表示（デバッグ用）
-                        console.log("保存ボタンクリック - フォームエラー:", form.formState.errors);
-                      }}
                     >
                       {isSaving || saveProfileMutation.isPending ? (
                         <span className="flex items-center gap-1">
