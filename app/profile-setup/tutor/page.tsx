@@ -12,51 +12,62 @@ import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// 高校科目のカテゴリー
+const highSchoolCategories = {
+  "国語": ["現代文", "古典"],
+  "数学": ["数学"],
+  "理科": ["物理", "化学", "生物", "地学"],
+  "社会": ["地理", "日本史", "世界史", "公共"],
+  "英語": ["英語"],
+  "その他": ["情報"]
+};
+
+// 小学生の科目
+const elementarySubjects = [
+  "国語", "算数", "理科", "社会", "英語"
+];
+
+// 中学生の科目
+const juniorHighSubjects = [
+  "国語", "数学", "理科", "社会", "英語"
+];
+
 export default function TutorProfileSetup() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
-    name: "",
-    bio: "",
-    specialization: "",
-    yearsOfExperience: "",
-    hourlyRate: "",
-    subjects: [] as string[],
-    availability: {
-      monday: false,
-      tuesday: false,
-      wednesday: false,
-      thursday: false,
-      friday: false,
-      saturday: false,
-      sunday: false
-    },
+    lastName: "",
+    firstName: "",
+    lastNameFurigana: "",
+    firstNameFurigana: "",
+    university: "",
+    birthDate: "",
+    email: "",
+    selectedSubjects: [] as string[],
   });
 
-  const subjects = [
-    "数学", "英語", "国語", "理科", "社会", "物理", "化学", "生物", "地学", 
-    "世界史", "日本史", "地理", "プログラミング", "音楽", "美術", "体育"
-  ];
-
-  const handleSubjectChange = (subject: string) => {
-    setFormData(prev => {
-      const subjects = prev.subjects.includes(subject)
-        ? prev.subjects.filter(s => s !== subject)
-        : [...prev.subjects, subject];
-      return { ...prev, subjects };
-    });
-  };
-
-  const handleAvailabilityChange = (day: keyof typeof formData.availability) => {
-    setFormData(prev => ({
-      ...prev,
-      availability: {
-        ...prev.availability,
-        [day]: !prev.availability[day]
+  const handleSubjectChange = (subject: string, category?: string) => {
+    let fullSubjectName = subject;
+    
+    // カテゴリーが指定されている場合、フルネームを生成
+    if (category) {
+      if (category === "小学生") {
+        fullSubjectName = `小学${subject}`;
+      } else if (category === "中学生") {
+        fullSubjectName = `中学${subject}`;
+      } else if (category === "高校生") {
+        fullSubjectName = `高校${subject}`;
       }
-    }));
+    }
+    
+    setFormData(prev => {
+      const subjects = prev.selectedSubjects.includes(fullSubjectName)
+        ? prev.selectedSubjects.filter(s => s !== fullSubjectName)
+        : [...prev.selectedSubjects, fullSubjectName];
+      return { ...prev, selectedSubjects: subjects };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,6 +75,27 @@ export default function TutorProfileSetup() {
     setIsLoading(true);
 
     try {
+      // 入力バリデーション
+      const requiredFields = [
+        'lastName', 'firstName', 'lastNameFurigana', 'firstNameFurigana',
+        'university', 'birthDate', 'email'
+      ];
+      
+      for (const field of requiredFields) {
+        if (!formData[field as keyof typeof formData]) {
+          throw new Error(`${field}は必須項目です`);
+        }
+      }
+      
+      if (formData.selectedSubjects.length === 0) {
+        throw new Error("少なくとも1つの科目を選択してください");
+      }
+      
+      // メールアドレスの簡易バリデーション
+      if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+        throw new Error("有効なメールアドレスを入力してください");
+      }
+
       // ユーザーセッションを取得
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -71,19 +103,24 @@ export default function TutorProfileSetup() {
         throw new Error("ユーザー認証情報が見つかりません");
       }
 
+      // 科目の配列をカンマ区切りの文字列に変換
+      const subjects = formData.selectedSubjects.join(",");
+
       // プロフィール情報を保存
       const { error } = await supabase
         .from('tutor_profiles')
         .insert([
           {
             user_id: user.id,
-            name: formData.name,
-            bio: formData.bio,
-            specialization: formData.specialization,
-            years_of_experience: parseInt(formData.yearsOfExperience),
-            hourly_rate: parseInt(formData.hourlyRate),
-            subjects: formData.subjects,
-            availability: formData.availability
+            last_name: formData.lastName,
+            first_name: formData.firstName,
+            last_name_furigana: formData.lastNameFurigana,
+            first_name_furigana: formData.firstNameFurigana,
+            university: formData.university,
+            birth_date: formData.birthDate,
+            subjects: subjects,
+            email: formData.email,
+            profile_completed: true
           }
         ]);
 
@@ -116,135 +153,186 @@ export default function TutorProfileSetup() {
           <CardHeader>
             <CardTitle className="text-2xl">講師プロフィール設定</CardTitle>
             <CardDescription>
-              講師としてのプロフィール情報を入力してください。これらの情報は保護者が講師を選ぶ際に表示されます。
+              講師としての情報を入力してください。これらの情報は生徒とその保護者に公開されます。
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">氏名</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="田中 太郎"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bio">自己紹介</Label>
-                <Textarea
-                  id="bio"
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  placeholder="自己紹介や指導方針などを記入してください"
-                  rows={4}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 基本情報 */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">基本情報</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">姓</Label>
+                    <Input
+                      id="lastName"
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      placeholder="例：山田"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">名</Label>
+                    <Input
+                      id="firstName"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      placeholder="例：太郎"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="lastNameFurigana">姓（ふりがな）</Label>
+                    <Input
+                      id="lastNameFurigana"
+                      value={formData.lastNameFurigana}
+                      onChange={(e) => setFormData({ ...formData, lastNameFurigana: e.target.value })}
+                      placeholder="例：やまだ"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="firstNameFurigana">名（ふりがな）</Label>
+                    <Input
+                      id="firstNameFurigana"
+                      value={formData.firstNameFurigana}
+                      onChange={(e) => setFormData({ ...formData, firstNameFurigana: e.target.value })}
+                      placeholder="例：たろう"
+                      required
+                    />
+                  </div>
+                </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="specialization">専門分野</Label>
+                  <Label htmlFor="university">大学名</Label>
                   <Input
-                    id="specialization"
-                    value={formData.specialization}
-                    onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                    placeholder="例: 高校数学・物理"
+                    id="university"
+                    value={formData.university}
+                    onChange={(e) => setFormData({ ...formData, university: e.target.value })}
+                    placeholder="例：東京大学"
                     required
                   />
+                  <p className="text-sm text-gray-500">現在通っている、または卒業した大学名を入力してください。</p>
                 </div>
-
+                
                 <div className="space-y-2">
-                  <Label htmlFor="yearsOfExperience">指導経験年数</Label>
-                  <Select
-                    onValueChange={(value) => setFormData({ ...formData, yearsOfExperience: value })}
-                    defaultValue={formData.yearsOfExperience}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="選択してください" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">1年未満</SelectItem>
-                      <SelectItem value="1">1年</SelectItem>
-                      <SelectItem value="2">2年</SelectItem>
-                      <SelectItem value="3">3年</SelectItem>
-                      <SelectItem value="5">5年以上</SelectItem>
-                      <SelectItem value="10">10年以上</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="birthDate">生年月日</Label>
+                  <Input
+                    id="birthDate"
+                    type="date"
+                    value={formData.birthDate}
+                    onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+                    required
+                  />
+                  <p className="text-sm text-gray-500">講師は18歳以上の方のみ登録可能です。</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">メールアドレス（予約通知用）</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="例：yamada@example.com"
+                    required
+                  />
+                  <p className="text-sm text-gray-500">このメールアドレスに予約と取り消しの通知が送信されます。</p>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="hourlyRate">時給（円）</Label>
-                <Input
-                  id="hourlyRate"
-                  type="number"
-                  value={formData.hourlyRate}
-                  onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                  placeholder="例: 3000"
-                  min="1000"
-                  step="100"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>指導可能科目</Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {subjects.map((subject) => (
-                    <div key={subject} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`subject-${subject}`}
-                        checked={formData.subjects.includes(subject)}
-                        onCheckedChange={() => handleSubjectChange(subject)}
-                      />
-                      <Label
-                        htmlFor={`subject-${subject}`}
-                        className="text-sm font-normal"
-                      >
-                        {subject}
-                      </Label>
+              
+              <hr className="my-6" />
+              
+              {/* 指導科目 */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">指導可能な科目</h3>
+                <p className="text-sm text-gray-500">指導可能な科目を選択してください。複数選択できます。</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* 小学生の科目 */}
+                  <div className="space-y-2">
+                    <Label className="font-medium">小学生</Label>
+                    <div className="space-y-1">
+                      {elementarySubjects.map(subject => (
+                        <div key={`小学${subject}`} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`elem-${subject}`}
+                            checked={formData.selectedSubjects.includes(`小学${subject}`)}
+                            onCheckedChange={() => handleSubjectChange(subject, "小学生")}
+                          />
+                          <Label
+                            htmlFor={`elem-${subject}`}
+                            className="text-sm font-normal"
+                          >
+                            {subject}
+                          </Label>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>指導可能曜日</Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {Object.entries(formData.availability).map(([day, checked]) => {
-                    const localizedDay = {
-                      monday: "月曜日",
-                      tuesday: "火曜日",
-                      wednesday: "水曜日",
-                      thursday: "木曜日",
-                      friday: "金曜日",
-                      saturday: "土曜日",
-                      sunday: "日曜日"
-                    }[day as keyof typeof formData.availability];
-
-                    return (
-                      <div key={day} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`day-${day}`}
-                          checked={checked}
-                          onCheckedChange={() => handleAvailabilityChange(day as keyof typeof formData.availability)}
-                        />
-                        <Label
-                          htmlFor={`day-${day}`}
-                          className="text-sm font-normal"
-                        >
-                          {localizedDay}
-                        </Label>
+                  </div>
+                  
+                  {/* 中学生の科目 */}
+                  <div className="space-y-2">
+                    <Label className="font-medium">中学生</Label>
+                    <div className="space-y-1">
+                      {juniorHighSubjects.map(subject => (
+                        <div key={`中学${subject}`} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`jhs-${subject}`}
+                            checked={formData.selectedSubjects.includes(`中学${subject}`)}
+                            onCheckedChange={() => handleSubjectChange(subject, "中学生")}
+                          />
+                          <Label
+                            htmlFor={`jhs-${subject}`}
+                            className="text-sm font-normal"
+                          >
+                            {subject}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* 高校生の科目（カテゴリー分け） */}
+                  <div className="space-y-4">
+                    <Label className="font-medium">高校生</Label>
+                    {Object.entries(highSchoolCategories).map(([category, subjects]) => (
+                      <div key={category} className="mt-2">
+                        <Label className="text-sm font-medium text-gray-700">{category}</Label>
+                        <div className="ml-2 mt-1 space-y-1">
+                          {subjects.map(subject => {
+                            const fullSubjectName = `高校${subject}`;
+                            return (
+                              <div key={fullSubjectName} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`hs-${subject}`}
+                                  checked={formData.selectedSubjects.includes(fullSubjectName)}
+                                  onCheckedChange={() => handleSubjectChange(subject, "高校生")}
+                                />
+                                <Label
+                                  htmlFor={`hs-${subject}`}
+                                  className="text-sm font-normal"
+                                >
+                                  {subject}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
               </div>
-
+              
               <div className="pt-4">
                 <Button
                   type="submit"
