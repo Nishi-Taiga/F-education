@@ -19,16 +19,11 @@ import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 import { useEffect } from "react";
 
-// 新しいページをインポート
-import ProfileSelectionPage from "@/pages/profile-selection-page";
-import ParentProfileSetupPage from "@/pages/parent-profile-setup-page";
-import TutorProfileSetupPage from "@/pages/tutor-profile-setup-page";
-
-// バグチェック用のロギング関数を追加
-const logPathAccess = (path) => {
-  console.log(`Checking route: ${path}`);
-  return true;
-}
+// 新しいプロファイル関連ページをインポート
+import ProfileSetupRouter from "@/pages/profile-setup-router";
+import ProfileSelectionWrapper from "@/pages/profile-selection";
+import ParentProfilePage from "@/pages/parent-profile";
+import TutorProfilePage from "@/pages/tutor-profile";
 
 function Router() {
   return (
@@ -41,16 +36,11 @@ function Router() {
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/reports" component={ReportListPage} />
       
-      {/* プロフィール設定関連のルート - 正確なパスマッチングを修正 */}
-      <ProtectedRoute path="/profile-setup" component={ProfileSelectionPage} skipProfileCheck={true} />
-      
-      {/* 末尾にスラッシュが付いていない場合のルート */}
-      <ProtectedRoute path="/profile-setup/parent" component={ParentProfileSetupPage} skipProfileCheck={true} />
-      <ProtectedRoute path="/profile-setup/tutor" component={TutorProfileSetupPage} skipProfileCheck={true} />
-      
-      {/* 末尾にスラッシュが付いている場合のルート */}
-      <ProtectedRoute path="/profile-setup/parent/" component={ParentProfileSetupPage} skipProfileCheck={true} />
-      <ProtectedRoute path="/profile-setup/tutor/" component={TutorProfileSetupPage} skipProfileCheck={true} />
+      {/* プロファイル設定関連のルート */}
+      <ProtectedRoute path="/profile-setup" component={ProfileSetupRouter} skipProfileCheck={true} />
+      <ProtectedRoute path="/profile-selection" component={ProfileSelectionWrapper} skipProfileCheck={true} />
+      <ProtectedRoute path="/parent-profile" component={ParentProfilePage} skipProfileCheck={true} />
+      <ProtectedRoute path="/tutor-profile" component={TutorProfilePage} skipProfileCheck={true} />
       
       {/* 後方互換性のために一時的に残しておく古いルート */}
       <ProtectedRoute path="/profile-setup-old" component={ProfileSetupPage} skipProfileCheck={true} />
@@ -81,7 +71,7 @@ function App() {
     window.addEventListener('resize', setVhProperty);
     
     // ルーティングのデバッグ情報を表示
-    console.log("App initialized with routes for /profile-setup/parent and /profile-setup/tutor");
+    console.log("App initialized with updated routes for profile setup pages");
     
     return () => {
       window.removeEventListener('resize', setVhProperty);
