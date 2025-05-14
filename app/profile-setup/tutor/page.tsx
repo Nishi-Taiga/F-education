@@ -44,7 +44,6 @@ export default function TutorProfileSetup() {
     firstNameFurigana: "",
     university: "",
     birthDate: "",
-    email: "",
     selectedSubjects: [] as string[],
   });
 
@@ -78,7 +77,7 @@ export default function TutorProfileSetup() {
       // 入力バリデーション
       const requiredFields = [
         'lastName', 'firstName', 'lastNameFurigana', 'firstNameFurigana',
-        'university', 'birthDate', 'email'
+        'university', 'birthDate'
       ];
       
       for (const field of requiredFields) {
@@ -89,11 +88,6 @@ export default function TutorProfileSetup() {
       
       if (formData.selectedSubjects.length === 0) {
         throw new Error("少なくとも1つの科目を選択してください");
-      }
-      
-      // メールアドレスの簡易バリデーション
-      if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
-        throw new Error("有効なメールアドレスを入力してください");
       }
 
       // ユーザーセッションを取得
@@ -119,7 +113,7 @@ export default function TutorProfileSetup() {
             university: formData.university,
             birth_date: formData.birthDate,
             subjects: subjects,
-            email: formData.email,
+            email: user.email, // ログイン時のメールアドレスを使用
             profile_completed: true
           }
         ]);
@@ -233,19 +227,6 @@ export default function TutorProfileSetup() {
                     required
                   />
                   <p className="text-sm text-gray-500">講師は18歳以上の方のみ登録可能です。</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">メールアドレス（予約通知用）</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="例：yamada@example.com"
-                    required
-                  />
-                  <p className="text-sm text-gray-500">このメールアドレスに予約と取り消しの通知が送信されます。</p>
                 </div>
               </div>
               
