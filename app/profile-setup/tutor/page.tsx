@@ -193,25 +193,14 @@ export default function TutorProfileSetup() {
         throw new Error(`データ保存エラー: ${saveResult.error.message}`);
       }
 
-      // usersテーブルの更新は現在のテーブル構造と互換性がないためスキップ
-      /* 
-      以下の理由でusersテーブルの更新をスキップします：
-      1. usersテーブルのidはinteger型だが、認証ユーザーIDはUUID型
-      2. auth_user_idカラムが存在しないエラーが発生している
-      
-      このアプリケーションの今後の開発では、以下の点を検討してください：
-      1. usersテーブルにauth_user_id (UUID型) カラムを追加し、Supabase認証と紐付ける
-      2. または、Supabaseの認証スキーマ (auth.users) を直接使用するように変更する
-      */
-
       // 成功通知
       toast({
         title: "プロフィール設定完了",
         description: "講師プロフィールが正常に設定されました",
       });
 
-      // ダッシュボードページに問題があるため、一時的にホームページにリダイレクト
-      router.push('/');
+      // ダッシュボードに遷移 - ダッシュボードページは更新済み
+      router.push('/dashboard');
     } catch (error: any) {
       console.error("プロフィール設定エラー:", error);
       toast({
