@@ -103,9 +103,8 @@ export default function TutorProfileSetup() {
       // 科目の配列をカンマ区切りの文字列に変換
       const subjects = formData.selectedSubjects.join(",");
 
-      // プロフィールデータを構築
+      // プロフィールデータを構築 - idフィールドを削除（自動生成に任せる）
       const profileData = {
-        id: user.id, // IDを明示的に設定
         user_id: user.id,
         last_name: formData.lastName,
         first_name: formData.firstName,
@@ -116,21 +115,41 @@ export default function TutorProfileSetup() {
         subjects: subjects,
         email: user.email,
         profile_completed: true,
-        created_at: new Date().toISOString()  // 現在のタイムスタンプを設定
+        created_at: new Date().toISOString()
       };
 
       console.log("Profile data to save:", profileData);
 
-      // 直接tutor_profilesテーブルに保存
-      const { data, error } = await supabase
+      // まず既存のデータを確認
+      const { data: existingData, error: checkError } = await supabase
         .from('tutor_profiles')
-        .upsert([profileData])
-        .select();
+        .select()
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      console.log("Existing profile check:", { existingData, checkError });
       
-      console.log("Save to tutor_profiles result:", { data, error });
+      let saveResult;
       
-      if (error) {
-        throw new Error(`データ保存エラー: ${error.message}`);
+      if (existingData) {
+        // 既存のレコードがあれば更新
+        saveResult = await supabase
+          .from('tutor_profiles')
+          .update(profileData)
+          .eq('user_id', user.id)
+          .select();
+      } else {
+        // 新規レコードを挿入
+        saveResult = await supabase
+          .from('tutor_profiles')
+          .insert([profileData])
+          .select();
+      }
+      
+      console.log("Save to tutor_profiles result:", saveResult);
+      
+      if (saveResult.error) {
+        throw new Error(`データ保存エラー: ${saveResult.error.message}`);
       }
 
       // usersテーブルのプロフィール完了フラグを更新する試行
