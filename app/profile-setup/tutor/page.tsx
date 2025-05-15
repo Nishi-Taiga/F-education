@@ -70,58 +70,6 @@ export default function TutorProfileSetup() {
     });
   };
 
-  // 利用可能なテーブルを確認する関数
-  const checkTables = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('tutors')
-        .select('*')
-        .limit(1);
-
-      console.log("Tutors table check result:", { data, error });
-      return !error;
-    } catch (e) {
-      console.error("Error checking tutors table:", e);
-      return false;
-    }
-  };
-
-  // テーブルの場所を判断してデータを保存する関数
-  const saveProfile = async (userId: string, profileData: any) => {
-    // まずtutorsテーブルを試す
-    const tutorsCheck = await checkTables();
-    
-    if (tutorsCheck) {
-      // tutorsテーブルが存在する場合
-      console.log("Trying to save to tutors table");
-      const { data, error } = await supabase
-        .from('tutors')
-        .insert([profileData])
-        .select();
-        
-      console.log("Save to tutors result:", { data, error });
-      
-      if (!error) {
-        return { success: true, table: 'tutors', data };
-      }
-    }
-    
-    // tutorsが失敗した場合はtutor_profilesテーブルを試す
-    console.log("Trying to save to tutor_profiles table");
-    const { data, error } = await supabase
-      .from('tutor_profiles')
-      .insert([profileData])
-      .select();
-      
-    console.log("Save to tutor_profiles result:", { data, error });
-    
-    if (error) {
-      return { success: false, error };
-    }
-    
-    return { success: true, table: 'tutor_profiles', data };
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -157,6 +105,7 @@ export default function TutorProfileSetup() {
 
       // プロフィールデータを構築
       const profileData = {
+        id: user.id, // IDを明示的に設定
         user_id: user.id,
         last_name: formData.lastName,
         first_name: formData.firstName,
@@ -166,19 +115,23 @@ export default function TutorProfileSetup() {
         birth_date: formData.birthDate,
         subjects: subjects,
         email: user.email,
-        profile_completed: true
+        profile_completed: true,
+        created_at: new Date().toISOString()  // 現在のタイムスタンプを設定
       };
 
       console.log("Profile data to save:", profileData);
 
-      // データ保存を試行
-      const saveResult = await saveProfile(user.id, profileData);
+      // 直接tutor_profilesテーブルに保存
+      const { data, error } = await supabase
+        .from('tutor_profiles')
+        .upsert([profileData])
+        .select();
       
-      if (!saveResult.success) {
-        throw new Error(`データ保存エラー: ${saveResult.error?.message || "Unknown error"}`);
+      console.log("Save to tutor_profiles result:", { data, error });
+      
+      if (error) {
+        throw new Error(`データ保存エラー: ${error.message}`);
       }
-
-      console.log(`Successfully saved to ${saveResult.table} table:`, saveResult.data);
 
       // usersテーブルのプロフィール完了フラグを更新する試行
       try {
