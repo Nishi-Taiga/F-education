@@ -1,4 +1,26 @@
-を入力してください" }),
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/lib/supabase/client";
+
+// 講師情報のスキーマ
+const tutorProfileSchema = z.object({
+  last_name: z.string().min(1, { message: "姓を入力してください" }),
+  first_name: z.string().min(1, { message: "名を入力してください" }),
+  last_name_furigana: z.string().min(1, { message: "姓のふりがなを入力してください" }),
+  first_name_furigana: z.string().min(1, { message: "名のふりがなを入力してください" }),
+  university: z.string().min(2, { message: "大学名を入力してください" }),
   birth_date: z.string().min(1, { message: "生年月日を入力してください" }),
   subjects: z.string().min(1, { message: "担当科目を選択してください" }),
   bio: z.string().optional(),
