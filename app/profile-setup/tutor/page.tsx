@@ -193,22 +193,16 @@ export default function TutorProfileSetup() {
         throw new Error(`データ保存エラー: ${saveResult.error.message}`);
       }
 
-      // usersテーブルのプロフィール完了フラグを更新する試行
-      try {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ profile_completed: true })
-          .eq('id', user.id);
-
-        if (updateError) {
-          console.error("User update error:", updateError);
-        } else {
-          console.log("Successfully updated user profile_completed flag");
-        }
-      } catch (userUpdateError) {
-        console.error("Failed to update user profile_completed:", userUpdateError);
-        // このエラーは致命的ではないので、処理を続行
-      }
+      // usersテーブルの更新は現在のテーブル構造と互換性がないためスキップ
+      /* 
+      以下の理由でusersテーブルの更新をスキップします：
+      1. usersテーブルのidはinteger型だが、認証ユーザーIDはUUID型
+      2. auth_user_idカラムが存在しないエラーが発生している
+      
+      このアプリケーションの今後の開発では、以下の点を検討してください：
+      1. usersテーブルにauth_user_id (UUID型) カラムを追加し、Supabase認証と紐付ける
+      2. または、Supabaseの認証スキーマ (auth.users) を直接使用するように変更する
+      */
 
       // 成功通知
       toast({
