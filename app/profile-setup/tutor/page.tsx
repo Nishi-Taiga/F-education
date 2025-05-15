@@ -70,6 +70,32 @@ export default function TutorProfileSetup() {
     });
   };
 
+  // 整数IDの生成 - これはSQLのシーケンスに相当するものではなく一時的な解決策です
+  const generateTempId = async () => {
+    // 現在の最大IDを取得
+    try {
+      const { data, error } = await supabase
+        .from('tutor_profiles')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1);
+      
+      if (error) {
+        console.error("Error fetching max ID:", error);
+        return 1; // エラーの場合は1を返す
+      }
+      
+      if (data && data.length > 0) {
+        return data[0].id + 1; // 最大ID + 1
+      } else {
+        return 1; // データがない場合は1を返す
+      }
+    } catch (e) {
+      console.error("Exception fetching max ID:", e);
+      return 1; // 例外の場合は1を返す
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -103,25 +129,6 @@ export default function TutorProfileSetup() {
       // 科目の配列をカンマ区切りの文字列に変換
       const subjects = formData.selectedSubjects.join(",");
 
-      // プロフィールデータを構築
-      // 注意: idフィールドは指定せず、DBの自動採番に任せる
-      // user_idフィールドにUUID型のユーザーIDを保存
-      const profileData = {
-        user_id: user.id,
-        last_name: formData.lastName,
-        first_name: formData.firstName,
-        last_name_furigana: formData.lastNameFurigana,
-        first_name_furigana: formData.firstNameFurigana,
-        university: formData.university,
-        birth_date: formData.birthDate,
-        subjects: subjects,
-        email: user.email,
-        profile_completed: true,
-        created_at: new Date().toISOString()
-      };
-
-      console.log("Profile data to save:", profileData);
-
       // まず既存のデータを確認
       const { data: existingData, error: checkError } = await supabase
         .from('tutor_profiles')
@@ -134,14 +141,46 @@ export default function TutorProfileSetup() {
       let saveResult;
       
       if (existingData) {
-        // 既存のレコードがあれば更新（idは変更しない）
+        // 既存のレコードがあれば更新
+        const profileData = {
+          // idフィールドは更新時には送信しない
+          user_id: user.id,
+          last_name: formData.lastName,
+          first_name: formData.firstName,
+          last_name_furigana: formData.lastNameFurigana,
+          first_name_furigana: formData.firstNameFurigana,
+          university: formData.university,
+          birth_date: formData.birthDate,
+          subjects: subjects,
+          email: user.email,
+          profile_completed: true,
+          created_at: new Date().toISOString()
+        };
+        
         saveResult = await supabase
           .from('tutor_profiles')
           .update(profileData)
           .eq('user_id', user.id)
           .select();
       } else {
-        // 新規レコードを挿入（idは自動生成される）
+        // 新規レコードを挿入する場合は、一時的なIDを生成
+        const tempId = await generateTempId();
+        
+        const profileData = {
+          id: tempId, // 明示的にIDを設定
+          user_id: user.id,
+          last_name: formData.lastName,
+          first_name: formData.firstName,
+          last_name_furigana: formData.lastNameFurigana,
+          first_name_furigana: formData.firstNameFurigana,
+          university: formData.university,
+          birth_date: formData.birthDate,
+          subjects: subjects,
+          email: user.email,
+          profile_completed: true,
+          created_at: new Date().toISOString()
+        };
+        
         saveResult = await supabase
           .from('tutor_profiles')
           .insert([profileData])
