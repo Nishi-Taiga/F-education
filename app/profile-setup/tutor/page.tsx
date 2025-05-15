@@ -210,8 +210,8 @@ export default function TutorProfileSetup() {
         description: "講師プロフィールが正常に設定されました",
       });
 
-      // ダッシュボードへリダイレクト
-      router.push('/dashboard');
+      // ダッシュボードページに問題があるため、一時的にホームページにリダイレクト
+      router.push('/');
     } catch (error: any) {
       console.error("プロフィール設定エラー:", error);
       toast({
