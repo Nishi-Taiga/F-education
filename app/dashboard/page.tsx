@@ -411,7 +411,11 @@ export default function Dashboard() {
                           <p className="font-medium">
                             {booking.date && format(new Date(booking.date), 'yyyy/MM/dd (EEE)', { locale: ja })}
                           </p>
-                          <span className={`px-2 py-1 rounded text-xs ${\n                          booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :\n                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :\n                          'bg-red-100 text-red-800'\n                        }`}>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                            booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
                             {booking.status === 'confirmed' ? '確定' :
                              booking.status === 'pending' ? '保留中' : 'キャンセル済み'}
                           </span>
