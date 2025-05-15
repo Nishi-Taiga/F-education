@@ -103,7 +103,9 @@ export default function TutorProfileSetup() {
       // 科目の配列をカンマ区切りの文字列に変換
       const subjects = formData.selectedSubjects.join(",");
 
-      // プロフィールデータを構築 - idフィールドを削除（自動生成に任せる）
+      // プロフィールデータを構築
+      // 注意: idフィールドは指定せず、DBの自動採番に任せる
+      // user_idフィールドにUUID型のユーザーIDを保存
       const profileData = {
         user_id: user.id,
         last_name: formData.lastName,
@@ -132,14 +134,14 @@ export default function TutorProfileSetup() {
       let saveResult;
       
       if (existingData) {
-        // 既存のレコードがあれば更新
+        // 既存のレコードがあれば更新（idは変更しない）
         saveResult = await supabase
           .from('tutor_profiles')
           .update(profileData)
           .eq('user_id', user.id)
           .select();
       } else {
-        // 新規レコードを挿入
+        // 新規レコードを挿入（idは自動生成される）
         saveResult = await supabase
           .from('tutor_profiles')
           .insert([profileData])
