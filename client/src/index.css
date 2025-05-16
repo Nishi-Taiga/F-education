@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --vh: 1vh; /* JavaScriptで動的に設定 */
+  }
+
+  html, body, #root {
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  /* メインコンテンツのモニター内収まる設定 */
+  .screen-container {
+    max-height: 100vh; /* fallback */
+    max-height: calc(var(--vh, 1vh) * 100);
+    overflow-y: auto;
+    padding-bottom: 1rem;
+  }
+
+  /* スクロール可能なコンテナ */
+  .scrollable-container {
+    max-height: calc(100vh - 12rem); /* fallback */
+    max-height: calc((var(--vh, 1vh) * 100) - 12rem);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+
+  /* カード要素のサイズ制限 */
+  .card-container {
+    max-height: calc(100vh - 16rem); /* fallback */
+    max-height: calc((var(--vh, 1vh) * 100) - 16rem);
+    overflow-y: auto;
+  }
+
+  /* フォームコンテナ */
+  .form-container {
+    max-height: calc(100vh - 10rem); /* fallback */
+    max-height: calc((var(--vh, 1vh) * 100) - 10rem);
+    overflow-y: auto;
+  }
+
+  /* コンテンツセクション */
+  .content-section {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.5rem;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  /* モバイル対応 */
+  @media (max-width: 640px) {
+    .scrollable-container {
+      max-height: calc(100vh - 8rem);
+      max-height: calc((var(--vh, 1vh) * 100) - 8rem);
+    }
+    .card-container {
+      max-height: calc(100vh - 10rem);
+      max-height: calc((var(--vh, 1vh) * 100) - 10rem);
+    }
+    .form-container {
+      max-height: calc(100vh - 8rem);
+      max-height: calc((var(--vh, 1vh) * 100) - 8rem);
+    }
+    .content-section {
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+  }
+}
+
+:root {
+      --background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 60 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--card-foreground: 20 14.3% 4.1%;
+--border: 20 5.9% 90%;
+--input: 20 5.9% 90%;
+--primary: 207 90% 54%;
+--primary-foreground: 211 100% 99%;
+--secondary: 60 4.8% 95.9%;
+--secondary-foreground: 24 9.8% 10%;
+--accent: 60 4.8% 95.9%;
+--accent-foreground: 24 9.8% 10%;
+--destructive: 0 84.2% 60.2%;
+--destructive-foreground: 60 9.1% 97.8%;
+--ring: 20 14.3% 4.1%;
+--radius: 0.5rem;
+  }
+  .dark {
+      --background: 240 10% 3.9%;
+--foreground: 0 0% 98%;
+--muted: 240 3.7% 15.9%;
+--muted-foreground: 240 5% 64.9%;
+--popover: 240 10% 3.9%;
+--popover-foreground: 0 0% 98%;
+--card: 240 10% 3.9%;
+--card-foreground: 0 0% 98%;
+--border: 240 3.7% 15.9%;
+--input: 240 3.7% 15.9%;
+--primary: 207 90% 54%;
+--primary-foreground: 211 100% 99%;
+--secondary: 240 3.7% 15.9%;
+--secondary-foreground: 0 0% 98%;
+--accent: 240 3.7% 15.9%;
+--accent-foreground: 0 0% 98%;
+--destructive: 0 62.8% 30.6%;
+--destructive-foreground: 0 0% 98%;
+--ring: 240 4.9% 83.9%;
+--radius: 0.5rem;
+  }
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
