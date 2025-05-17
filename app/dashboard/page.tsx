@@ -39,6 +39,18 @@ type TutorProfile = {
   university?: string;
 };
 
+// 保護者プロファイルの型
+type ParentProfile = {
+  id: number;
+  user_id: number;
+  parent_name: string;
+  phone?: string;
+  postal_code?: string;
+  prefecture?: string;
+  city?: string;
+  address?: string;
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -48,6 +60,7 @@ export default function DashboardPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [tutorProfile, setTutorProfile] = useState<TutorProfile | null>(null);
+  const [parentProfile, setParentProfile] = useState<ParentProfile | null>(null);
   const [availableTickets, setAvailableTickets] = useState(0);
 
   // ユーザープロフィールを取得
@@ -67,89 +80,151 @@ export default function DashboardPage() {
         
         console.log("Dashboard: session found for email:", session.user.email);
         
-        // ユーザー情報を取得 (users テーブル)
-        const { data: usersList, error: usersError } = await supabase
-          .from('users')
-          .select('*');
+        // 初期は役割が不明なので、全てのプロファイルテーブルを確認
+        let foundProfile = false;
+        let role = '';
+        
+        // 1. 講師プロファイルを確認
+        const { data: tutorData, error: tutorError } = await supabase
+          .from('tutor_profile')
+          .select('*')
+          .eq('email', session.user.email)
+          .maybeSingle();
           
-        if (usersError) {
-          console.error("Error fetching users list:", usersError);
-          throw new Error("ユーザー情報の取得に失敗しました");
+        if (tutorError) {
+          console.error("Error fetching tutor profile:", tutorError);
+        } else if (tutorData) {
+          console.log("Found tutor profile:", tutorData);
+          foundProfile = true;
+          role = 'tutor';
+          
+          setTutorProfile({
+            id: tutorData.id,
+            user_id: tutorData.user_id,
+            first_name: tutorData.first_name,
+            last_name: tutorData.last_name,
+            bio: tutorData.bio,
+            subjects: tutorData.subjects,
+            university: tutorData.university,
+          });
         }
         
-        // メールアドレスが一致するユーザーを検索
-        const userData = usersList?.find(user => 
-          user.email?.toLowerCase() === session.user.email.toLowerCase() || 
-          user.username?.toLowerCase() === session.user.email.toLowerCase()
-        );
+        // 2. 保護者プロファイルを確認
+        if (!foundProfile) {
+          const { data: parentData, error: parentError } = await supabase
+            .from('parent_profile')
+            .select('*')
+            .eq('email', session.user.email)
+            .maybeSingle();
+            
+          if (parentError) {
+            console.error("Error fetching parent profile:", parentError);
+          } else if (parentData) {
+            console.log("Found parent profile:", parentData);
+            foundProfile = true;
+            role = 'parent';
+            
+            setParentProfile({
+              id: parentData.id,
+              user_id: parentData.user_id,
+              parent_name: parentData.parent_name,
+              phone: parentData.phone,
+              postal_code: parentData.postal_code,
+              prefecture: parentData.prefecture,
+              city: parentData.city,
+              address: parentData.address,
+            });
+            
+            // 保護者の場合、生徒データも取得
+            const { data: studentsData, error: studentsError } = await supabase
+              .from('students')
+              .select('*')
+              .eq('parent_id', parentData.id);
+
+            if (studentsError) {
+              console.error('Error fetching students:', studentsError);
+            } else if (studentsData && studentsData.length > 0) {
+              setStudents(studentsData);
+            }
+
+            // チケット残数取得
+            const { data: ticketsData, error: ticketsError } = await supabase
+              .from('student_tickets')
+              .select('quantity')
+              .eq('parent_id', parentData.id)
+              .maybeSingle();
+
+            if (ticketsError) {
+              console.error('Error fetching tickets:', ticketsError);
+            } else if (ticketsData) {
+              setAvailableTickets(ticketsData.quantity || 0);
+            }
+          }
+        }
         
-        // ユーザーがデータベースに存在しない場合
-        if (!userData) {
-          console.log("User not in database, redirecting to profile setup");
+        // 3. 生徒プロファイルを確認
+        if (!foundProfile) {
+          const { data: studentData, error: studentError } = await supabase
+            .from('student_profile')
+            .select('*')
+            .eq('email', session.user.email)
+            .maybeSingle();
+            
+          if (studentError) {
+            console.error("Error fetching student profile:", studentError);
+          } else if (studentData) {
+            console.log("Found student profile:", studentData);
+            foundProfile = true;
+            role = 'student';
+            
+            // 生徒情報をセット
+            setStudents([{
+              id: studentData.id,
+              first_name: studentData.first_name,
+              last_name: studentData.last_name,
+              user_id: studentData.user_id,
+              grade: studentData.grade,
+              school: studentData.school,
+            }]);
+          }
+        }
+        
+        // プロファイルが見つからない場合
+        if (!foundProfile) {
+          console.log("No profile found for user, redirecting to profile setup");
           router.push('/profile-setup');
           return;
         }
         
-        console.log("User found in database:", userData);
-
-        // ユーザープロファイル設定
-        setUserProfile({
-          id: userData.id,
-          display_name: userData.display_name,
-          username: userData.username,
-          role: userData.role,
-          email: userData.email || session.user.email || '',
-          profile_completed: userData.profile_completed,
-        });
-
-        // ユーザーロールに応じたデータ取得
-        if (userData.role === 'parent') {
-          // 生徒データ取得
-          const { data: studentsData, error: studentsError } = await supabase
-            .from('students')
-            .select('*')
-            .eq('user_id', userData.id);
-
-          if (studentsError) {
-            console.error('Error fetching students:', studentsError);
-          } else if (studentsData) {
-            setStudents(studentsData);
-          }
-
-          // チケット残数取得
-          const { data: ticketsData, error: ticketsError } = await supabase
-            .from('student_tickets')
-            .select('quantity')
-            .eq('user_id', userData.id)
-            .maybeSingle();
-
-          if (ticketsError) {
-            console.error('Error fetching tickets:', ticketsError);
-          } else if (ticketsData) {
-            setAvailableTickets(ticketsData.quantity || 0);
-          }
-        } else if (userData.role === 'tutor') {
-          // 講師プロフィール取得
-          const { data: tutorData, error: tutorError } = await supabase
-            .from('tutors')
-            .select('*')
-            .eq('user_id', userData.id)
-            .maybeSingle();
-
-          if (tutorError) {
-            console.error('Error fetching tutor profile:', tutorError);
-          } else if (tutorData) {
-            setTutorProfile({
-              id: tutorData.id,
-              user_id: tutorData.user_id,
-              first_name: tutorData.first_name,
-              last_name: tutorData.last_name,
-              bio: tutorData.bio,
-              subjects: tutorData.subjects,
-              university: tutorData.university,
-            });
-          }
+        // ユーザープロファイル情報を設定
+        // ロールに応じた情報を設定
+        if (role === 'tutor' && tutorProfile) {
+          setUserProfile({
+            id: tutorProfile.id,
+            display_name: `${tutorProfile.last_name} ${tutorProfile.first_name}`,
+            role: 'tutor',
+            email: session.user.email,
+            profile_completed: true,
+          });
+        } else if (role === 'parent' && parentProfile) {
+          setUserProfile({
+            id: parentProfile.id,
+            display_name: parentProfile.parent_name,
+            role: 'parent',
+            email: session.user.email,
+            profile_completed: true,
+          });
+        } else if (role === 'student' && students.length > 0) {
+          const student = students[0];
+          setUserProfile({
+            id: student.id,
+            display_name: `${student.last_name} ${student.first_name}`,
+            role: 'student',
+            email: session.user.email,
+            profile_completed: true,
+          });
         }
+        
       } catch (error: any) {
         console.error('Failed to fetch user data:', error);
         toast({
@@ -177,13 +252,13 @@ export default function DashboardPage() {
   if (!userProfile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-2xl font-bold mb-4">認証エラー</h1>
-        <p className="text-muted-foreground">ログインする必要があります</p>
+        <h1 className="text-2xl font-bold mb-4">プロフィールが見つかりません</h1>
+        <p className="text-muted-foreground mb-4">サービスを利用するには、プロフィール情報の設定が必要です</p>
         <button 
-          className="mt-4 px-4 py-2 bg-primary text-white rounded-md"
-          onClick={() => router.push('/auth')}
+          className="px-4 py-2 bg-primary text-white rounded-md"
+          onClick={() => router.push('/profile-setup')}
         >
-          ログイン画面へ
+          プロフィール設定へ
         </button>
       </div>
     );
@@ -194,6 +269,7 @@ export default function DashboardPage() {
       userProfile={userProfile}
       students={students}
       tutorProfile={tutorProfile}
+      parentProfile={parentProfile}
       availableTickets={availableTickets}
     />
   );
