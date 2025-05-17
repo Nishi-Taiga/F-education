@@ -70,32 +70,6 @@ export default function TutorProfileSetup() {
     });
   };
 
-  // 整数IDの生成 - これはSQLのシーケンスに相当するものではなく一時的な解決策です
-  const generateTempId = async () => {
-    // 現在の最大IDを取得
-    try {
-      const { data, error } = await supabase
-        .from('tutor_profiles')
-        .select('id')
-        .order('id', { ascending: false })
-        .limit(1);
-      
-      if (error) {
-        console.error("Error fetching max ID:", error);
-        return 1; // エラーの場合は1を返す
-      }
-      
-      if (data && data.length > 0) {
-        return data[0].id + 1; // 最大ID + 1
-      } else {
-        return 1; // データがない場合は1を返す
-      }
-    } catch (e) {
-      console.error("Exception fetching max ID:", e);
-      return 1; // 例外の場合は1を返す
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -128,69 +102,108 @@ export default function TutorProfileSetup() {
 
       // 科目の配列をカンマ区切りの文字列に変換
       const subjects = formData.selectedSubjects.join(",");
+      
+      // 表示名を作成（姓 + 名）
+      const displayName = `${formData.lastName} ${formData.firstName}`;
 
-      // まず既存のデータを確認
-      const { data: existingData, error: checkError } = await supabase
-        .from('tutor_profiles')
-        .select()
-        .eq('user_id', user.id)
+      // まず既存のユーザーを確認
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', user.email)
         .maybeSingle();
 
-      console.log("Existing profile check:", { existingData, checkError });
+      console.log("Existing user check:", { existingUser, checkError });
+
+      let userData;
       
-      let saveResult;
+      if (existingUser) {
+        // 既存ユーザーを更新
+        const { data, error } = await supabase
+          .from('users')
+          .update({
+            display_name: displayName,
+            email: user.email,
+            profile_completed: true,
+            role: 'tutor'
+          })
+          .eq('id', existingUser.id)
+          .select();
+          
+        if (error) throw error;
+        userData = data[0];
+      } else {
+        // 新規ユーザーを作成
+        const { data, error } = await supabase
+          .from('users')
+          .insert([{
+            username: user.email,
+            email: user.email,
+            display_name: displayName,
+            profile_completed: true,
+            role: 'tutor',
+            password: 'supabase_auth_managed' // ダミーパスワード（Supabaseで認証管理）
+          }])
+          .select();
+          
+        if (error) throw error;
+        userData = data[0];
+      }
+
+      console.log("User data saved:", userData);
+
+      // 講師プロフィール情報を保存
+      // まず既存の講師プロフィールを確認
+      const { data: existingTutor, error: tutorCheckError } = await supabase
+        .from('tutors')
+        .select('id')
+        .eq('user_id', userData.id)
+        .maybeSingle();
+
+      console.log("Existing tutor check:", { existingTutor, tutorCheckError });
       
-      if (existingData) {
-        // 既存のレコードがあれば更新
-        const profileData = {
-          // idフィールドは更新時には送信しない
-          user_id: user.id,
-          last_name: formData.lastName,
-          first_name: formData.firstName,
-          last_name_furigana: formData.lastNameFurigana,
-          first_name_furigana: formData.firstNameFurigana,
-          university: formData.university,
-          birth_date: formData.birthDate,
-          subjects: subjects,
-          email: user.email,
-          profile_completed: true,
-          created_at: new Date().toISOString()
-        };
-        
-        saveResult = await supabase
-          .from('tutor_profiles')
-          .update(profileData)
-          .eq('user_id', user.id)
+      let tutorResult;
+      
+      if (existingTutor) {
+        // 既存の講師プロフィールを更新
+        tutorResult = await supabase
+          .from('tutors')
+          .update({
+            last_name: formData.lastName,
+            first_name: formData.firstName,
+            last_name_furigana: formData.lastNameFurigana,
+            first_name_furigana: formData.firstNameFurigana,
+            university: formData.university,
+            birth_date: formData.birthDate,
+            subjects: subjects,
+            email: user.email,
+            profile_completed: true
+          })
+          .eq('id', existingTutor.id)
           .select();
       } else {
-        // 新規レコードを挿入する場合は、一時的なIDを生成
-        const tempId = await generateTempId();
-        
-        const profileData = {
-          id: tempId, // 明示的にIDを設定
-          user_id: user.id,
-          last_name: formData.lastName,
-          first_name: formData.firstName,
-          last_name_furigana: formData.lastNameFurigana,
-          first_name_furigana: formData.firstNameFurigana,
-          university: formData.university,
-          birth_date: formData.birthDate,
-          subjects: subjects,
-          email: user.email,
-          profile_completed: true,
-          created_at: new Date().toISOString()
-        };
-        
-        saveResult = await supabase
-          .from('tutor_profiles')
-          .insert([profileData])
+        // 新規講師プロフィールを作成
+        tutorResult = await supabase
+          .from('tutors')
+          .insert([{
+            user_id: userData.id,
+            last_name: formData.lastName,
+            first_name: formData.firstName,
+            last_name_furigana: formData.lastNameFurigana,
+            first_name_furigana: formData.firstNameFurigana,
+            university: formData.university,
+            birth_date: formData.birthDate,
+            subjects: subjects,
+            email: user.email,
+            profile_completed: true
+          }])
           .select();
       }
       
-      console.log("Save to tutor_profiles result:", saveResult);
+      console.log("Tutor profile save result:", tutorResult);
       
-      if (saveResult.error) {
-        throw new Error(`データ保存エラー: ${saveResult.error.message}`);
+      if (tutorResult.error) {
+        throw new Error(`講師プロフィール保存エラー: ${tutorResult.error.message}`);
       }
 
       // 成功通知
@@ -199,7 +212,7 @@ export default function TutorProfileSetup() {
         description: "講師プロフィールが正常に設定されました",
       });
 
-      // ダッシュボードに遷移 - ダッシュボードページは更新済み
+      // ダッシュボードに遷移
       router.push('/dashboard');
     } catch (error: any) {
       console.error("プロフィール設定エラー:", error);
