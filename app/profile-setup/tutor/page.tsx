@@ -148,49 +148,8 @@ export default function TutorProfileSetup() {
       } catch (apiError) {
         console.error("API実行失敗:", apiError);
         
-        // 直接クライアント側で独自のテーブル操作を試す
-        try {
-          console.log("独自テーブル作成とデータ挿入を試行...");
-          
-          // JSON形式でデータを準備
-          const profileData = {
-            user_id: user.id,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            last_name_furigana: formData.lastNameFurigana,
-            first_name_furigana: formData.firstNameFurigana,
-            university: formData.university,
-            birth_date: formData.birthDate,
-            subjects: subjects,
-            email: user.email,
-            profile_completed: true
-          };
-          
-          // 直接クライアントからPostgreSQLのtutor_profileテーブルにinsert
-          const { data: directData, error: directError } = await supabase
-            .from('tutor_profile')
-            .insert(profileData);
-          
-          if (directError) {
-            console.error("直接挿入エラー:", directError);
-            throw directError;
-          }
-          
-          console.log("直接挿入成功:", directData);
-          
-          // 成功通知
-          toast({
-            title: "プロフィール設定完了",
-            description: "講師プロフィールが正常に設定されました",
-          });
-          
-          // ダッシュボードに遷移
-          router.push('/dashboard');
-          return;
-        } catch (directError) {
-          console.error("直接挿入失敗:", directError);
-          throw new Error(`すべての保存方法が失敗しました: ${directError instanceof Error ? directError.message : String(directError)}`);
-        }
+        // 直接操作は行わず、APIのエラーをスローする
+        throw apiError;
       }
     } catch (error: any) {
       console.error("プロフィール設定エラー:", error);
