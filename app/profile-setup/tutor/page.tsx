@@ -106,105 +106,32 @@ export default function TutorProfileSetup() {
       // 表示名を作成（姓 + 名）
       const displayName = `${formData.lastName} ${formData.firstName}`;
 
-      // まず既存のユーザーを確認
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', user.email)
-        .maybeSingle();
-
-      console.log("Existing user check:", { existingUser, checkError });
-
-      let userData;
-      
-      if (existingUser) {
-        // 既存ユーザーを更新
-        const { data, error } = await supabase
-          .from('users')
-          .update({
-            display_name: displayName,
-            email: user.email,
-            profile_completed: true,
-            role: 'tutor'
-          })
-          .eq('id', existingUser.id)
-          .select();
-          
-        if (error) throw error;
-        userData = data[0];
-      } else {
-        // 新規ユーザーを作成
-        const { data, error } = await supabase
-          .from('users')
-          .insert([{
-            username: user.email,
-            email: user.email,
-            display_name: displayName,
-            profile_completed: true,
-            role: 'tutor',
-            password: 'supabase_auth_managed' // ダミーパスワード（Supabaseで認証管理）
-          }])
-          .select();
-          
-        if (error) throw error;
-        userData = data[0];
-      }
-
-      console.log("User data saved:", userData);
-
       // 講師プロフィール情報を保存
-      // まず既存の講師プロフィールを確認
-      const { data: existingTutor, error: tutorCheckError } = await supabase
-        .from('tutors')
-        .select('id')
-        .eq('user_id', userData.id)
-        .maybeSingle();
-
-      console.log("Existing tutor check:", { existingTutor, tutorCheckError });
+      console.log("Saving tutor profile with user_id:", user.id);
       
-      let tutorResult;
+      // 講師プロフィールを保存
+      const { data: tutorData, error: tutorError } = await supabase
+        .from('tutor_profile')
+        .insert([{
+          user_id: user.id,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          first_name_furigana: formData.firstNameFurigana,
+          last_name_furigana: formData.lastNameFurigana,
+          university: formData.university,
+          birth_date: formData.birthDate,
+          subjects: subjects,
+          email: user.email,
+          profile_completed: true
+        }])
+        .select();
       
-      if (existingTutor) {
-        // 既存の講師プロフィールを更新
-        tutorResult = await supabase
-          .from('tutors')
-          .update({
-            last_name: formData.lastName,
-            first_name: formData.firstName,
-            last_name_furigana: formData.lastNameFurigana,
-            first_name_furigana: formData.firstNameFurigana,
-            university: formData.university,
-            birth_date: formData.birthDate,
-            subjects: subjects,
-            email: user.email,
-            profile_completed: true
-          })
-          .eq('id', existingTutor.id)
-          .select();
-      } else {
-        // 新規講師プロフィールを作成
-        tutorResult = await supabase
-          .from('tutors')
-          .insert([{
-            user_id: userData.id,
-            last_name: formData.lastName,
-            first_name: formData.firstName,
-            last_name_furigana: formData.lastNameFurigana,
-            first_name_furigana: formData.firstNameFurigana,
-            university: formData.university,
-            birth_date: formData.birthDate,
-            subjects: subjects,
-            email: user.email,
-            profile_completed: true
-          }])
-          .select();
+      if (tutorError) {
+        console.error("Error saving tutor profile:", tutorError);
+        throw new Error(`講師プロフィール保存エラー: ${tutorError.message}`);
       }
       
-      console.log("Tutor profile save result:", tutorResult);
-      
-      if (tutorResult.error) {
-        throw new Error(`講師プロフィール保存エラー: ${tutorResult.error.message}`);
-      }
+      console.log("Tutor profile saved:", tutorData);
 
       // 成功通知
       toast({
