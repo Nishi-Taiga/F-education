@@ -135,18 +135,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ログイン処理
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
+      console.log("Attempting login for email:", credentials.email);
+      
       // まずSupabaseで認証
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       });
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error("Login authentication error:", error);
+        throw new Error(error.message);
+      }
       
-      console.log("Successful login with Supabase auth, email:", credentials.email);
+      if (!data.user) {
+        console.error("No user returned from authentication");
+        throw new Error("認証情報の取得に失敗しました");
+      }
+      
+      console.log("Successful login with Supabase auth, user id:", data.user.id);
       
       // ユーザー情報を取得
-      // まずは単純に一覧で取得して、クライアント側でフィルタリング
       const { data: usersList, error: usersError } = await supabase
         .from('users')
         .select('*');
@@ -162,12 +171,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user.username?.toLowerCase() === credentials.email.toLowerCase()
       );
       
+      // DBにユーザーが見つからない場合（プロフィール未設定）の処理
       if (!userData) {
-        console.error("User not found for email:", credentials.email);
-        throw new Error("ユーザーが見つかりません");
+        console.log("User not found in database, creating minimal user object for auth user");
+        
+        // 認証情報のみを持つ最小限のユーザーオブジェクトを返す
+        // プロフィール設定画面でユーザー情報が作成される
+        return {
+          id: 0, // 仮のID
+          auth_id: data.user.id,
+          displayName: '',
+          username: credentials.email,
+          firstName: '',
+          lastName: '',
+          role: 'parent', // デフォルト値
+          email: credentials.email,
+          profileCompleted: false
+        };
       }
       
-      console.log("Found user:", userData);
+      console.log("Found user in database:", userData);
       
       // ユーザーオブジェクトの形式に変換して返す
       return {
@@ -184,11 +207,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       setCurrentUser(user);
-      toast({
-        title: "ログイン成功",
-        description: `こんにちは、${user.displayName || user.username || user.email}さん`,
-      });
-      router.push('/dashboard');
+      
+      if (user.profileCompleted) {
+        toast({
+          title: "ログイン成功",
+          description: `こんにちは、${user.displayName || user.username || user.email}さん`,
+        });
+        router.push('/dashboard');
+      } else {
+        toast({
+          title: "ログイン成功",
+          description: "プロフィール情報の設定が必要です",
+        });
+        // プロフィール未設定の場合は自動的にプロフィール設定画面に遷移
+        // ミドルウェアでも制御しているが、明示的にリダイレクト
+        router.push('/profile-setup');
+      }
     },
     onError: (error: Error) => {
       toast({
