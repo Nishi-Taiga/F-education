@@ -23,6 +23,7 @@ type DashboardProps = {
   availableTickets: number;
 };
 
+// ダッシュボードコンポーネント
 export const Dashboard = ({ userProfile, students, tutorProfile, availableTickets }: DashboardProps) => {
   const router = useRouter();
   const supabase = createClientComponentClient<Database>();
