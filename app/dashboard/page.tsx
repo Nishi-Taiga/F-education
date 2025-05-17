@@ -79,6 +79,10 @@ export default function DashboardPage() {
         }
         
         console.log("Dashboard: session found for email:", session.user.email);
+        console.log("Dashboard: session user ID:", session.user.id);
+        
+        // ユーザーIDを取得
+        const userId = session.user.id;
         
         // 初期は役割が不明なので、全てのプロファイルテーブルを確認
         let foundProfile = false;
@@ -88,7 +92,7 @@ export default function DashboardPage() {
         const { data: tutorData, error: tutorError } = await supabase
           .from('tutor_profile')
           .select('*')
-          .eq('email', session.user.email)
+          .eq('user_id', userId)
           .maybeSingle();
           
         if (tutorError) {
@@ -114,7 +118,7 @@ export default function DashboardPage() {
           const { data: parentData, error: parentError } = await supabase
             .from('parent_profile')
             .select('*')
-            .eq('email', session.user.email)
+            .eq('user_id', userId)
             .maybeSingle();
             
           if (parentError) {
@@ -167,7 +171,7 @@ export default function DashboardPage() {
           const { data: studentData, error: studentError } = await supabase
             .from('student_profile')
             .select('*')
-            .eq('email', session.user.email)
+            .eq('user_id', userId)
             .maybeSingle();
             
           if (studentError) {
@@ -192,6 +196,11 @@ export default function DashboardPage() {
         // プロファイルが見つからない場合
         if (!foundProfile) {
           console.log("No profile found for user, redirecting to profile setup");
+          toast({
+            title: "プロフィール未設定",
+            description: "プロフィール情報を設定してください",
+            variant: "default",
+          });
           router.push('/profile-setup');
           return;
         }
@@ -232,6 +241,9 @@ export default function DashboardPage() {
           description: error.message || "ユーザー情報の取得中にエラーが発生しました",
           variant: "destructive",
         });
+        
+        // エラーが発生した場合でも、プロフィールが設定されていないとみなしてリダイレクト
+        router.push('/profile-setup');
       } finally {
         setLoading(false);
       }
