@@ -28,156 +28,92 @@ export async function POST(request: NextRequest) {
     // サーバーサイドSupabaseクライアントを作成
     const supabase = createClient();
     
-    console.log('[API] Starting profile registration process');
+    console.log('[API] Starting profile registration process with data:', {
+      ...tutorData,
+      // 機密情報を隠す
+      user_id: tutorData.user_id ? `${tutorData.user_id.substring(0, 8)}...` : 'undefined',
+    });
     
-    // テーブルにデータを挿入
-    let result;
+    // プロフィールデータを準備
+    const profileData = {
+      user_id: tutorData.user_id,
+      first_name: tutorData.first_name,
+      last_name: tutorData.last_name,
+      last_name_furigana: tutorData.last_name_furigana || '',
+      first_name_furigana: tutorData.first_name_furigana || '',
+      university: tutorData.university || '',
+      birth_date: tutorData.birth_date,
+      subjects: tutorData.subjects,
+      email: tutorData.email || '',
+      profile_completed: true
+    };
     
-    // 複数の方法を試す
     try {
-      // 直接SQL実行でIDを自動生成する
-      console.log('[API] Trying direct SQL insert...');
+      // 標準的なInsert操作
+      console.log('[API] Attempting standard insert');
       
-      const { data: sqlData, error: sqlError } = await supabase.rpc('execute_sql', {
-        sql_query: `
-          INSERT INTO tutor_profile (
-            id,
-            user_id, 
-            first_name, 
-            last_name, 
-            last_name_furigana, 
-            first_name_furigana, 
-            university, 
-            birth_date, 
-            subjects, 
-            email, 
-            profile_completed
-          ) VALUES (
-            (SELECT COALESCE(MAX(id), 0) + 1 FROM tutor_profile),
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-          ) RETURNING *
-        `,
-        params: [
-          tutorData.user_id,
-          tutorData.first_name,
-          tutorData.last_name,
-          tutorData.last_name_furigana || '',
-          tutorData.first_name_furigana || '',
-          tutorData.university || '',
-          tutorData.birth_date,
-          tutorData.subjects,
-          tutorData.email || '',
-          true
-        ]
-      });
+      const { data: insertData, error: insertError } = await supabase
+        .from('tutor_profile')
+        .insert(profileData)
+        .select();
       
-      if (sqlError) {
-        console.error('[API] SQL insert failed:', sqlError);
-        throw new Error(`SQL insert failed: ${sqlError.message}`);
+      if (insertError) {
+        console.error('[API] Standard insert failed:', insertError);
+        throw new Error(`Standard insert failed: ${insertError.message}`);
       }
       
-      result = sqlData;
-      console.log('[API] SQL insert succeeded:', result);
-    } catch (sqlError) {
-      // テーブルの作成を試みる（通常これは必要ないはず）
+      console.log('[API] Standard insert succeeded:', insertData);
+      return NextResponse.json({ success: true, data: insertData });
+    } catch (error: any) {
+      console.error('[API] Insert error:', error);
+      
+      // Supabaseの自動処理にアクセスできない場合は別の方法を試す
       try {
-        console.log('[API] Creating table as last resort...');
+        // テーブルのスキーマ確認
+        console.log('[API] Checking table schema');
+        const { data: schemaData, error: schemaError } = await supabase
+          .from('tutor_profile')
+          .select('id')
+          .limit(1);
         
-        // まずテーブルがあるか確認
-        const { data: tableCheck, error: checkError } = await supabase.rpc('execute_sql', {
-          sql_query: `
-            SELECT EXISTS (
-              SELECT FROM information_schema.tables 
-              WHERE table_schema = 'public'
-              AND table_name = 'tutor_profile'
-            )
-          `,
-          params: []
-        });
-        
-        if (checkError) {
-          console.error('[API] Table check failed:', checkError);
-        } else {
-          console.log('[API] Table exists check:', tableCheck);
+        if (schemaError) {
+          console.error('[API] Schema check failed:', schemaError);
+          return NextResponse.json({ 
+            error: 'Database error during schema check', 
+            details: schemaError 
+          }, { status: 500 });
         }
         
-        // テーブルを作成
-        const { error: tableError } = await supabase.rpc('execute_sql', {
-          sql_query: `
-            CREATE TABLE IF NOT EXISTS tutor_profile (
-              id SERIAL PRIMARY KEY,
-              user_id UUID NOT NULL,
-              first_name TEXT NOT NULL,
-              last_name TEXT NOT NULL,
-              last_name_furigana TEXT,
-              first_name_furigana TEXT,
-              university TEXT,
-              birth_date TEXT NOT NULL,
-              subjects TEXT NOT NULL,
-              email TEXT,
-              bio TEXT,
-              profile_completed BOOLEAN DEFAULT TRUE,
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            )
-          `,
-          params: []
-        });
+        // Upsert操作を試す
+        console.log('[API] Trying upsert operation');
+        const { data: upsertData, error: upsertError } = await supabase
+          .from('tutor_profile')
+          .upsert(profileData)
+          .select();
         
-        if (tableError) {
-          console.error('[API] Table creation failed:', tableError);
-          throw new Error(`Table creation failed: ${tableError.message}`);
+        if (upsertError) {
+          console.error('[API] Upsert failed:', upsertError);
+          return NextResponse.json({ 
+            error: 'Database error during upsert', 
+            details: upsertError 
+          }, { status: 500 });
         }
         
-        // データを挿入
-        const { data: insertData, error: insertError } = await supabase.rpc('execute_sql', {
-          sql_query: `
-            INSERT INTO tutor_profile (
-              user_id, 
-              first_name, 
-              last_name, 
-              last_name_furigana, 
-              first_name_furigana, 
-              university, 
-              birth_date, 
-              subjects, 
-              email, 
-              profile_completed
-            ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-            ) RETURNING *
-          `,
-          params: [
-            tutorData.user_id,
-            tutorData.first_name,
-            tutorData.last_name,
-            tutorData.last_name_furigana || '',
-            tutorData.first_name_furigana || '',
-            tutorData.university || '',
-            tutorData.birth_date,
-            tutorData.subjects,
-            tutorData.email || '',
-            true
-          ]
-        });
-        
-        if (insertError) {
-          console.error('[API] Final insert attempt failed:', insertError);
-          throw new Error(`Final insert attempt failed: ${insertError.message}`);
-        }
-        
-        result = insertData;
-        console.log('[API] Final insert succeeded after table creation:', result);
-      } catch (finalError) {
-        console.error('[API] All methods failed:', finalError);
-        return NextResponse.json({ error: 'All insert methods failed', details: finalError }, { status: 500 });
+        console.log('[API] Upsert succeeded:', upsertData);
+        return NextResponse.json({ success: true, data: upsertData });
+      } catch (fallbackError: any) {
+        console.error('[API] All fallback methods failed:', fallbackError);
+        return NextResponse.json({ 
+          error: 'All insert methods failed', 
+          details: fallbackError.message || String(fallbackError)
+        }, { status: 500 });
       }
     }
-    
-    // 成功したら結果を返す
-    return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
     console.error('[API] Unexpected error:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message || 'Internal server error',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   }
 }
