@@ -17,7 +17,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {/* 注: Devtoolsは本番環境では使用しないため、importを削除しました */}
+      {/* Devtoolsを本番環境では使用しない */}
     </QueryClientProvider>
   );
 }
