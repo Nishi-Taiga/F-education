@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,10 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 // Login form schema
 const loginSchema = z.object({
@@ -32,8 +30,7 @@ const registerSchema = z.object({
 
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-  const { toast } = useToast();
+  const { loginMutation, registerMutation } = useAuth();
   
   // Login form
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -58,24 +55,13 @@ export default function AuthPage() {
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      await loginMutation.mutateAsync({
         email: values.email,
         password: values.password,
       });
-      
-      if (error) {
-        throw error;
-      }
-      
-      router.push("/dashboard");
-      router.refresh();
-    } catch (error: any) {
+    } catch (error) {
+      // エラーハンドリングはloginMutation内で行われる
       console.error("Login error:", error);
-      toast({
-        title: "ログイン失敗",
-        description: error.message || "ログインに失敗しました。メールアドレスとパスワードを確認してください。",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -85,31 +71,13 @@ export default function AuthPage() {
   async function onRegisterSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      await registerMutation.mutateAsync({
         email: values.email,
         password: values.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
       });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast({
-        title: "登録完了",
-        description: "アカウントが作成されました。確認メールをご確認ください。",
-      });
-      
-      registerForm.reset();
-    } catch (error: any) {
+    } catch (error) {
+      // エラーハンドリングはregisterMutation内で行われる
       console.error("Registration error:", error);
-      toast({
-        title: "登録失敗",
-        description: error.message || "アカウント登録に失敗しました。もう一度お試しください。",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -146,7 +114,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>メールアドレス</FormLabel>
                           <FormControl>
-                            <Input placeholder="your@email.com" {...field} disabled={isLoading} />
+                            <Input placeholder="your@email.com" {...field} disabled={isLoading || loginMutation.isPending} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -159,14 +127,14 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>パスワード</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="********" {...field} disabled={isLoading} />
+                            <Input type="password" placeholder="********" {...field} disabled={isLoading || loginMutation.isPending} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? (
+                    <Button type="submit" className="w-full" disabled={isLoading || loginMutation.isPending}>
+                      {(isLoading || loginMutation.isPending) ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ログイン中...
@@ -198,7 +166,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>メールアドレス</FormLabel>
                           <FormControl>
-                            <Input placeholder="your@email.com" {...field} disabled={isLoading} />
+                            <Input placeholder="your@email.com" {...field} disabled={isLoading || registerMutation.isPending} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -211,7 +179,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>パスワード</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="********" {...field} disabled={isLoading} />
+                            <Input type="password" placeholder="********" {...field} disabled={isLoading || registerMutation.isPending} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -224,14 +192,14 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>パスワード（確認）</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="********" {...field} disabled={isLoading} />
+                            <Input type="password" placeholder="********" {...field} disabled={isLoading || registerMutation.isPending} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? (
+                    <Button type="submit" className="w-full" disabled={isLoading || registerMutation.isPending}>
+                      {(isLoading || registerMutation.isPending) ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           登録中...
