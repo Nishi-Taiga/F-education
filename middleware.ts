@@ -18,6 +18,14 @@ export async function middleware(req: NextRequest) {
   // プロフィール設定ページ関連のパス
   const profileSetupPaths = ['/profile-setup', '/profile-setup/parent', '/profile-setup/tutor'];
   
+  // 認証確認ページのパス（認証メールのリンクで遷移するページ）
+  const authVerificationPaths = ['/auth/callback', '/auth/confirm', '/auth/reset'];
+  
+  // 認証確認ページにはアクセス可能（認証メールからのリダイレクト先）
+  if (authVerificationPaths.some(path => pathname.startsWith(path))) {
+    return res; // そのまま処理を続行
+  }
+  
   // 認証済みで、認証関連ページにアクセスしようとしている場合
   if (session && authRelatedPaths.some(path => pathname.startsWith(path))) {
     // ダッシュボードにリダイレクト
