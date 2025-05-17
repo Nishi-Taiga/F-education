@@ -26,9 +26,9 @@ type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   error: Error | null;
-  loginMutation: UseMutationResult<User, Error, LoginData>;
+  loginMutation: UseMutationResult<{ email: string }, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<User, Error, RegisterData>;
+  registerMutation: UseMutationResult<{ email: string }, Error, RegisterData>;
 };
 
 type LoginData = {
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // ユーザー情報の取得
+  // ユーザー情報の取得 - この関数は認証情報のみを確認し、必要時に実行される
   const {
     data: user,
     error,
@@ -72,15 +72,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log("Session found, user email:", session.user.email);
         
         // セッションがあれば、ユーザー情報を取得
-        // まず全てのユーザーを取得して、コンソールに出力（デバッグ用）
-        const { data: allUsers } = await supabase
-          .from('users')
-          .select('id, email, username')
-          .limit(10);
-          
-        console.log("Available users:", allUsers);
-        
-        // email値を使って既存のユーザーデータを検索
         // まずは単純に一覧で取得して、クライアント側でフィルタリング
         const { data: usersList, error: usersError } = await supabase
           .from('users')
@@ -98,11 +89,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         
         if (!userData) {
-          console.error("User not found for email:", session.user.email);
-          return null;
+          console.log("User not found for email in DB:", session.user.email);
+          // データベースにユーザーが見つからない場合は、認証情報を元に最小限のユーザー情報を返す
+          return {
+            id: 0,
+            auth_id: session.user.id,
+            displayName: '',
+            username: session.user.email,
+            firstName: '',
+            lastName: '',
+            role: 'parent', // デフォルト値
+            email: session.user.email,
+            profileCompleted: false
+          };
         }
         
-        console.log("Found user:", userData);
+        console.log("Found user in DB:", userData);
         
         // フロントエンド用のユーザーオブジェクト形式に変換
         return {
@@ -122,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     staleTime: 5 * 60 * 1000, // 5分間キャッシュ
+    enabled: false, // 初回は自動実行しない
   });
 
   useEffect(() => {
@@ -132,12 +135,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  // ログイン処理
+  // ログイン処理 - 認証チェックのみ
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       console.log("Attempting login for email:", credentials.email);
       
-      // まずSupabaseで認証
+      // Supabaseで認証のみを実行
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
@@ -155,74 +158,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       console.log("Successful login with Supabase auth, user id:", data.user.id);
       
-      // ユーザー情報を取得
-      const { data: usersList, error: usersError } = await supabase
-        .from('users')
-        .select('*');
-        
-      if (usersError) {
-        console.error("Error fetching users list:", usersError);
-        throw new Error("ユーザー情報の取得に失敗しました");
-      }
-      
-      // メールアドレスが一致するユーザーを検索
-      const userData = usersList?.find(user => 
-        user.email?.toLowerCase() === credentials.email.toLowerCase() || 
-        user.username?.toLowerCase() === credentials.email.toLowerCase()
-      );
-      
-      // DBにユーザーが見つからない場合（プロフィール未設定）の処理
-      if (!userData) {
-        console.log("User not found in database, creating minimal user object for auth user");
-        
-        // 認証情報のみを持つ最小限のユーザーオブジェクトを返す
-        // プロフィール設定画面でユーザー情報が作成される
-        return {
-          id: 0, // 仮のID
-          auth_id: data.user.id,
-          displayName: '',
-          username: credentials.email,
-          firstName: '',
-          lastName: '',
-          role: 'parent', // デフォルト値
-          email: credentials.email,
-          profileCompleted: false
-        };
-      }
-      
-      console.log("Found user in database:", userData);
-      
-      // ユーザーオブジェクトの形式に変換して返す
+      // 認証情報のみを返す - データベース情報は後で取得
       return {
-        id: userData.id,
-        auth_id: data.user.id,
-        displayName: userData.display_name || '',
-        username: userData.username,
-        firstName: '', // DBにはないが、フロントエンド側で使用するプロパティ
-        lastName: '',  // DBにはないが、フロントエンド側で使用するプロパティ
-        role: userData.role,
-        email: userData.email || credentials.email,
-        profileCompleted: userData.profile_completed
+        email: credentials.email,
       };
     },
-    onSuccess: (user: User) => {
-      setCurrentUser(user);
+    onSuccess: ({ email }) => {
+      toast({
+        title: "ログイン成功",
+        description: `ログインしました`,
+      });
       
-      if (user.profileCompleted) {
-        toast({
-          title: "ログイン成功",
-          description: `こんにちは、${user.displayName || user.username || user.email}さん`,
-        });
-        router.push('/dashboard');
-      } else {
-        toast({
-          title: "ログイン成功",
-          description: "プロフィール情報の設定が必要です",
-        });
-        // プロフィール未設定の場合は自動的にプロフィール設定画面に遷移
-        // ミドルウェアでも制御しているが、明示的にリダイレクト
-        router.push('/profile-setup');
-      }
+      // ダッシュボードに遷移 - データベース情報はダッシュボード表示時に取得される
+      router.push('/dashboard');
     },
     onError: (error: Error) => {
       toast({
@@ -233,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // 登録処理
+  // 登録処理 - 認証のみに簡略化
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
       console.log("Starting registration process for email:", data.email);
@@ -262,22 +210,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("認証は成功しましたが、ユーザー情報が取得できませんでした");
       }
       
-      // 認証が成功した場合、最小限のユーザー情報だけを返す
-      // 実際のユーザープロフィールはプロフィール設定画面で登録される
+      // 認証が成功した場合、メールアドレスのみを返す
       return {
-        id: 0, // 仮のID（プロフィール登録後に実際のIDが設定される）
-        auth_id: authData.user.id,
-        displayName: '',
-        username: data.email,
-        firstName: '',
-        lastName: '',
-        role: 'parent', // デフォルトは保護者
         email: data.email,
-        profileCompleted: false
       };
     },
-    onSuccess: (user: User) => {
-      setCurrentUser(user);
+    onSuccess: ({ email }) => {
       toast({
         title: "アカウント作成完了",
         description: "メールアドレスの確認メールをお送りしました。メール内のリンクをクリックして認証を完了してください。",
