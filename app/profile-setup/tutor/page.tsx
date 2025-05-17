@@ -37,8 +37,6 @@ export default function TutorProfileSetup() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [tables, setTables] = useState<string[]>([]);
-  const [showDebug, setShowDebug] = useState(false);
   
   const [formData, setFormData] = useState({
     lastName: "",
@@ -70,48 +68,6 @@ export default function TutorProfileSetup() {
         : [...prev.selectedSubjects, fullSubjectName];
       return { ...prev, selectedSubjects: subjects };
     });
-  };
-
-  // テーブル一覧を取得する関数
-  const fetchTableList = async () => {
-    try {
-      // 情報スキーマからテーブル一覧を取得
-      const { data, error } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public');
-      
-      if (error) {
-        console.error("Failed to fetch table list:", error);
-        
-        // 別の方法を試す
-        try {
-          const { data: result, error: queryError } = await supabase.rpc('get_table_list');
-          if (queryError) {
-            console.error("Failed to fetch tables with RPC:", queryError);
-            return;
-          }
-          
-          if (result) {
-            setTables(result);
-            console.log("Tables (via RPC):", result);
-          }
-        } catch (rpcError) {
-          console.error("RPC error:", rpcError);
-        }
-        return;
-      }
-      
-      if (data) {
-        const tableNames = data.map(item => item.table_name);
-        setTables(tableNames);
-        console.log("Available tables:", tableNames);
-      }
-      
-      setShowDebug(true);
-    } catch (error) {
-      console.error("Failed to fetch tables:", error);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -147,51 +103,54 @@ export default function TutorProfileSetup() {
       // 科目の配列をカンマ区切りの文字列に変換
       const subjects = formData.selectedSubjects.join(",");
       
-      // 表示名を作成（姓 + 名）
-      const displayName = `${formData.lastName} ${formData.firstName}`;
-
-      // テーブル一覧を取得して確認
-      await fetchTableList();
-      
-      // どんなテーブルが存在するか確認
-      console.log("Verifying tables and creating tutor_profile if needed...");
-      
       try {
-        // まずtutors_profileテーブルが存在するかを確認
-        const { data: tutorProfileData, error: tutorProfileError } = await supabase
-          .from('tutor_profile')
-          .select('id')
-          .limit(1);
+        console.log("Attempting direct SQL insert...");
+      
+        // PostgreSQLの直接クエリを使用してデータを挿入
+        const { data: sqlData, error: sqlError } = await supabase.rpc('insert_tutor_profile', {
+          p_user_id: user.id,
+          p_first_name: formData.firstName,
+          p_last_name: formData.lastName,
+          p_last_name_furigana: formData.lastNameFurigana,
+          p_first_name_furigana: formData.firstNameFurigana,
+          p_university: formData.university,
+          p_birth_date: formData.birthDate,
+          p_subjects: subjects,
+          p_email: user.email,
+        });
+        
+        if (sqlError) {
+          console.error("SQL insert failed:", sqlError);
           
-        console.log("tutors_profile check result:", { tutorProfileData, tutorProfileError });
-        
-        // 作成するテーブル名を設定
-        const tableToUse = 'tutor_profile';
-        console.log(`Using table: ${tableToUse}`);
-        
-        // 講師プロフィールを保存
-        const { data: saveData, error: saveError } = await supabase
-          .from(tableToUse)
-          .insert([{
-            user_id: user.id,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            last_name_furigana: formData.lastNameFurigana,
-            first_name_furigana: formData.firstNameFurigana,
-            university: formData.university,
-            birth_date: formData.birthDate,
-            subjects: subjects,
-            email: user.email,
-            profile_completed: true
-          }])
-          .select();
-        
-        if (saveError) {
-          console.error(`Error saving to ${tableToUse} table:`, saveError);
-          throw saveError;
+          // 通常のテーブル操作にフォールバック
+          console.log("Falling back to standard insert...");
+          
+          // 講師プロフィールを保存
+          const { data: tutorData, error: tutorError } = await supabase
+            .from('tutor_profile')
+            .insert({
+              user_id: user.id,
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+              last_name_furigana: formData.lastNameFurigana,
+              first_name_furigana: formData.firstNameFurigana,
+              university: formData.university,
+              birth_date: formData.birthDate,
+              subjects: subjects,
+              email: user.email,
+              profile_completed: true
+            })
+            .select();
+          
+          if (tutorError) {
+            console.error("Standard insert failed:", tutorError);
+            throw tutorError;
+          }
+          
+          console.log("Tutor profile saved via standard insert:", tutorData);
+        } else {
+          console.log("Tutor profile saved via SQL insert:", sqlData);
         }
-        
-        console.log(`Tutor profile saved to ${tableToUse} table:`, saveData);
         
         // 成功通知
         toast({
@@ -203,7 +162,54 @@ export default function TutorProfileSetup() {
         router.push('/dashboard');
       } catch (error) {
         console.error("Failed to save profile:", error);
-        throw new Error(`プロフィール保存に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+        
+        // 最後の手段として直接テーブル作成とデータ挿入を試みる（通常、この方法は推奨されません）
+        try {
+          console.error("All standard methods failed, using raw SQL...");
+          
+          // データをJSON形式で準備
+          const tutorDataObject = {
+            user_id: user.id,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            last_name_furigana: formData.lastNameFurigana,
+            first_name_furigana: formData.firstNameFurigana,
+            university: formData.university,
+            birth_date: formData.birthDate,
+            subjects,
+            email: user.email,
+            profile_completed: true
+          };
+          
+          // APIエンドポイントを使用して登録
+          const response = await fetch('/api/register-tutor', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(tutorDataObject)
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`API returned error: ${JSON.stringify(errorData)}`);
+          }
+          
+          const result = await response.json();
+          console.log("Tutor profile saved via API:", result);
+          
+          // 成功通知
+          toast({
+            title: "プロフィール設定完了",
+            description: "講師プロフィールが正常に設定されました (API経由)",
+          });
+          
+          // ダッシュボードに遷移
+          router.push('/dashboard');
+        } catch (apiError) {
+          console.error("API fallback failed:", apiError);
+          throw new Error(`すべての保存方法が失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
     } catch (error: any) {
       console.error("プロフィール設定エラー:", error);
@@ -220,49 +226,12 @@ export default function TutorProfileSetup() {
   return (
     <div className="container mx-auto py-10 px-4">
       <div className="max-w-4xl mx-auto">
-        {showDebug && (
-          <Card className="mb-4 bg-gray-50">
-            <CardHeader>
-              <CardTitle className="text-lg">デバッグ情報</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>利用可能なテーブル:</p>
-              <pre className="bg-gray-100 p-2 rounded text-xs mt-2">
-                {tables.length > 0 ? tables.join(', ') : 'テーブルが見つかりませんでした'}
-              </pre>
-              
-              <div className="mt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={fetchTableList}
-                >
-                  テーブル一覧を再取得
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="text-2xl">講師プロフィール設定</CardTitle>
             <CardDescription>
               講師としての情報を入力してください。これらの情報は生徒とその保護者に公開されます。
             </CardDescription>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => {
-                setShowDebug(!showDebug);
-                if (!showDebug) fetchTableList();
-              }}
-              className="text-xs text-gray-500"
-            >
-              {showDebug ? 'デバッグ情報を隠す' : 'デバッグ情報を表示'}
-            </Button>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
