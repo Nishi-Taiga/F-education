@@ -2,45 +2,47 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { Database } from "@/types/supabase";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase/client";
 import { Dashboard } from "@/components/dashboard";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 // ユーザー情報の型
 type UserProfile = {
-  id: string;
-  first_name?: string;
-  last_name?: string;
+  id: number;
+  display_name?: string;
+  username?: string;
   role?: 'parent' | 'tutor' | 'student' | 'admin';
   email: string;
+  profile_completed?: boolean;
 };
 
 // 生徒情報の型
 type Student = {
-  id: string;
+  id: number;
   first_name: string;
   last_name: string;
-  parent_id: string;
+  user_id: number;
   grade?: string;
   school?: string;
 };
 
 // 講師プロファイルの型
 type TutorProfile = {
-  id: string;
-  user_id: string;
+  id: number;
+  user_id: number;
   first_name: string;
   last_name: string;
   bio?: string;
-  subjects: string[];
-  qualifications?: string[];
-  hourly_rate?: number;
+  subjects?: string;
+  university?: string;
 };
 
 export default function DashboardPage() {
   const router = useRouter();
-  const supabase = createClientComponentClient<Database>();
+  const { toast } = useToast();
+  const { refetch } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -58,30 +60,46 @@ export default function DashboardPage() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
+          console.log("No active session found in dashboard");
           router.push('/auth');
           return;
         }
         
-        // ユーザー情報を取得
-        const { data: userData, error: userError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single();
-
-        if (userError || !userData) {
-          console.error('Error fetching user profile:', userError);
+        console.log("Dashboard: session found for email:", session.user.email);
+        
+        // ユーザー情報を取得 (users テーブル)
+        const { data: usersList, error: usersError } = await supabase
+          .from('users')
+          .select('*');
+          
+        if (usersError) {
+          console.error("Error fetching users list:", usersError);
+          throw new Error("ユーザー情報の取得に失敗しました");
+        }
+        
+        // メールアドレスが一致するユーザーを検索
+        const userData = usersList?.find(user => 
+          user.email?.toLowerCase() === session.user.email.toLowerCase() || 
+          user.username?.toLowerCase() === session.user.email.toLowerCase()
+        );
+        
+        // ユーザーがデータベースに存在しない場合
+        if (!userData) {
+          console.log("User not in database, redirecting to profile setup");
           router.push('/profile-setup');
           return;
         }
+        
+        console.log("User found in database:", userData);
 
         // ユーザープロファイル設定
         setUserProfile({
           id: userData.id,
-          first_name: userData.first_name,
-          last_name: userData.last_name,
+          display_name: userData.display_name,
+          username: userData.username,
           role: userData.role,
           email: userData.email || session.user.email || '',
+          profile_completed: userData.profile_completed,
         });
 
         // ユーザーロールに応じたデータ取得
@@ -90,9 +108,11 @@ export default function DashboardPage() {
           const { data: studentsData, error: studentsError } = await supabase
             .from('students')
             .select('*')
-            .eq('parent_id', userData.id);
+            .eq('user_id', userData.id);
 
-          if (!studentsError && studentsData) {
+          if (studentsError) {
+            console.error('Error fetching students:', studentsError);
+          } else if (studentsData) {
             setStudents(studentsData);
           }
 
@@ -100,42 +120,50 @@ export default function DashboardPage() {
           const { data: ticketsData, error: ticketsError } = await supabase
             .from('student_tickets')
             .select('quantity')
-            .eq('parent_id', userData.id)
-            .single();
+            .eq('user_id', userData.id)
+            .maybeSingle();
 
-          if (!ticketsError && ticketsData) {
+          if (ticketsError) {
+            console.error('Error fetching tickets:', ticketsError);
+          } else if (ticketsData) {
             setAvailableTickets(ticketsData.quantity || 0);
           }
         } else if (userData.role === 'tutor') {
           // 講師プロフィール取得
           const { data: tutorData, error: tutorError } = await supabase
-            .from('tutor_profiles')
+            .from('tutors')
             .select('*')
-            .eq('user_id', session.user.id)
-            .single();
+            .eq('user_id', userData.id)
+            .maybeSingle();
 
-          if (!tutorError && tutorData) {
+          if (tutorError) {
+            console.error('Error fetching tutor profile:', tutorError);
+          } else if (tutorData) {
             setTutorProfile({
               id: tutorData.id,
               user_id: tutorData.user_id,
               first_name: tutorData.first_name,
               last_name: tutorData.last_name,
               bio: tutorData.bio,
-              subjects: tutorData.subjects || [],
-              qualifications: tutorData.qualifications,
-              hourly_rate: tutorData.hourly_rate,
+              subjects: tutorData.subjects,
+              university: tutorData.university,
             });
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch user data:', error);
+        toast({
+          title: "データ取得エラー",
+          description: error.message || "ユーザー情報の取得中にエラーが発生しました",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserData();
-  }, [supabase, router]);
+  }, [supabase, router, toast]);
 
   if (loading) {
     return (
@@ -151,6 +179,12 @@ export default function DashboardPage() {
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h1 className="text-2xl font-bold mb-4">認証エラー</h1>
         <p className="text-muted-foreground">ログインする必要があります</p>
+        <button 
+          className="mt-4 px-4 py-2 bg-primary text-white rounded-md"
+          onClick={() => router.push('/auth')}
+        >
+          ログイン画面へ
+        </button>
       </div>
     );
   }
