@@ -37,6 +37,8 @@ export default function TutorProfileSetup() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [tables, setTables] = useState<string[]>([]);
+  const [showDebug, setShowDebug] = useState(false);
   
   const [formData, setFormData] = useState({
     lastName: "",
@@ -68,6 +70,30 @@ export default function TutorProfileSetup() {
         : [...prev.selectedSubjects, fullSubjectName];
       return { ...prev, selectedSubjects: subjects };
     });
+  };
+
+  // テーブル名を取得する関数
+  const fetchTables = async () => {
+    try {
+      // Supabaseで利用可能なテーブルをリストアップするSQLクエリを実行
+      const { data, error } = await supabase
+        .rpc('list_tables');
+      
+      if (error) {
+        console.error("Error fetching tables:", error);
+        return;
+      }
+      
+      // テーブル名の配列を設定
+      if (data) {
+        setTables(data);
+        console.log("Available tables:", data);
+      }
+      
+      setShowDebug(true);
+    } catch (error) {
+      console.error("Failed to fetch tables:", error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,12 +133,13 @@ export default function TutorProfileSetup() {
       const displayName = `${formData.lastName} ${formData.firstName}`;
 
       // 利用可能なテーブルを確認
-      console.log("Saving profile to tutor_profile table...");
+      await fetchTables();
+      console.log("Saving profile to tutors table...");
       
       try {
         // 講師プロフィールを保存
         const { data: tutorData, error: tutorError } = await supabase
-          .from('tutor_profile')
+          .from('tutors')
           .insert([{
             user_id: user.id,
             first_name: formData.firstName,
@@ -128,11 +155,11 @@ export default function TutorProfileSetup() {
           .select();
         
         if (tutorError) {
-          console.error("Error saving to tutor_profile table:", tutorError);
+          console.error("Error saving to tutors table:", tutorError);
           throw tutorError;
         }
         
-        console.log("Tutor profile saved to tutor_profile table:", tutorData);
+        console.log("Tutor profile saved to tutors table:", tutorData);
         
         // 成功通知
         toast({
@@ -161,6 +188,20 @@ export default function TutorProfileSetup() {
   return (
     <div className="container mx-auto py-10 px-4">
       <div className="max-w-4xl mx-auto">
+        {showDebug && (
+          <Card className="mb-4 bg-gray-50">
+            <CardHeader>
+              <CardTitle className="text-lg">デバッグ情報</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>利用可能なテーブル:</p>
+              <pre className="bg-gray-100 p-2 rounded text-xs mt-2">
+                {tables.length > 0 ? tables.join(', ') : 'テーブルが見つかりませんでした'}
+              </pre>
+            </CardContent>
+          </Card>
+        )}
+        
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="text-2xl">講師プロフィール設定</CardTitle>
