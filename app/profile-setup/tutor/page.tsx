@@ -107,12 +107,12 @@ export default function TutorProfileSetup() {
       const displayName = `${formData.lastName} ${formData.firstName}`;
 
       // 利用可能なテーブルを確認
-      console.log("Checking available tables...");
+      console.log("Saving profile to tutor_profile table...");
       
       try {
-        // 講師プロフィールを保存（tutorsテーブルを使用）
+        // 講師プロフィールを保存
         const { data: tutorData, error: tutorError } = await supabase
-          .from('tutors')
+          .from('tutor_profile')
           .insert([{
             user_id: user.id,
             first_name: formData.firstName,
@@ -128,11 +128,11 @@ export default function TutorProfileSetup() {
           .select();
         
         if (tutorError) {
-          console.error("Error saving to tutors table:", tutorError);
+          console.error("Error saving to tutor_profile table:", tutorError);
           throw tutorError;
         }
         
-        console.log("Tutor profile saved to tutors table:", tutorData);
+        console.log("Tutor profile saved to tutor_profile table:", tutorData);
         
         // 成功通知
         toast({
