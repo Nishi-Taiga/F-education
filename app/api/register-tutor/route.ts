@@ -34,8 +34,33 @@ export async function POST(request: NextRequest) {
       user_id: tutorData.user_id ? `${tutorData.user_id.substring(0, 8)}...` : 'undefined',
     });
     
+    // まず、テーブルが存在するか確認し、なければ作成する
+    try {
+      console.log('[API] Checking if table exists');
+      const { error: tableCheckError } = await supabase
+        .from('tutor_profile')
+        .select('id')
+        .limit(1);
+      
+      if (tableCheckError) {
+        console.log('[API] Table might not exist, attempting to create it');
+        const { error: createTableError } = await supabase
+          .rpc('create_tutor_profile_table_if_not_exists');
+        
+        if (createTableError) {
+          console.error('[API] Failed to create table:', createTableError);
+        } else {
+          console.log('[API] Table created successfully');
+        }
+      }
+    } catch (tableError) {
+      console.error('[API] Error checking/creating table:', tableError);
+    }
+    
     // プロフィールデータを準備
+    // 重要: ここでidフィールドを生成して含める
     const profileData = {
+      id: crypto.randomUUID(), // UUIDを明示的に生成
       user_id: tutorData.user_id,
       first_name: tutorData.first_name,
       last_name: tutorData.last_name,
@@ -45,12 +70,14 @@ export async function POST(request: NextRequest) {
       birth_date: tutorData.birth_date,
       subjects: tutorData.subjects,
       email: tutorData.email || '',
-      profile_completed: true
+      profile_completed: true,
+      is_active: true,
+      created_at: new Date().toISOString()
     };
     
     try {
       // 標準的なInsert操作
-      console.log('[API] Attempting standard insert');
+      console.log('[API] Attempting standard insert with explicit ID');
       
       const { data: insertData, error: insertError } = await supabase
         .from('tutor_profile')
@@ -69,43 +96,28 @@ export async function POST(request: NextRequest) {
       
       // Supabaseの自動処理にアクセスできない場合は別の方法を試す
       try {
-        // テーブルのスキーマ確認
-        console.log('[API] Checking table schema');
-        const { data: schemaData, error: schemaError } = await supabase
-          .from('tutor_profile')
-          .select('id')
-          .limit(1);
+        // RPC呼び出しを試みる
+        console.log('[API] Trying RPC call to insert tutor profile');
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc('insert_tutor_profile', { 
+            profile: profileData 
+          });
         
-        if (schemaError) {
-          console.error('[API] Schema check failed:', schemaError);
+        if (rpcError) {
+          console.error('[API] RPC call failed:', rpcError);
           return NextResponse.json({ 
-            error: 'Database error during schema check', 
-            details: schemaError 
+            error: 'Database error during RPC call', 
+            details: rpcError 
           }, { status: 500 });
         }
         
-        // Upsert操作を試す
-        console.log('[API] Trying upsert operation');
-        const { data: upsertData, error: upsertError } = await supabase
-          .from('tutor_profile')
-          .upsert(profileData)
-          .select();
-        
-        if (upsertError) {
-          console.error('[API] Upsert failed:', upsertError);
-          return NextResponse.json({ 
-            error: 'Database error during upsert', 
-            details: upsertError 
-          }, { status: 500 });
-        }
-        
-        console.log('[API] Upsert succeeded:', upsertData);
-        return NextResponse.json({ success: true, data: upsertData });
+        console.log('[API] RPC call succeeded:', rpcData);
+        return NextResponse.json({ success: true, data: rpcData });
       } catch (fallbackError: any) {
         console.error('[API] All fallback methods failed:', fallbackError);
         return NextResponse.json({ 
           error: 'All insert methods failed', 
-          details: fallbackError.message || String(fallbackError)
+          details: fallbackError.message || String(fallbackError) 
         }, { status: 500 });
       }
     }
@@ -113,7 +125,7 @@ export async function POST(request: NextRequest) {
     console.error('[API] Unexpected error:', error);
     return NextResponse.json({ 
       error: error.message || 'Internal server error',
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
     }, { status: 500 });
   }
 }

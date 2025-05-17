@@ -72,6 +72,15 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres
 ```
 
+### セットアップ後の必須手順
+
+1. Supabaseのダッシュボード上でSQLエディターを開き、`sql/migrations/create_tutor_profile_table_rpc.sql` のSQL文を実行して必要な関数を作成してください。
+
+2. 次に以下のコマンドを実行して、テーブルを初期化します：
+```sql
+SELECT create_tutor_profile_table_if_not_exists();
+```
+
 ### 参考リンク
 
 - [Next.js ドキュメント](https://nextjs.org/docs)
