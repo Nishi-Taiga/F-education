@@ -1,5 +1,6 @@
 import './globals.css';
-import { AuthProvider } from '@/contexts/auth-provider';
+import { AuthProvider } from '@/hooks/use-auth';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata = {
   title: 'F-education',
@@ -16,6 +17,7 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           {children}
+          <Toaster />
         </AuthProvider>
       </body>
     </html>
