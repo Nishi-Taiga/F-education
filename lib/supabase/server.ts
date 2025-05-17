@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 /**
@@ -9,21 +9,11 @@ export function createClient() {
   const cookieStore = cookies();
   
   // Supabaseクライアントを初期化
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  return createServerComponentClient(
+    { cookies: () => cookieStore },
     {
-      cookies: {
-        get(name) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name, value, options) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          cookieStore.set({ name, value: '', ...options });
-        },
-      },
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     }
   );
 }
