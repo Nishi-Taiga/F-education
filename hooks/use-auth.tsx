@@ -108,10 +108,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return {
           id: userData.id,
           auth_id: session.user.id, // SupabaseのAuth UIを格納
-          displayName: userData.display_name || `${userData.last_name || ''} ${userData.first_name || ''}`.trim(),
+          displayName: userData.display_name || '',
           username: userData.username,
-          firstName: userData.first_name,
-          lastName: userData.last_name,
+          firstName: '', // DBにはないが、フロントエンド側で使用するプロパティ
+          lastName: '',  // DBにはないが、フロントエンド側で使用するプロパティ
           role: userData.role,
           email: userData.email || session.user.email,
           profileCompleted: userData.profile_completed
@@ -173,10 +173,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return {
         id: userData.id,
         auth_id: data.user.id,
-        displayName: userData.display_name || `${userData.last_name || ''} ${userData.first_name || ''}`.trim(),
+        displayName: userData.display_name || '',
         username: userData.username,
-        firstName: userData.first_name,
-        lastName: userData.last_name,
+        firstName: '', // DBにはないが、フロントエンド側で使用するプロパティ
+        lastName: '',  // DBにはないが、フロントエンド側で使用するプロパティ
         role: userData.role,
         email: userData.email || credentials.email,
         profileCompleted: userData.profile_completed
@@ -210,9 +210,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password: data.password,
         options: {
           data: {
-            first_name: data.firstName,
-            last_name: data.lastName,
-            role: data.role || 'parent',
+            email: data.email,
+            // 最低限の情報のみを保存
           }
         }
       });
@@ -229,129 +228,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("認証は成功しましたが、ユーザー情報が取得できませんでした");
       }
       
-      // ユーザーテーブルに既にメールアドレスが存在するか確認
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', data.email)
-        .maybeSingle();
-        
-      if (checkError) {
-        console.error("Error checking existing user:", checkError);
-      }
-      
-      // 既に存在する場合は既存ユーザーを返す
-      if (existingUser) {
-        console.log("User already exists in database, fetching data");
-        const { data: userData, error: fetchError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', existingUser.id)
-          .single();
-          
-        if (fetchError) {
-          console.error("Error fetching existing user data:", fetchError);
-          throw new Error("既存のユーザー情報を取得できませんでした");
-        }
-        
-        return {
-          id: userData.id,
-          auth_id: authData.user.id,
-          displayName: userData.display_name,
-          username: userData.username,
-          firstName: userData.first_name,
-          lastName: userData.last_name,
-          role: userData.role,
-          email: userData.email,
-          profileCompleted: userData.profile_completed
-        };
-      }
-      
-      // 新規ユーザーをデータベースに登録 (最大3回リトライ)
-      let userData = null;
-      let userError = null;
-      let retryCount = 0;
-      
-      while (!userData && retryCount < 3) {
-        console.log(`Attempting to create database user record (attempt ${retryCount + 1})`);
-        
-        const userInsertResult = await supabase
-          .from('users')
-          .insert([
-            {
-              username: data.email,
-              email: data.email,
-              first_name: data.firstName,
-              last_name: data.lastName,
-              role: data.role || 'parent',
-              profile_completed: false,
-              display_name: `${data.lastName || ''} ${data.firstName || ''}`.trim(),
-              // auth_idフィールドは存在しないため削除
-              // 以下は古いスキーマとの互換性のためのダミーデータ
-              password: 'supabase_auth_managed' // パスワード自体はSupabaseで管理
-            }
-          ])
-          .select()
-          .single();
-          
-        userData = userInsertResult.data;
-        userError = userInsertResult.error;
-        
-        if (userError) {
-          console.error(`User insert error (attempt ${retryCount + 1}):`, userError);
-          retryCount++;
-          
-          if (retryCount < 3) {
-            // リトライ前に少し待機
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        } else {
-          // 成功したらループを抜ける
-          break;
-        }
-      }
-        
-      // 最終的にデータベースへの登録が失敗した場合
-      if (userError || !userData) {
-        console.error("Final user insert error after retries:", userError);
-        
-        // ユーザー作成失敗時は、認証アカウントも削除を試みる
-        try {
-          const { error: deleteError } = await supabase.auth.admin.deleteUser(authData.user.id);
-          if (deleteError) {
-            console.error("Failed to delete auth user after DB insert failure:", deleteError);
-          } else {
-            console.log("Auth user deleted after failed DB insert");
-          }
-        } catch (deleteError) {
-          console.error("Error during auth user cleanup:", deleteError);
-        }
-        
-        throw new Error(userError?.message || "ユーザーデータベースへの登録に失敗しました");
-      }
-      
-      console.log("User successfully created in database:", userData);
-      
-      // ユーザーオブジェクトの形式に変換して返す
+      // 認証が成功した場合、最小限のユーザー情報だけを返す
+      // 実際のユーザープロフィールはプロフィール設定画面で登録される
       return {
-        id: userData.id,
+        id: 0, // 仮のID（プロフィール登録後に実際のIDが設定される）
         auth_id: authData.user.id,
-        displayName: userData.display_name,
-        username: userData.username,
-        firstName: userData.first_name,
-        lastName: userData.last_name,
-        role: userData.role,
-        email: userData.email,
-        profileCompleted: userData.profile_completed
+        displayName: '',
+        username: data.email,
+        firstName: '',
+        lastName: '',
+        role: 'parent', // デフォルトは保護者
+        email: data.email,
+        profileCompleted: false
       };
     },
     onSuccess: (user: User) => {
       setCurrentUser(user);
       toast({
         title: "アカウント作成完了",
-        description: "登録が完了しました。サービスをご利用いただけます。",
+        description: "メールアドレスの確認メールをお送りしました。メール内のリンクをクリックして認証を完了してください。",
       });
-      router.push('/profile-setup');
+      // メール確認を待つので、ここではページ遷移しない
     },
     onError: (error: Error) => {
       console.error("Registration mutation error:", error);
