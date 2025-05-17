@@ -104,7 +104,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, availableTicket
   }, [userProfile, tutorProfile, students, isParent, isStudent, isTutor, toast, supabase]);
 
   // 予約詳細を表示
-  const handleBookingClick = (booking: any) => {
+  const handleBookingSelect = (booking: any) => {
     setSelectedBooking(booking);
     setShowBookingDetailModal(true);
   };
@@ -166,7 +166,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, availableTicket
   };
 
   // 予約ページへの遷移
-  const handleBookingClick = () => {
+  const handleBookingPageClick = () => {
     router.push('/booking');
   };
 
@@ -205,7 +205,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, availableTicket
         
         <div className="flex flex-wrap gap-2">
           {(isParent || isStudent) && (
-            <Button onClick={handleBookingClick}>
+            <Button onClick={handleBookingPageClick}>
               <Plus className="mr-2 h-4 w-4" />
               予約する
             </Button>
@@ -254,7 +254,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, availableTicket
                 bookings={bookings}
                 currentDate={currentDate}
                 onDateChange={handleMonthChange}
-                onBookingClick={handleBookingClick}
+                onBookingClick={handleBookingSelect}
               />
             )}
           </CardContent>
@@ -283,7 +283,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, availableTicket
                       <BookingCard
                         key={booking.id}
                         booking={booking}
-                        onClick={() => handleBookingClick(booking)}
+                        onClick={() => handleBookingSelect(booking)}
                       />
                     ))
                   ) : (
@@ -302,7 +302,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, availableTicket
                       <BookingCard
                         key={booking.id}
                         booking={booking}
-                        onClick={() => handleBookingClick(booking)}
+                        onClick={() => handleBookingSelect(booking)}
                         onViewReport={booking.reportId ? () => handleViewReport(booking) : undefined}
                       />
                     ))
@@ -322,7 +322,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, availableTicket
                       <BookingCard
                         key={booking.id}
                         booking={booking}
-                        onClick={() => handleBookingClick(booking)}
+                        onClick={() => handleBookingSelect(booking)}
                       />
                     ))
                   ) : (
