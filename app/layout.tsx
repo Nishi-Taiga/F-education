@@ -1,6 +1,7 @@
 import './globals.css';
 import { AuthProvider } from '@/hooks/use-auth';
 import { Toaster } from '@/components/ui/toaster';
+import Providers from './providers';
 
 export const metadata = {
   title: 'F-education',
@@ -15,10 +16,12 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body>
-        <AuthProvider>
-          {children}
-          <Toaster />
-        </AuthProvider>
+        <Providers>
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   )
