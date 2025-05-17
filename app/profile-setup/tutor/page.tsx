@@ -72,22 +72,40 @@ export default function TutorProfileSetup() {
     });
   };
 
-  // テーブル名を取得する関数
-  const fetchTables = async () => {
+  // テーブル一覧を取得する関数
+  const fetchTableList = async () => {
     try {
-      // Supabaseで利用可能なテーブルをリストアップするSQLクエリを実行
+      // 情報スキーマからテーブル一覧を取得
       const { data, error } = await supabase
-        .rpc('list_tables');
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public');
       
       if (error) {
-        console.error("Error fetching tables:", error);
+        console.error("Failed to fetch table list:", error);
+        
+        // 別の方法を試す
+        try {
+          const { data: result, error: queryError } = await supabase.rpc('get_table_list');
+          if (queryError) {
+            console.error("Failed to fetch tables with RPC:", queryError);
+            return;
+          }
+          
+          if (result) {
+            setTables(result);
+            console.log("Tables (via RPC):", result);
+          }
+        } catch (rpcError) {
+          console.error("RPC error:", rpcError);
+        }
         return;
       }
       
-      // テーブル名の配列を設定
       if (data) {
-        setTables(data);
-        console.log("Available tables:", data);
+        const tableNames = data.map(item => item.table_name);
+        setTables(tableNames);
+        console.log("Available tables:", tableNames);
       }
       
       setShowDebug(true);
@@ -132,14 +150,28 @@ export default function TutorProfileSetup() {
       // 表示名を作成（姓 + 名）
       const displayName = `${formData.lastName} ${formData.firstName}`;
 
-      // 利用可能なテーブルを確認
-      await fetchTables();
-      console.log("Saving profile to tutors table...");
+      // テーブル一覧を取得して確認
+      await fetchTableList();
+      
+      // どんなテーブルが存在するか確認
+      console.log("Verifying tables and creating tutor_profile if needed...");
       
       try {
+        // まずtutors_profileテーブルが存在するかを確認
+        const { data: tutorProfileData, error: tutorProfileError } = await supabase
+          .from('tutor_profile')
+          .select('id')
+          .limit(1);
+          
+        console.log("tutors_profile check result:", { tutorProfileData, tutorProfileError });
+        
+        // 作成するテーブル名を設定
+        const tableToUse = 'tutor_profile';
+        console.log(`Using table: ${tableToUse}`);
+        
         // 講師プロフィールを保存
-        const { data: tutorData, error: tutorError } = await supabase
-          .from('tutors')
+        const { data: saveData, error: saveError } = await supabase
+          .from(tableToUse)
           .insert([{
             user_id: user.id,
             first_name: formData.firstName,
@@ -154,12 +186,12 @@ export default function TutorProfileSetup() {
           }])
           .select();
         
-        if (tutorError) {
-          console.error("Error saving to tutors table:", tutorError);
-          throw tutorError;
+        if (saveError) {
+          console.error(`Error saving to ${tableToUse} table:`, saveError);
+          throw saveError;
         }
         
-        console.log("Tutor profile saved to tutors table:", tutorData);
+        console.log(`Tutor profile saved to ${tableToUse} table:`, saveData);
         
         // 成功通知
         toast({
@@ -198,6 +230,17 @@ export default function TutorProfileSetup() {
               <pre className="bg-gray-100 p-2 rounded text-xs mt-2">
                 {tables.length > 0 ? tables.join(', ') : 'テーブルが見つかりませんでした'}
               </pre>
+              
+              <div className="mt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchTableList}
+                >
+                  テーブル一覧を再取得
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -208,6 +251,18 @@ export default function TutorProfileSetup() {
             <CardDescription>
               講師としての情報を入力してください。これらの情報は生徒とその保護者に公開されます。
             </CardDescription>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                setShowDebug(!showDebug);
+                if (!showDebug) fetchTableList();
+              }}
+              className="text-xs text-gray-500"
+            >
+              {showDebug ? 'デバッグ情報を隠す' : 'デバッグ情報を表示'}
+            </Button>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
