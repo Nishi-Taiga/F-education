@@ -90,7 +90,7 @@ export default function DashboardPage() {
         
         // 1. 講師プロファイルを確認
         const { data: tutorData, error: tutorError } = await supabase
-          .from('tutor_profile')
+          .from('tutors')
           .select('*')
           .eq('user_id', userId)
           .maybeSingle();
