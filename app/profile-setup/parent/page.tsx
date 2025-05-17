@@ -173,42 +173,89 @@ export default function ParentProfileSetup() {
         throw new Error("ユーザー認証情報が見つかりません");
       }
 
-      // 保護者プロフィールを保存
-      const { error: profileError, data: profileData } = await supabase
-        .from('parent_profiles')
-        .insert([
-          {
-            user_id: user.id,
-            parent_name: parentName,
+      // 名前を分解して姓と名に分割（保護者名に空白が含まれる場合）
+      let lastName = parentName;
+      let firstName = "";
+      
+      if (parentName.includes(" ")) {
+        const nameParts = parentName.split(" ");
+        lastName = nameParts[0];
+        firstName = nameParts.slice(1).join(" ");
+      }
+
+      console.log("Creating or updating user profile...");
+
+      // まず既存のユーザーを確認
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      console.log("Existing user check:", { existingUser, checkError });
+
+      let userData;
+      
+      if (existingUser) {
+        // 既存ユーザーを更新
+        const { data, error } = await supabase
+          .from('users')
+          .update({
+            display_name: parentName,
+            email: user.email,
             phone: phone,
             postal_code: postalCode,
             prefecture: prefecture,
             city: city,
             address: address,
-            profile_completed: true
-          }
-        ])
-        .select();
+            profile_completed: true,
+            role: 'parent'
+          })
+          .eq('id', existingUser.id)
+          .select();
+          
+        if (error) throw error;
+        userData = data[0];
+      } else {
+        // 新規ユーザーを作成
+        const { data, error } = await supabase
+          .from('users')
+          .insert([{
+            username: user.email,
+            email: user.email,
+            display_name: parentName,
+            phone: phone,
+            postal_code: postalCode,
+            prefecture: prefecture,
+            city: city,
+            address: address,
+            profile_completed: true,
+            role: 'parent',
+            password: 'supabase_auth_managed' // ダミーパスワード（Supabaseで認証管理）
+          }])
+          .select();
+          
+        if (error) throw error;
+        userData = data[0];
+      }
 
-      if (profileError) throw profileError;
+      console.log("User data saved:", userData);
 
       // 生徒情報を保存
       const studentPromises = students.map(student => {
         return supabase
           .from('students')
-          .insert([
-            {
-              parent_id: profileData[0].id,
-              last_name: student.lastName,
-              first_name: student.firstName,
-              last_name_furigana: student.lastNameFurigana,
-              first_name_furigana: student.firstNameFurigana,
-              gender: student.gender,
-              school: student.school,
-              grade: student.grade,
-              birth_date: student.birthDate
-            }
-          ]);
+          .insert([{
+            user_id: userData.id,
+            last_name: student.lastName,
+            first_name: student.firstName,
+            last_name_furigana: student.lastNameFurigana,
+            first_name_furigana: student.firstNameFurigana,
+            gender: student.gender,
+            school: student.school,
+            grade: student.grade,
+            birth_date: student.birthDate
+          }]);
       });
 
       const studentResults = await Promise.all(studentPromises);
