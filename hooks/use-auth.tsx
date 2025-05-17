@@ -286,7 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               role: data.role || 'parent',
               profile_completed: false,
               display_name: `${data.lastName || ''} ${data.firstName || ''}`.trim(),
-              auth_id: authData.user.id, // 認証IDを保存
+              // auth_idフィールドは存在しないため削除
               // 以下は古いスキーマとの互換性のためのダミーデータ
               password: 'supabase_auth_managed' // パスワード自体はSupabaseで管理
             }
