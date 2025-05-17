@@ -104,172 +104,92 @@ export default function TutorProfileSetup() {
       const subjects = formData.selectedSubjects.join(",");
       
       try {
-        console.log("直接SQLを実行...");
-      
-        // 直接SQLを使用してデータを挿入
-        const { data: sqlData, error: sqlError } = await supabase.rpc('execute_sql', {
-          sql_query: `
-            INSERT INTO tutor_profile (
-              user_id, 
-              first_name, 
-              last_name, 
-              last_name_furigana, 
-              first_name_furigana, 
-              university, 
-              birth_date, 
-              subjects, 
-              email, 
-              profile_completed
-            ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-            ) RETURNING *
-          `,
-          params: [
-            user.id,
-            formData.firstName,
-            formData.lastName,
-            formData.lastNameFurigana,
-            formData.firstNameFurigana,
-            formData.university,
-            formData.birthDate,
-            subjects,
-            user.email,
-            true
-          ]
+        console.log("APIエンドポイントを使用...");
+        
+        // 転送するデータを準備
+        const apiData = {
+          user_id: user.id,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          last_name_furigana: formData.lastNameFurigana,
+          first_name_furigana: formData.firstNameFurigana,
+          university: formData.university,
+          birth_date: formData.birthDate,
+          subjects: subjects,
+          email: user.email
+        };
+        
+        // APIエンドポイントにリクエストを送信
+        const response = await fetch('/api/register-tutor', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(apiData)
         });
         
-        if (sqlError) {
-          console.error("SQL実行エラー:", sqlError);
-          throw sqlError;
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`APIエラー: ${JSON.stringify(errorData)}`);
         }
         
-        console.log("プロフィール保存成功(SQL):", sqlData);
+        const result = await response.json();
+        console.log("プロフィール保存成功(API):", result);
         
         // 成功通知
         toast({
           title: "プロフィール設定完了",
           description: "講師プロフィールが正常に設定されました",
         });
-
+        
         // ダッシュボードに遷移
         router.push('/dashboard');
         return;
-      } catch (sqlError) {
-        console.error("SQL実行失敗:", sqlError);
+      } catch (apiError) {
+        console.error("API実行失敗:", apiError);
         
-        // 次の方法を試す - ID自動生成を無効化した通常のinsert
+        // 直接クライアント側で独自のテーブル操作を試す
         try {
-          console.log("INSERT WITHOUT SERIAL IDを試行...");
+          console.log("独自テーブル作成とデータ挿入を試行...");
           
-          // 直接SQLでIDを指定したinsertを実行
-          const { data: rawData, error: rawError } = await supabase.rpc('execute_sql', {
-            sql_query: `
-              INSERT INTO tutor_profile (
-                id,
-                user_id, 
-                first_name, 
-                last_name, 
-                last_name_furigana, 
-                first_name_furigana, 
-                university, 
-                birth_date, 
-                subjects, 
-                email, 
-                profile_completed
-              ) VALUES (
-                (SELECT COALESCE(MAX(id), 0) + 1 FROM tutor_profile),
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-              ) RETURNING *
-            `,
-            params: [
-              user.id,
-              formData.firstName,
-              formData.lastName,
-              formData.lastNameFurigana,
-              formData.firstNameFurigana,
-              formData.university,
-              formData.birthDate,
-              subjects,
-              user.email,
-              true
-            ]
-          });
+          // JSON形式でデータを準備
+          const profileData = {
+            user_id: user.id,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            last_name_furigana: formData.lastNameFurigana,
+            first_name_furigana: formData.firstNameFurigana,
+            university: formData.university,
+            birth_date: formData.birthDate,
+            subjects: subjects,
+            email: user.email,
+            profile_completed: true
+          };
           
-          if (rawError) {
-            console.error("RAW SQL実行エラー:", rawError);
-            throw rawError;
+          // 直接クライアントからPostgreSQLのtutor_profileテーブルにinsert
+          const { data: directData, error: directError } = await supabase
+            .from('tutor_profile')
+            .insert(profileData);
+          
+          if (directError) {
+            console.error("直接挿入エラー:", directError);
+            throw directError;
           }
           
-          console.log("プロフィール保存成功(RAW SQL):", rawData);
+          console.log("直接挿入成功:", directData);
           
           // 成功通知
           toast({
             title: "プロフィール設定完了",
             description: "講師プロフィールが正常に設定されました",
           });
-
+          
           // ダッシュボードに遷移
           router.push('/dashboard');
           return;
-        } catch (rawError) {
-          console.error("RAW SQL実行失敗:", rawError);
-          
-          // 次の方法を試す - APIを使用したサーバーサイドでの挿入
-          try {
-            console.log("APIエンドポイントを使用...");
-            
-            // 転送するデータを準備
-            const apiData = {
-              user_id: user.id,
-              first_name: formData.firstName,
-              last_name: formData.lastName,
-              last_name_furigana: formData.lastNameFurigana,
-              first_name_furigana: formData.firstNameFurigana,
-              university: formData.university,
-              birth_date: formData.birthDate,
-              subjects: subjects,
-              email: user.email,
-              profile_completed: true
-            };
-            
-            // セッショントークンを取得
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (!session) {
-              throw new Error("セッションが見つかりません");
-            }
-            
-            // APIエンドポイントにリクエストを送信
-            const response = await fetch('/api/register-tutor', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`
-              },
-              body: JSON.stringify(apiData)
-            });
-            
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(`APIエラー: ${JSON.stringify(errorData)}`);
-            }
-            
-            const result = await response.json();
-            console.log("プロフィール保存成功(API):", result);
-            
-            // 成功通知
-            toast({
-              title: "プロフィール設定完了",
-              description: "講師プロフィールが正常に設定されました",
-            });
-            
-            // ダッシュボードに遷移
-            router.push('/dashboard');
-            return;
-          } catch (apiError) {
-            console.error("API実行失敗:", apiError);
-            throw new Error(`すべての保存方法が失敗しました: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
-          }
+        } catch (directError) {
+          console.error("直接挿入失敗:", directError);
+          throw new Error(`すべての保存方法が失敗しました: ${directError instanceof Error ? directError.message : String(directError)}`);
         }
       }
     } catch (error: any) {
