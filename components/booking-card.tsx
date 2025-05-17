@@ -4,8 +4,6 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { BookOpen, User, X, AlertCircle, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 
 interface BookingCardProps {
   booking: {
@@ -89,15 +87,15 @@ export function BookingCard({ booking, onClick, onViewReport }: BookingCardProps
       
       {/* ステータス表示 */}
       {isCancelled && (
-        <Badge variant="outline" className="bg-gray-100 text-gray-800 mr-1">
+        <div className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full mr-1">
           キャンセル済
-        </Badge>
+        </div>
       )}
       
       {isCompleted && booking.reportId && !onViewReport && (
-        <Badge className="bg-green-100 text-green-800 hover:bg-green-200 mr-1">
+        <div className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full mr-1">
           レポート済
-        </Badge>
+        </div>
       )}
     </div>
   );
