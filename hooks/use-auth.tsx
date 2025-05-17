@@ -202,6 +202,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 登録処理
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
+      console.log("Starting registration process for email:", data.email);
+      
       // Supabaseで認証アカウントを作成
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
@@ -215,33 +217,125 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       });
       
-      if (authError) throw new Error(authError.message);
+      if (authError) {
+        console.error("Auth signup error:", authError);
+        throw new Error(authError.message);
+      }
       
-      // データベースのユーザーテーブルに登録情報を作成
-      const { data: userData, error: userError } = await supabase
+      // 認証成功のログ
+      console.log("Auth signup successful. User ID:", authData.user?.id);
+      
+      if (!authData.user) {
+        throw new Error("認証は成功しましたが、ユーザー情報が取得できませんでした");
+      }
+      
+      // ユーザーテーブルに既にメールアドレスが存在するか確認
+      const { data: existingUser, error: checkError } = await supabase
         .from('users')
-        .insert([
-          {
-            username: data.email,
-            email: data.email,
-            first_name: data.firstName,
-            last_name: data.lastName,
-            role: data.role || 'parent',
-            profile_completed: false,
-            display_name: `${data.lastName || ''} ${data.firstName || ''}`.trim(),
-            // 以下は古いスキーマとの互換性のためのダミーデータ
-            password: 'supabase_auth_managed' // パスワード自体はSupabaseで管理
-          }
-        ])
-        .select()
-        .single();
+        .select('id')
+        .eq('email', data.email)
+        .maybeSingle();
         
-      if (userError) throw new Error(userError.message);
+      if (checkError) {
+        console.error("Error checking existing user:", checkError);
+      }
+      
+      // 既に存在する場合は既存ユーザーを返す
+      if (existingUser) {
+        console.log("User already exists in database, fetching data");
+        const { data: userData, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', existingUser.id)
+          .single();
+          
+        if (fetchError) {
+          console.error("Error fetching existing user data:", fetchError);
+          throw new Error("既存のユーザー情報を取得できませんでした");
+        }
+        
+        return {
+          id: userData.id,
+          auth_id: authData.user.id,
+          displayName: userData.display_name,
+          username: userData.username,
+          firstName: userData.first_name,
+          lastName: userData.last_name,
+          role: userData.role,
+          email: userData.email,
+          profileCompleted: userData.profile_completed
+        };
+      }
+      
+      // 新規ユーザーをデータベースに登録 (最大3回リトライ)
+      let userData = null;
+      let userError = null;
+      let retryCount = 0;
+      
+      while (!userData && retryCount < 3) {
+        console.log(`Attempting to create database user record (attempt ${retryCount + 1})`);
+        
+        const userInsertResult = await supabase
+          .from('users')
+          .insert([
+            {
+              username: data.email,
+              email: data.email,
+              first_name: data.firstName,
+              last_name: data.lastName,
+              role: data.role || 'parent',
+              profile_completed: false,
+              display_name: `${data.lastName || ''} ${data.firstName || ''}`.trim(),
+              auth_id: authData.user.id, // 認証IDを保存
+              // 以下は古いスキーマとの互換性のためのダミーデータ
+              password: 'supabase_auth_managed' // パスワード自体はSupabaseで管理
+            }
+          ])
+          .select()
+          .single();
+          
+        userData = userInsertResult.data;
+        userError = userInsertResult.error;
+        
+        if (userError) {
+          console.error(`User insert error (attempt ${retryCount + 1}):`, userError);
+          retryCount++;
+          
+          if (retryCount < 3) {
+            // リトライ前に少し待機
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } else {
+          // 成功したらループを抜ける
+          break;
+        }
+      }
+        
+      // 最終的にデータベースへの登録が失敗した場合
+      if (userError || !userData) {
+        console.error("Final user insert error after retries:", userError);
+        
+        // ユーザー作成失敗時は、認証アカウントも削除を試みる
+        try {
+          const { error: deleteError } = await supabase.auth.admin.deleteUser(authData.user.id);
+          if (deleteError) {
+            console.error("Failed to delete auth user after DB insert failure:", deleteError);
+          } else {
+            console.log("Auth user deleted after failed DB insert");
+          }
+        } catch (deleteError) {
+          console.error("Error during auth user cleanup:", deleteError);
+        }
+        
+        throw new Error(userError?.message || "ユーザーデータベースへの登録に失敗しました");
+      }
+      
+      console.log("User successfully created in database:", userData);
       
       // ユーザーオブジェクトの形式に変換して返す
       return {
         id: userData.id,
-        auth_id: authData.user?.id,
+        auth_id: authData.user.id,
         displayName: userData.display_name,
         username: userData.username,
         firstName: userData.first_name,
@@ -260,6 +354,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/profile-setup');
     },
     onError: (error: Error) => {
+      console.error("Registration mutation error:", error);
       toast({
         title: "アカウント作成に失敗しました",
         description: error.message || "このメールアドレスは既に使用されています",
