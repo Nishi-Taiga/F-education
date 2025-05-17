@@ -69,18 +69,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return null;
         }
         
+        console.log("Session found, user email:", session.user.email);
+        
         // セッションがあれば、ユーザー情報を取得
-        // email値を使って既存のユーザーデータを検索
-        const { data: userData, error: userError } = await supabase
+        // まず全てのユーザーを取得して、コンソールに出力（デバッグ用）
+        const { data: allUsers } = await supabase
           .from('users')
-          .select('*')
-          .eq('email', session.user.email)
-          .single();
+          .select('id, email, username')
+          .limit(10);
           
-        if (userError) {
-          console.error("Error fetching user data:", userError);
+        console.log("Available users:", allUsers);
+        
+        // email値を使って既存のユーザーデータを検索
+        // まずは単純に一覧で取得して、クライアント側でフィルタリング
+        const { data: usersList, error: usersError } = await supabase
+          .from('users')
+          .select('*');
+          
+        if (usersError) {
+          console.error("Error fetching users list:", usersError);
           return null;
         }
+        
+        // メールアドレスが一致するユーザーを検索
+        const userData = usersList?.find(user => 
+          user.email?.toLowerCase() === session.user.email.toLowerCase() || 
+          user.username?.toLowerCase() === session.user.email.toLowerCase()
+        );
+        
+        if (!userData) {
+          console.error("User not found for email:", session.user.email);
+          return null;
+        }
+        
+        console.log("Found user:", userData);
         
         // フロントエンド用のユーザーオブジェクト形式に変換
         return {
@@ -91,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           firstName: userData.first_name,
           lastName: userData.last_name,
           role: userData.role,
-          email: userData.email,
+          email: userData.email || session.user.email,
           profileCompleted: userData.profile_completed
         };
       } catch (error) {
@@ -121,15 +143,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (error) throw new Error(error.message);
       
-      // ユーザー情報を再取得
-      // emailを使ってユーザーを検索
-      const { data: userData, error: userError } = await supabase
+      console.log("Successful login with Supabase auth, email:", credentials.email);
+      
+      // ユーザー情報を取得
+      // まずは単純に一覧で取得して、クライアント側でフィルタリング
+      const { data: usersList, error: usersError } = await supabase
         .from('users')
-        .select('*')
-        .eq('email', credentials.email)
-        .single();
+        .select('*');
         
-      if (userError) throw new Error(userError.message);
+      if (usersError) {
+        console.error("Error fetching users list:", usersError);
+        throw new Error("ユーザー情報の取得に失敗しました");
+      }
+      
+      // メールアドレスが一致するユーザーを検索
+      const userData = usersList?.find(user => 
+        user.email?.toLowerCase() === credentials.email.toLowerCase() || 
+        user.username?.toLowerCase() === credentials.email.toLowerCase()
+      );
+      
+      if (!userData) {
+        console.error("User not found for email:", credentials.email);
+        throw new Error("ユーザーが見つかりません");
+      }
+      
+      console.log("Found user:", userData);
       
       // ユーザーオブジェクトの形式に変換して返す
       return {
@@ -140,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firstName: userData.first_name,
         lastName: userData.last_name,
         role: userData.role,
-        email: userData.email,
+        email: userData.email || credentials.email,
         profileCompleted: userData.profile_completed
       };
     },
