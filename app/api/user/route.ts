@@ -17,17 +17,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not authorized" }, { status: 401 });
     }
     
-    // Fetch user data from the database by email instead of user_id
-    const { data: userData, error: userError } = await supabase
+    console.log("API: Session found, user email:", session.user.email);
+    
+    // まずは全ユーザーを取得して、クライアント側でフィルタリング
+    const { data: usersList, error: usersError } = await supabase
       .from('users')
-      .select('*')
-      .eq('email', session.user.email)
-      .single();
+      .select('*');
       
-    if (userError) {
-      console.error("User data fetch error:", userError);
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (usersError) {
+      console.error("API: Error fetching users list:", usersError);
+      return NextResponse.json({ error: "ユーザー情報の取得に失敗しました" }, { status: 500 });
     }
+    
+    console.log("API: Users list retrieved, count:", usersList?.length);
+    
+    // メールアドレスが一致するユーザーを検索
+    const userData = usersList?.find(user => 
+      user.email?.toLowerCase() === session.user.email.toLowerCase() || 
+      user.username?.toLowerCase() === session.user.email.toLowerCase()
+    );
+    
+    if (!userData) {
+      console.error("API: User not found for email:", session.user.email);
+      return NextResponse.json({ error: "ユーザーが見つかりません" }, { status: 404 });
+    }
+    
+    console.log("API: Found user:", userData);
     
     // Return the user data
     return NextResponse.json({
@@ -37,11 +52,12 @@ export async function GET(request: NextRequest) {
       firstName: userData.first_name,
       lastName: userData.last_name,
       role: userData.role,
-      email: userData.email,
-      profileCompleted: userData.profile_completed
+      email: userData.email || session.user.email,
+      profileCompleted: userData.profile_completed,
+      displayName: userData.display_name || `${userData.last_name || ''} ${userData.first_name || ''}`.trim()
     });
   } catch (error) {
-    console.error("Server error:", error);
+    console.error("API: Server error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
