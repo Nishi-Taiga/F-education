@@ -20,11 +20,12 @@ type DashboardProps = {
   userProfile: any;
   students: any[];
   tutorProfile: any;
+  parentProfile?: any;
   availableTickets: number;
 };
 
 // ダッシュボードコンポーネント
-export const Dashboard = ({ userProfile, students, tutorProfile, availableTickets }: DashboardProps) => {
+export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, availableTickets }: DashboardProps) => {
   const router = useRouter();
   const supabase = createClientComponentClient<Database>();
   const { toast } = useToast();
@@ -191,16 +192,30 @@ export const Dashboard = ({ userProfile, students, tutorProfile, availableTicket
     router.push('/reports');
   };
 
+  // 表示名を決定
+  let displayName = userProfile?.display_name || '';
+  if (!displayName) {
+    if (isTutor && tutorProfile) {
+      displayName = `${tutorProfile.last_name} ${tutorProfile.first_name}`;
+    } else if (isParent && parentProfile) {
+      displayName = parentProfile.parent_name;
+    } else if (isStudent && students.length > 0) {
+      displayName = `${students[0].last_name} ${students[0].first_name}`;
+    } else {
+      displayName = userProfile?.email || '';
+    }
+  }
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">ダッシュボード</h1>
           <p className="text-muted-foreground">
-            {userProfile?.first_name ? `${userProfile.last_name} ${userProfile.first_name}` : ''}
-            {userProfile?.role === 'parent' && 'さん、お子様の学習状況をご確認ください'}
-            {userProfile?.role === 'student' && 'さん、授業の予定を確認しましょう'}
-            {userProfile?.role === 'tutor' && '先生、本日もよろしくお願いします'}
+            {displayName}
+            {isParent && 'さん、お子様の学習状況をご確認ください'}
+            {isStudent && 'さん、授業の予定を確認しましょう'}
+            {isTutor && '先生、本日もよろしくお願いします'}
           </p>
         </div>
         
