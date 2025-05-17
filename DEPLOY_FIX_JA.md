@@ -1,19 +1,16 @@
-# デプロイエラー修正について
+# デプロイエラー修正について（追加）
 
-## 修正内容
+## 追加の修正内容
 
-今回実施した修正点は以下の2点です：
+前回の修正でもエラーが解消されなかったため、以下の追加対応を行いました：
 
-1. **ReactQueryDevtools のインポート削除**
-   - エラー: `Module not found: Can't resolve '@tanstack/react-query-devtools'`
-   - 原因: `@tanstack/react-query-devtools` パッケージが `dependencies` に追加されていなかった
-   - 修正方法: `app/providers.tsx` ファイルから ReactQueryDevtools のインポートと使用部分を削除
-   - 理由: このモジュールは開発環境でのみ必要であり、本番環境では不要なため
+1. **@tanstack/react-query-devtools パッケージの追加**
+   - 前回の対応として、providers.tsx からのインポート部分を削除しましたが、Vercelのビルドプロセスでは依然としてパッケージを探していたようです
+   - 対応策として、package.json の dependencies に `@tanstack/react-query-devtools` パッケージを追加しました
+   - バージョンは react-query と同じ `^5.60.5` を使用
 
-2. **Node.js バージョン指定の修正**
-   - 警告: `Detected "engines": { "node": "18.17.0" } in your package.json with major.minor.patch, but only major Node.js Version can be selected.`
-   - 原因: Vercel ではメジャーバージョンのみの指定（例：18.x）を推奨している
-   - 修正方法: `package.json` 内の engines.node の値を `18.17.0` から `18.x` に変更
-   - 理由: Vercel の推奨に従い、デプロイ時の警告を解消するため
+2. **providers.tsx ファイルの再コミット**
+   - キャッシュの問題でVercelが古いコードを参照している可能性があるため、providers.tsx ファイルを再度コミットしました
+   - コード内容は同じですが、コメントを若干変更し、ビルドプロセスが確実に新しいバージョンを使用するようにしました
 
-以上の修正により、Vercel へのデプロイが正常に完了するようになります。
+これにより、ビルドエラーが解消されるはずです。本番環境では React Query Devtools は使用しませんが、ビルドプロセスを成功させるためにパッケージをインストールする方法を選択しました。
