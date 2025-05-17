@@ -106,54 +106,46 @@ export default function TutorProfileSetup() {
       // 表示名を作成（姓 + 名）
       const displayName = `${formData.lastName} ${formData.firstName}`;
 
-      // 講師プロフィール情報を保存
-      console.log("Saving tutor profile with user_id:", user.id);
+      // 利用可能なテーブルを確認
+      console.log("Checking available tables...");
       
-      // テーブル構造をログに出力して確認
-      const { data: tableInfo, error: tableError } = await supabase
-        .from('tutor_profile')
-        .select('*')
-        .limit(0);
+      try {
+        // 講師プロフィールを保存（tutorsテーブルを使用）
+        const { data: tutorData, error: tutorError } = await supabase
+          .from('tutors')
+          .insert([{
+            user_id: user.id,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            last_name_furigana: formData.lastNameFurigana,
+            first_name_furigana: formData.firstNameFurigana,
+            university: formData.university,
+            birth_date: formData.birthDate,
+            subjects: subjects,
+            email: user.email,
+            profile_completed: true
+          }])
+          .select();
         
-      if (tableError) {
-        console.error("Error checking tutor_profile table:", tableError);
-        throw new Error(`テーブル構造の確認に失敗しました: ${tableError.message}`);
-      }
-      
-      console.log("Table structure:", tableInfo);
-      
-      // 講師プロフィールを保存
-      const { data: tutorData, error: tutorError } = await supabase
-        .from('tutors')
-        .insert([{
-          user_id: user.id,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          last_name_furigana: formData.lastNameFurigana,
-          first_name_furigana: formData.firstNameFurigana,
-          university: formData.university,
-          birth_date: formData.birthDate,
-          subjects: subjects,
-          email: user.email,
-          profile_completed: true
-        }])
-        .select();
-      
-      if (tutorError) {
-        console.error("Error saving tutor profile:", tutorError);
-        throw new Error(`講師プロフィール保存エラー: ${tutorError.message}`);
-      }
-      
-      console.log("Tutor profile saved:", tutorData);
+        if (tutorError) {
+          console.error("Error saving to tutors table:", tutorError);
+          throw tutorError;
+        }
+        
+        console.log("Tutor profile saved to tutors table:", tutorData);
+        
+        // 成功通知
+        toast({
+          title: "プロフィール設定完了",
+          description: "講師プロフィールが正常に設定されました",
+        });
 
-      // 成功通知
-      toast({
-        title: "プロフィール設定完了",
-        description: "講師プロフィールが正常に設定されました",
-      });
-
-      // ダッシュボードに遷移
-      router.push('/dashboard');
+        // ダッシュボードに遷移
+        router.push('/dashboard');
+      } catch (error) {
+        console.error("Failed to save profile:", error);
+        throw new Error(`プロフィール保存に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+      }
     } catch (error: any) {
       console.error("プロフィール設定エラー:", error);
       toast({
