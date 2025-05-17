@@ -17,11 +17,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not authorized" }, { status: 401 });
     }
     
-    // Fetch user data from the database
+    // Fetch user data from the database by email instead of user_id
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('user_id', session.user.id)
+      .eq('email', session.user.email)
       .single();
       
     if (userError) {
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     // Return the user data
     return NextResponse.json({
       id: userData.id,
-      user_id: userData.user_id,
+      auth_id: session.user.id, // Supabaseの認証ID
       username: userData.username,
       firstName: userData.first_name,
       lastName: userData.last_name,
