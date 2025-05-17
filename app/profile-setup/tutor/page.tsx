@@ -109,15 +109,28 @@ export default function TutorProfileSetup() {
       // 講師プロフィール情報を保存
       console.log("Saving tutor profile with user_id:", user.id);
       
+      // テーブル構造をログに出力して確認
+      const { data: tableInfo, error: tableError } = await supabase
+        .from('tutor_profile')
+        .select('*')
+        .limit(0);
+        
+      if (tableError) {
+        console.error("Error checking tutor_profile table:", tableError);
+        throw new Error(`テーブル構造の確認に失敗しました: ${tableError.message}`);
+      }
+      
+      console.log("Table structure:", tableInfo);
+      
       // 講師プロフィールを保存
       const { data: tutorData, error: tutorError } = await supabase
-        .from('tutor_profile')
+        .from('tutors')
         .insert([{
           user_id: user.id,
           first_name: formData.firstName,
           last_name: formData.lastName,
-          first_name_furigana: formData.firstNameFurigana,
           last_name_furigana: formData.lastNameFurigana,
+          first_name_furigana: formData.firstNameFurigana,
           university: formData.university,
           birth_date: formData.birthDate,
           subjects: subjects,
