@@ -1,19 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-// 明示的なハードコード値（必須）
-const SUPABASE_URL = 'https://iknunqtcfpdpwkovggqr.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrbnVucXRjZnBkcHdrb3ZnZ3FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5MjA2ODQsImV4cCI6MjA2MjQ5NjY4NH0.H8BKyngllaBTTz6VBg4y1nd-6udqFq5yr16rK5XtCTY';
-
-// サーバークライアントは毎回新しいインスタンスを作成するが、
-// クライアント側と同じ認証情報を使用
-export function createServerClient() {
-  // デバッグ情報
-  console.log('Creating Supabase server client');
+/**
+ * サーバーサイドのSupabaseクライアントを作成する関数
+ * Next.jsのAPI RoutesやServer Componentsから使用する
+ */
+export function createClient() {
+  const cookieStore = cookies();
   
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false, // サーバーサイドではトークン自動更新は不要
+  // Supabaseクライアントを初期化
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name, value, options) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          cookieStore.set({ name, value: '', ...options });
+        },
+      },
     }
-  });
+  );
 }
