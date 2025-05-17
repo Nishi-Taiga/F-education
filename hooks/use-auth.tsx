@@ -51,14 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // ユーザー情報の取得
+  // ユーザー情報の取得 - APIエンドポイントを修正
   const {
     data: user,
     error,
     isLoading,
     refetch
   } = useQuery<User | null, Error>({
-    queryKey: ["/api/user"],
+    queryKey: ["/api/user/me"],
     queryFn: async () => {
       try {
         // Supabaseのセッションを確認
