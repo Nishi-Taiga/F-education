@@ -1,286 +1,184 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { FileText, User, Calendar, Clock, BookOpen, MapPin, Phone, History, Edit } from "lucide-react";
+import { useState } from 'react';
 import { format } from "date-fns";
-
-// 内部型定義を使用して柔軟性を確保
-interface BookingForModal {
-  id: number;
-  userId: number;
-  tutorId: number;
-  studentId: number | null;
-  tutorShiftId?: number;
-  date: string;
-  timeSlot: string;
-  subject: string | null;
-  status: string | null;
-  reportStatus?: string | null;
-  reportContent?: string | null;
-  createdAt: string | Date;
-  studentName?: string;
-  tutorName?: string;
-  openEditAfterClose?: boolean;
-  previousReport?: {
-    date: string;
-    content: string;
-  } | null;
-}
+import { ja } from "date-fns/locale";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Calendar, Clock, BookOpen, User, FileText } from "lucide-react";
 
 interface BookingDetailModalProps {
   isOpen: boolean;
-  booking: BookingForModal;
+  booking: {
+    id: string;
+    date: Date;
+    startTime: string;
+    endTime: string;
+    status: string;
+    subject: string;
+    studentId: string;
+    tutorId: string;
+    studentName?: string;
+    tutorName?: string;
+    reportId?: string | null;
+    reportStatus?: string | null;
+    reportContent?: string | null;
+  };
   onClose: () => void;
-  onCreateReport?: () => void;
+  onCancel: () => void;
   onViewReport?: () => void;
-  onEditReport?: () => void; // レポート編集用コールバック追加
-  studentDetails?: {
-    lastName: string;
-    firstName: string;
-    school: string;
-    grade: string;
-    address?: string;
-    phone?: string;
-  } | null;
+  userRole: 'student' | 'parent' | 'tutor' | 'admin';
 }
 
 export function BookingDetailModal({
   isOpen,
   booking,
   onClose,
-  onCreateReport,
+  onCancel,
   onViewReport,
-  onEditReport,
-  studentDetails
+  userRole
 }: BookingDetailModalProps) {
-  // 日本時間を取得するヘルパー関数
-  const getJapanTime = () => {
-    const now = new Date();
-    // 日本時間（UTC+9）に調整
-    return new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  
+  const bookingDate = new Date(booking.date);
+  const now = new Date();
+  
+  // 予約日24時間前かどうかを判定
+  const isWithin24Hours = () => {
+    const bookingTime = bookingDate.getTime();
+    const nowTime = now.getTime();
+    return bookingTime - nowTime < 24 * 60 * 60 * 1000;
   };
   
-  // 授業が過去のものかどうか確認
-  const isPastLesson = () => {
-    const japanTime = getJapanTime();
-    const todayStr = format(japanTime, 'yyyy-MM-dd');
-    return booking.date < todayStr;
-  };
-
-  // 授業のステータスを判定（修正）
-  // 'completed'または'completed:'で始まる場合はレポート作成済み
-  const isCompletedWithReport = booking.reportStatus === 'completed' || (booking.reportStatus && booking.reportStatus.startsWith('completed:'));
-  // 'pending'または未設定（null）の場合はレポート未作成
-  const isCompletedNoReport = booking.reportStatus === 'pending' || booking.reportStatus === null;
+  // キャンセル可能かどうかを判定
+  const canCancel = booking.status === 'confirmed' && 
+                   (userRole === 'admin' || (!isWithin24Hours() && (userRole === 'parent' || userRole === 'student')));
   
-  // 編集コールバックの存在を明示的に確認（型チェック）
-  const hasEditCallback = typeof onEditReport === 'function';
-  
-  // 授業が終了していて、かつ報告書が未作成の場合
-  const showCreateReportButton = isPastLesson() && isCompletedNoReport && onCreateReport;
-  
-  // 報告書が作成済みの場合（保護者側ではボタンを常に表示、講師側では条件付き）
-  const showViewReportButton = isCompletedWithReport && onViewReport;
-  
-  // レポート編集ボタンを表示する条件（講師用）
-  // レポートが作成済みなら編集、未作成なら新規作成として表示
-  // 常に講師画面では表示する（過去の授業の場合）
-  const showEditReportButton = isPastLesson();
-  const editButtonText = isCompletedWithReport ? "レポート編集" : "レポート作成";
+  const isPast = bookingDate < now;
+  const isCompleted = booking.status === 'completed';
+  const isCancelled = booking.status === 'cancelled';
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl">授業詳細</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          {/* 1. 日付と時間 */}
-          <div className="flex items-start">
-            <Calendar className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-            <div>
-              <p className="font-medium text-gray-900">{booking.date}</p>
-              <p className="text-sm text-gray-500">{booking.timeSlot}</p>
-            </div>
-          </div>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>予約詳細</DialogTitle>
+            <DialogDescription>
+              授業の予約詳細情報
+            </DialogDescription>
+          </DialogHeader>
           
-          {/* 2. 生徒情報 */}
-          {booking.studentName && (
-            <div className="flex items-start">
-              <User className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-              <div>
-                <p className="font-medium text-gray-900">生徒</p>
-                <p className="text-sm text-gray-600">{booking.studentName}</p>
-                {studentDetails && (
-                  <div className="mt-1 text-xs text-gray-500">
-                    <p>{studentDetails.school} {studentDetails.grade}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* 3. 科目 */}
-          <div className="flex items-start">
-            <BookOpen className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-            <div>
-              <p className="font-medium text-gray-900">科目</p>
-              <p className="text-sm text-gray-600">{booking.subject}</p>
-            </div>
-          </div>
-          
-          {/* 講師情報 */}
-          {booking.tutorName && (
-            <div className="flex items-start">
-              <User className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-              <div>
-                <p className="font-medium text-gray-900">講師</p>
-                <p className="text-sm text-gray-600">{booking.tutorName}</p>
-              </div>
-            </div>
-          )}
-          
-          {/* 住所 - 講師用のみ表示 */}
-          {studentDetails?.address && (
-            <div className="flex items-start">
-              <MapPin className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-              <div>
-                <p className="font-medium text-gray-900">住所</p>
-                <p className="text-sm text-gray-600">{studentDetails.address}</p>
-              </div>
-            </div>
-          )}
-          
-          {/* 前回授業のレポート - 授業前は常に表示、授業後で今回のレポートが無い場合も表示 */}
-          {(!isPastLesson() || (isPastLesson() && !isCompletedWithReport)) && (
-            <div className="flex items-start">
-              <History className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-              <div>
-                <p className="font-medium text-gray-900">前回の授業レポート</p>
-                {booking.previousReport ? (
-                  <div className="text-sm text-gray-600">
-                    <p className="text-xs text-gray-500">{booking.previousReport.date}</p>
-                    <div className="bg-gray-50 p-3 rounded-md mt-1 border border-gray-200 max-h-40 overflow-y-auto">
-                      <div className="text-sm text-gray-600 whitespace-pre-line">
-                        {booking.previousReport.content}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">前回のレポートはありません。</p>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* レポート状態と内容 - 授業後のみ表示 */}
-          {isPastLesson() && (
-            <>
-              <div className="flex items-start">
-                <FileText className="h-5 w-5 text-gray-500 mt-0.5 mr-3" />
-                <div>
-                  <p className="font-medium text-gray-900">今回の授業レポート</p>
-                  {isCompletedWithReport ? (
-                    <p className="text-sm text-green-600 font-medium">作成済み</p>
-                  ) : (
-                    <p className="text-sm text-red-500 font-medium">未作成</p>
-                  )}
-                </div>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2" />
+                <span className="font-medium">日付:</span>
+                <span className="ml-2">
+                  {format(bookingDate, 'yyyy年MM月dd日(EEE)', { locale: ja })}
+                </span>
               </div>
               
-              {/* 今回のレポート内容があれば表示（プレビュー） */}
-              {isCompletedWithReport && booking.reportContent && (
-                <div className="bg-gray-50 p-3 rounded-md mt-2 border border-gray-200">
-                  <div className="flex justify-between items-start mb-1">
-                    <p className="text-sm font-medium text-gray-900">レポート内容</p>
-                    {onViewReport && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 flex items-center text-green-600 hover:text-green-700 hover:bg-green-50 -mt-1 -mr-1"
-                        onClick={onViewReport}
-                      >
-                        <span className="text-xs mr-1">詳細</span>
-                        <FileText className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-600 whitespace-pre-line max-h-40 overflow-y-auto">
-                    {booking.reportContent}
-                  </div>
-                </div>
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2" />
+                <span className="font-medium">時間:</span>
+                <span className="ml-2">
+                  {booking.startTime.substring(0, 5)} - {booking.endTime.substring(0, 5)}
+                </span>
+              </div>
+              
+              <div className="flex items-center">
+                <BookOpen className="h-4 w-4 mr-2" />
+                <span className="font-medium">科目:</span>
+                <span className="ml-2">{booking.subject}</span>
+              </div>
+              
+              <div className="flex items-center">
+                <User className="h-4 w-4 mr-2" />
+                <span className="font-medium">生徒:</span>
+                <span className="ml-2">{booking.studentName}</span>
+              </div>
+              
+              <div className="flex items-center">
+                <User className="h-4 w-4 mr-2" />
+                <span className="font-medium">講師:</span>
+                <span className="ml-2">{booking.tutorName}</span>
+              </div>
+              
+              <div className="flex items-center">
+                <span className="font-medium">ステータス:</span>
+                <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                  isCancelled 
+                    ? 'bg-gray-100 text-gray-800' 
+                    : isCompleted 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-green-100 text-green-800'
+                }`}>
+                  {isCancelled 
+                    ? 'キャンセル済' 
+                    : isCompleted 
+                      ? '完了' 
+                      : '予定'}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="sm:justify-between flex-row">
+            <div>
+              {isCompleted && booking.reportId && onViewReport && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    onClose();
+                    onViewReport();
+                  }}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  レポートを見る
+                </Button>
               )}
-            </>
-          )}
-        </div>
-        
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          {/* レポート表示ボタン - レポート作成済みの場合のみ表示 */}
-          {isCompletedWithReport && onViewReport && (
-            <Button
-              type="button"
-              variant="default"
-              className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={onViewReport}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              レポート確認
-            </Button>
-          )}
-          
-          {/* 統合されたレポート作成/編集ボタン - 過去のレッスンのみ表示 */}
-          {isPastLesson() && (
-            <Button
-              type="button"
-              variant={isCompletedWithReport ? "outline" : "default"}
-              className={isCompletedWithReport ? 
-                "border-amber-600 text-amber-600 hover:bg-amber-50" : 
-                "bg-blue-600 hover:bg-blue-700 text-white"
-              }
-              onClick={() => {
-                // レポート未作成で作成コールバックがある場合
-                if (!isCompletedWithReport && onCreateReport) {
-                  onCreateReport();
-                  return;
-                }
-                
-                // 以下は編集処理
-                // 編集機能が有効な場合は直接onEditReportを呼び出す
-                if (onEditReport) {
-                  onClose();
-                  // 少し遅延させて実行
-                  setTimeout(() => {
-                    onEditReport();
-                  }, 100);
-                } else {
-                  // booking オブジェクトにフラグを設定
-                  if (booking) {
-                    // TypeScriptのプロパティ追加警告を回避するためにany型にキャスト
-                    (booking as any).openEditAfterClose = true;
-                  }
-                  // モーダルを閉じる（閉じる際に親コンポーネントのonCloseハンドラーでフラグをチェック）
-                  onClose();
-                }
-              }}
-            >
-              {isCompletedWithReport ? <Edit className="mr-2 h-4 w-4" /> : <FileText className="mr-2 h-4 w-4" />}
-              {isCompletedWithReport ? "レポート編集" : "レポート作成"}
-            </Button>
-          )}
-          
-          <Button type="button" variant="outline" onClick={onClose}>
-            閉じる
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={onClose}
+              >
+                閉じる
+              </Button>
+              
+              {canCancel && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowCancelConfirm(true)}
+                >
+                  キャンセル
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>予約のキャンセル</AlertDialogTitle>
+            <AlertDialogDescription>
+              この予約をキャンセルしますか？この操作は取り消せません。
+              <p className="font-medium mt-2">
+                {format(bookingDate, 'yyyy年MM月dd日(EEE)', { locale: ja })} {booking.startTime.substring(0, 5)} - {booking.endTime.substring(0, 5)}
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>いいえ</AlertDialogCancel>
+            <AlertDialogAction onClick={onCancel}>はい、キャンセルします</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
