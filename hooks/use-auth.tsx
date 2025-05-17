@@ -12,7 +12,7 @@ type UserRole = 'parent' | 'tutor' | 'student';
 // ユーザー情報の型
 type User = {
   id: number; 
-  user_id: string;
+  auth_id?: string;  // Supabaseの認証IDを格納
   displayName?: string;
   username?: string;
   firstName?: string;
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // ユーザー情報の取得 - APIエンドポイントを修正
+  // ユーザー情報の取得
   const {
     data: user,
     error,
@@ -70,10 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         // セッションがあれば、ユーザー情報を取得
+        // email値を使って既存のユーザーデータを検索
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('*')
-          .eq('user_id', session.user.id)
+          .eq('email', session.user.email)
           .single();
           
         if (userError) {
@@ -84,8 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // フロントエンド用のユーザーオブジェクト形式に変換
         return {
           id: userData.id,
-          user_id: userData.user_id,
-          displayName: `${userData.last_name || ''} ${userData.first_name || ''}`.trim() || userData.username,
+          auth_id: session.user.id, // SupabaseのAuth UIを格納
+          displayName: userData.display_name || `${userData.last_name || ''} ${userData.first_name || ''}`.trim(),
           username: userData.username,
           firstName: userData.first_name,
           lastName: userData.last_name,
@@ -112,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ログイン処理
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
+      // まずSupabaseで認証
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
@@ -120,13 +122,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
       
       // ユーザー情報を再取得
-      await refetch();
-      
-      // データベースからユーザープロファイルを取得
+      // emailを使ってユーザーを検索
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('user_id', data.user.id)
+        .eq('email', credentials.email)
         .single();
         
       if (userError) throw new Error(userError.message);
@@ -134,8 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ユーザーオブジェクトの形式に変換して返す
       return {
         id: userData.id,
-        user_id: userData.user_id,
-        displayName: `${userData.last_name || ''} ${userData.first_name || ''}`.trim() || userData.username,
+        auth_id: data.user.id,
+        displayName: userData.display_name || `${userData.last_name || ''} ${userData.first_name || ''}`.trim(),
         username: userData.username,
         firstName: userData.first_name,
         lastName: userData.last_name,
@@ -184,12 +184,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('users')
         .insert([
           {
-            user_id: authData.user?.id,
+            username: data.email,
             email: data.email,
             first_name: data.firstName,
             last_name: data.lastName,
             role: data.role || 'parent',
-            profile_completed: false
+            profile_completed: false,
+            display_name: `${data.lastName || ''} ${data.firstName || ''}`.trim(),
+            // 以下は古いスキーマとの互換性のためのダミーデータ
+            password: 'supabase_auth_managed' // パスワード自体はSupabaseで管理
           }
         ])
         .select()
@@ -200,8 +203,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ユーザーオブジェクトの形式に変換して返す
       return {
         id: userData.id,
-        user_id: userData.user_id,
-        displayName: `${userData.last_name || ''} ${userData.first_name || ''}`.trim(),
+        auth_id: authData.user?.id,
+        displayName: userData.display_name,
         username: userData.username,
         firstName: userData.first_name,
         lastName: userData.last_name,
