@@ -74,16 +74,15 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
 
 ### セットアップ手順
 
-1. Supabaseのダッシュボード上でSQLエディターを開き、`sql/migrations/create_direct_tutor_profile.sql` のSQL文を実行して必要なテーブルを作成してください。
+1. Supabaseのダッシュボード上でSQLエディターを開き、`sql/migrations/create_tutor_profile_simple_schema.sql` のSQL文を実行してテーブルを作成してください。
 
 2. このスクリプトは以下の処理を行います：
-   - 既存のテーブルやポリシーがあれば削除
-   - uuid-ossp拡張機能をインストール
-   - クリーンな状態でテーブルを作成
-   - 適切なセキュリティポリシーを設定
-   - SQL実行用のヘルパー関数を作成
+   - `tutor_profile`テーブルを作成します。
+   - 自動采番される整数型の`id`フィールドを主キーとして設定します。
+   - `user_id`をUUID型で定義してSupabaseの認証ユーザーIDを格納します。
+   - 適切な行レベルセキュリティポリシーを設定します。
 
-3. このスクリプトを実行した後、アプリケーションが正常に動作するようになります。
+3. スクリプトの実行後、アプリケーションは正常に動作するようになります。
 
 ### 参考リンク
 
