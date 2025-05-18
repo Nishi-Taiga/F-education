@@ -74,12 +74,9 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
 
 ### セットアップ後の必須手順
 
-1. Supabaseのダッシュボード上でSQLエディターを開き、`sql/migrations/create_tutor_profile_table_rpc.sql` のSQL文を実行して必要な関数を作成してください。
+1. Supabaseのダッシュボード上でSQLエディターを開き、`sql/migrations/create_tutor_profile_table_simple.sql` のSQL文を実行して必要なテーブルを作成してください。
 
-2. 次に以下のコマンドを実行して、テーブルを初期化します：
-```sql
-SELECT create_tutor_profile_table_if_not_exists();
-```
+2. これにより自動化されたUUID生成機能を持つテーブルが作成され、アプリケーションが正常に動作するようになります。
 
 ### 参考リンク
 

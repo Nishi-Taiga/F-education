@@ -34,33 +34,9 @@ export async function POST(request: NextRequest) {
       user_id: tutorData.user_id ? `${tutorData.user_id.substring(0, 8)}...` : 'undefined',
     });
     
-    // まず、テーブルが存在するか確認し、なければ作成する
-    try {
-      console.log('[API] Checking if table exists');
-      const { error: tableCheckError } = await supabase
-        .from('tutor_profile')
-        .select('id')
-        .limit(1);
-      
-      if (tableCheckError) {
-        console.log('[API] Table might not exist, attempting to create it');
-        const { error: createTableError } = await supabase
-          .rpc('create_tutor_profile_table_if_not_exists');
-        
-        if (createTableError) {
-          console.error('[API] Failed to create table:', createTableError);
-        } else {
-          console.log('[API] Table created successfully');
-        }
-      }
-    } catch (tableError) {
-      console.error('[API] Error checking/creating table:', tableError);
-    }
-    
-    // プロフィールデータを準備
-    // 重要: ここでidフィールドを生成して含める
+    // プロフィールデータを準備 - idフィールドを含めない
+    // PostgreSQLのUUID生成関数が自動的にidを生成します
     const profileData = {
-      id: crypto.randomUUID(), // UUIDを明示的に生成
       user_id: tutorData.user_id,
       first_name: tutorData.first_name,
       last_name: tutorData.last_name,
@@ -71,56 +47,57 @@ export async function POST(request: NextRequest) {
       subjects: tutorData.subjects,
       email: tutorData.email || '',
       profile_completed: true,
-      is_active: true,
-      created_at: new Date().toISOString()
+      is_active: true
     };
     
-    try {
-      // 標準的なInsert操作
-      console.log('[API] Attempting standard insert with explicit ID');
+    // データの挿入操作を実行
+    console.log('[API] Inserting profile data into tutor_profile table');
+    const { data: insertedData, error: insertError } = await supabase
+      .from('tutor_profile')
+      .insert(profileData)
+      .select();
+    
+    if (insertError) {
+      console.error('[API] Insert error:', insertError);
       
-      const { data: insertData, error: insertError } = await supabase
-        .from('tutor_profile')
-        .insert(profileData)
-        .select();
-      
-      if (insertError) {
-        console.error('[API] Standard insert failed:', insertError);
-        throw new Error(`Standard insert failed: ${insertError.message}`);
-      }
-      
-      console.log('[API] Standard insert succeeded:', insertData);
-      return NextResponse.json({ success: true, data: insertData });
-    } catch (error: any) {
-      console.error('[API] Insert error:', error);
-      
-      // Supabaseの自動処理にアクセスできない場合は別の方法を試す
-      try {
-        // RPC呼び出しを試みる
-        console.log('[API] Trying RPC call to insert tutor profile');
-        const { data: rpcData, error: rpcError } = await supabase
-          .rpc('insert_tutor_profile', { 
-            profile: profileData 
-          });
-        
-        if (rpcError) {
-          console.error('[API] RPC call failed:', rpcError);
+      // ユーザーIDが同じレコードが既に存在する場合は、更新を試みる
+      if (insertError.code === '23505') { // 重複キーエラー
+        console.log('[API] Record already exists, trying update');
+        const { data: updatedData, error: updateError } = await supabase
+          .from('tutor_profile')
+          .update(profileData)
+          .eq('user_id', tutorData.user_id)
+          .select();
+          
+        if (updateError) {
+          console.error('[API] Update error:', updateError);
           return NextResponse.json({ 
-            error: 'Database error during RPC call', 
-            details: rpcError 
+            error: 'Failed to update existing profile', 
+            details: updateError 
           }, { status: 500 });
         }
         
-        console.log('[API] RPC call succeeded:', rpcData);
-        return NextResponse.json({ success: true, data: rpcData });
-      } catch (fallbackError: any) {
-        console.error('[API] All fallback methods failed:', fallbackError);
+        console.log('[API] Update successful:', updatedData);
+        return NextResponse.json({ success: true, data: updatedData });
+      }
+      
+      // テーブルが存在しない可能性がある場合の処理
+      if (insertError.code === '42P01') { // テーブルが存在しない
         return NextResponse.json({ 
-          error: 'All insert methods failed', 
-          details: fallbackError.message || String(fallbackError) 
+          error: 'Table does not exist. Please run the SQL script to create the table.', 
+          details: insertError 
         }, { status: 500 });
       }
+      
+      return NextResponse.json({ 
+        error: 'Failed to insert profile data', 
+        details: insertError 
+      }, { status: 500 });
     }
+    
+    console.log('[API] Insert successful:', insertedData);
+    return NextResponse.json({ success: true, data: insertedData });
+    
   } catch (error: any) {
     console.error('[API] Unexpected error:', error);
     return NextResponse.json({ 
