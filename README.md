@@ -72,11 +72,18 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres
 ```
 
-### セットアップ後の必須手順
+### セットアップ手順
 
-1. Supabaseのダッシュボード上でSQLエディターを開き、`sql/migrations/create_tutor_profile_table_simple.sql` のSQL文を実行して必要なテーブルを作成してください。
+1. Supabaseのダッシュボード上でSQLエディターを開き、`sql/migrations/create_direct_tutor_profile.sql` のSQL文を実行して必要なテーブルを作成してください。
 
-2. これにより自動化されたUUID生成機能を持つテーブルが作成され、アプリケーションが正常に動作するようになります。
+2. このスクリプトは以下の処理を行います：
+   - 既存のテーブルやポリシーがあれば削除
+   - uuid-ossp拡張機能をインストール
+   - クリーンな状態でテーブルを作成
+   - 適切なセキュリティポリシーを設定
+   - SQL実行用のヘルパー関数を作成
+
+3. このスクリプトを実行した後、アプリケーションが正常に動作するようになります。
 
 ### 参考リンク
 
