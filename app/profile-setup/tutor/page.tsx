@@ -103,11 +103,12 @@ export default function TutorProfileSetup() {
       // 科目の配列をカンマ区切りの文字列に変換
       const subjects = formData.selectedSubjects.join(",");
       
+      // 直接tutor_profileテーブルに挿入
       try {
-        console.log("APIエンドポイントを使用...");
+        console.log("Supabaseに直接データを挿入...");
         
-        // 転送するデータを準備
-        const apiData = {
+        // データを準備
+        const profileData = {
           user_id: user.id,
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -116,40 +117,74 @@ export default function TutorProfileSetup() {
           university: formData.university,
           birth_date: formData.birthDate,
           subjects: subjects,
-          email: user.email
+          email: user.email,
+          profile_completed: true,
+          is_active: true
         };
         
-        // APIエンドポイントにリクエストを送信
-        const response = await fetch('/api/register-tutor', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(apiData)
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`APIエラー: ${JSON.stringify(errorData)}`);
+        // Supabaseテーブルに挿入
+        const { data: insertData, error: insertError } = await supabase
+          .from('tutor_profile')
+          .insert(profileData)
+          .select('id');
+          
+        if (insertError) {
+          console.error("挿入エラー:", insertError);
+          
+          // 既に登録されている場合は更新を試みる
+          if (insertError.code === '23505') { // 重複キーエラー
+            console.log("既存レコードが存在するため更新を試みます");
+            
+            const { data: updateData, error: updateError } = await supabase
+              .from('tutor_profile')
+              .update({
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                last_name_furigana: formData.lastNameFurigana,
+                first_name_furigana: formData.firstNameFurigana,
+                university: formData.university,
+                birth_date: formData.birthDate,
+                subjects: subjects,
+                profile_completed: true,
+                is_active: true
+              })
+              .eq('user_id', user.id)
+              .select();
+              
+            if (updateError) {
+              console.error("更新エラー:", updateError);
+              throw new Error(`更新中にエラーが発生しました: ${updateError.message}`);
+            }
+            
+            console.log("更新成功:", updateData);
+            toast({
+              title: "プロフィール更新完了",
+              description: "講師プロフィールが正常に更新されました",
+            });
+            
+            router.push('/dashboard');
+            return;
+          }
+          
+          // その他のエラー
+          if (insertError.code === '42P01') {
+            throw new Error("テーブルが存在しません。スクリプトを実行してテーブルを作成してください。");
+          }
+          
+          throw new Error(`プロフィールの保存中にエラーが発生しました: ${insertError.message}`);
         }
         
-        const result = await response.json();
-        console.log("プロフィール保存成功(API):", result);
+        console.log("挿入成功:", insertData);
         
-        // 成功通知
         toast({
           title: "プロフィール設定完了",
           description: "講師プロフィールが正常に設定されました",
         });
         
-        // ダッシュボードに遷移
         router.push('/dashboard');
-        return;
-      } catch (apiError) {
-        console.error("API実行失敗:", apiError);
-        
-        // 直接操作は行わず、APIのエラーをスローする
-        throw apiError;
+      } catch (directError: any) {
+        console.error("直接挿入失敗:", directError);
+        throw directError;
       }
     } catch (error: any) {
       console.error("プロフィール設定エラー:", error);
