@@ -33,20 +33,6 @@ const juniorHighSubjects = [
   "国語", "数学", "理科", "社会", "英語"
 ];
 
-// UUID生成関数
-function generateUUID() {
-  // Web Crypto APIを使用してUUIDを生成
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  
-  // フォールバックメソッド（ブラウザ互換性のため）
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
 export default function TutorProfileSetup() {
   const router = useRouter();
   const { toast } = useToast();
@@ -121,9 +107,9 @@ export default function TutorProfileSetup() {
       try {
         console.log("直接データベースに挿入を試みます...");
         
-        // 直接挿入用のデータを準備
-        const dbData = {
-          id: generateUUID(), // 明示的にUUIDを生成して指定
+        // データを準備 - idフィールドを含めず、自動采番に任せる
+        const profileData = {
+          // 認証ユーザーIDをuser_idフィールドに設定
           user_id: user.id,
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -137,9 +123,10 @@ export default function TutorProfileSetup() {
           is_active: true
         };
         
+        // 挿入操作の実行
         const { data: insertData, error: insertError } = await supabase
           .from('tutor_profile')
-          .insert(dbData)
+          .insert(profileData)
           .select();
           
         if (insertError) {
@@ -180,10 +167,15 @@ export default function TutorProfileSetup() {
             return;
           }
           
+          // テーブルが存在しない場合
+          if (insertError.code === '42P01') { // relation "テーブル名" does not exist
+            throw new Error("テーブルが存在しません。\n\n管理者に連絡してください。");
+          }
+          
           throw new Error(`プロフィールの保存中にエラーが発生しました: ${insertError.message}`);
         }
         
-        console.log("直接挿入成功:", insertData);
+        console.log("挿入成功:", insertData);
         toast({
           title: "プロフィール設定完了",
           description: "講師プロフィールが正常に設定されました",
