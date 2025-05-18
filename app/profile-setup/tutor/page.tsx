@@ -33,6 +33,20 @@ const juniorHighSubjects = [
   "国語", "数学", "理科", "社会", "英語"
 ];
 
+// UUID生成関数
+function generateUUID() {
+  // Web Crypto APIを使用してUUIDを生成
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  
+  // フォールバックメソッド（ブラウザ互換性のため）
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 export default function TutorProfileSetup() {
   const router = useRouter();
   const { toast } = useToast();
@@ -103,12 +117,13 @@ export default function TutorProfileSetup() {
       // 科目の配列をカンマ区切りの文字列に変換
       const subjects = formData.selectedSubjects.join(",");
       
-      // 直接tutor_profileテーブルに挿入
+      // 直接データベースに挿入
       try {
-        console.log("Supabaseに直接データを挿入...");
+        console.log("直接データベースに挿入を試みます...");
         
-        // データを準備
-        const profileData = {
+        // 直接挿入用のデータを準備
+        const dbData = {
+          id: generateUUID(), // 明示的にUUIDを生成して指定
           user_id: user.id,
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -122,11 +137,10 @@ export default function TutorProfileSetup() {
           is_active: true
         };
         
-        // Supabaseテーブルに挿入
         const { data: insertData, error: insertError } = await supabase
           .from('tutor_profile')
-          .insert(profileData)
-          .select('id');
+          .insert(dbData)
+          .select();
           
         if (insertError) {
           console.error("挿入エラー:", insertError);
@@ -166,25 +180,19 @@ export default function TutorProfileSetup() {
             return;
           }
           
-          // その他のエラー
-          if (insertError.code === '42P01') {
-            throw new Error("テーブルが存在しません。スクリプトを実行してテーブルを作成してください。");
-          }
-          
           throw new Error(`プロフィールの保存中にエラーが発生しました: ${insertError.message}`);
         }
         
-        console.log("挿入成功:", insertData);
-        
+        console.log("直接挿入成功:", insertData);
         toast({
           title: "プロフィール設定完了",
           description: "講師プロフィールが正常に設定されました",
         });
         
         router.push('/dashboard');
-      } catch (directError: any) {
-        console.error("直接挿入失敗:", directError);
-        throw directError;
+      } catch (dbError: any) {
+        console.error("直接データベース操作失敗:", dbError);
+        throw dbError;
       }
     } catch (error: any) {
       console.error("プロフィール設定エラー:", error);
