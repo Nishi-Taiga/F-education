@@ -14,7 +14,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Save, Loader2, User, GraduationCap, Building, Book } from "lucide-react";
@@ -53,7 +52,6 @@ export default function TutorProfilePage() {
     lastNameFurigana: "",
     firstNameFurigana: "",
     university: "",
-    bio: "",
     birthDate: "",
     selectedSubjects: [] as string[],
     email: "",
@@ -151,7 +149,6 @@ export default function TutorProfilePage() {
       lastNameFurigana: tutorData.last_name_furigana || "",
       firstNameFurigana: tutorData.first_name_furigana || "",
       university: tutorData.university || "",
-      bio: tutorData.bio || "",
       birthDate: tutorData.birth_date || "",
       selectedSubjects: subjects,
       email: email,
@@ -214,7 +211,6 @@ export default function TutorProfilePage() {
           first_name_furigana: formData.firstNameFurigana,
           university: formData.university,
           birth_date: formData.birthDate,
-          bio: formData.bio,
           subjects: subjects,
           email: formData.email,
           profile_completed: true,
@@ -356,17 +352,6 @@ export default function TutorProfilePage() {
                     required
                   />
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="bio">自己紹介</Label>
-                <Textarea
-                  id="bio"
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  placeholder="生徒や保護者に向けて自己紹介を書いてください"
-                  className="min-h-[120px]"
-                />
               </div>
             </CardContent>
           </Card>
