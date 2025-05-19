@@ -1,3 +1,237 @@
+// app/tutor/schedule/page.tsx
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { format, addDays, isSameDay } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { 
+  ArrowLeft, 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Trash2, 
+  CalendarRange,
+  Loader2,
+  Save
+} from 'lucide-react';
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+  CardFooter,
+  CardDescription,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Label,
+  Calendar,
+  Badge,
+  Separator
+} from '@/components/ui';  // Adjust the import path as needed based on your project structure
+import { cn } from '@/lib/utils';  // Adjust the import path as needed based on your project structure
+
+// Define the TutorSchedulePage component
+export default function TutorSchedulePage() {
+  // States
+  const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
+  const [weekDays, setWeekDays] = useState<Date[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddShiftModal, setShowAddShiftModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringEndDate, setRecurringEndDate] = useState<Date | undefined>(addDays(new Date(), 30));
+  const [recurringDays, setRecurringDays] = useState<number[]>([]);
+  const [upcomingShifts, setUpcomingShifts] = useState<any[]>([]);  // Replace 'any' with your actual shift type
+  
+  // Dummy data - replace with actual data from your API
+  const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+  const timeOptions = [
+    { value: '09:00', label: '9:00' },
+    { value: '10:00', label: '10:00' },
+    { value: '11:00', label: '11:00' },
+    { value: '12:00', label: '12:00' },
+    { value: '13:00', label: '13:00' },
+    { value: '14:00', label: '14:00' },
+    { value: '15:00', label: '15:00' },
+    { value: '16:00', label: '16:00' },
+    { value: '17:00', label: '17:00' },
+    { value: '18:00', label: '18:00' },
+    { value: '19:00', label: '19:00' },
+    { value: '20:00', label: '20:00' },
+  ];
+  
+  // Use effects
+  useEffect(() => {
+    // Calculate the days of the week
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      days.push(addDays(currentWeekStart, i));
+    }
+    setWeekDays(days);
+    
+    // Load shifts - replace with your actual API call
+    loadShifts();
+  }, [currentWeekStart]);
+  
+  // Functions
+  const loadShifts = async () => {
+    setLoading(true);
+    try {
+      // Replace with your actual API call
+      // const response = await fetch('/api/tutor-shifts');
+      // const data = await response.json();
+      // setUpcomingShifts(data);
+      
+      // For now, just simulate loading with dummy data
+      setTimeout(() => {
+        setUpcomingShifts([
+          {
+            id: '1',
+            date: new Date(),
+            startTime: '09:00',
+            endTime: '10:00',
+            isBooked: false
+          },
+          {
+            id: '2',
+            date: addDays(new Date(), 1),
+            startTime: '14:00',
+            endTime: '15:00',
+            isBooked: true
+          }
+        ]);
+        setLoading(false);
+      }, 1000);
+    } catch (error) {
+      console.error('Error loading shifts:', error);
+      setLoading(false);
+    }
+  };
+  
+  const getShiftsForDate = (date: Date) => {
+    // Replace with actual filtering logic based on your data structure
+    return upcomingShifts.filter(shift => 
+      isSameDay(new Date(shift.date), date)
+    );
+  };
+  
+  const handleBackToDashboard = () => {
+    // Replace with your navigation logic
+    window.location.href = '/';
+  };
+  
+  const goToPreviousWeek = () => {
+    setCurrentWeekStart(prevDate => addDays(prevDate, -7));
+  };
+  
+  const goToNextWeek = () => {
+    setCurrentWeekStart(prevDate => addDays(prevDate, 7));
+  };
+  
+  const goToCurrentWeek = () => {
+    setCurrentWeekStart(new Date());
+  };
+  
+  const toggleRecurringDay = (dayIndex: number) => {
+    setRecurringDays(prev => 
+      prev.includes(dayIndex) 
+        ? prev.filter(d => d !== dayIndex)
+        : [...prev, dayIndex]
+    );
+  };
+  
+  const handleSaveShift = async () => {
+    if (!selectedDate || !startTime || !endTime) {
+      alert('日付と時間を選択してください');
+      return;
+    }
+    
+    setSaveLoading(true);
+    try {
+      // Replace with your actual API call
+      // const payload = isRecurring 
+      //   ? { 
+      //       startDate: selectedDate, 
+      //       endDate: recurringEndDate, 
+      //       days: recurringDays,
+      //       startTime,
+      //       endTime
+      //     }
+      //   : { 
+      //       date: selectedDate, 
+      //       startTime, 
+      //       endTime 
+      //     };
+      // 
+      // await fetch('/api/tutor-shifts', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify(payload),
+      // });
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Refresh shifts
+      await loadShifts();
+      
+      // Close modal
+      setShowAddShiftModal(false);
+      
+      // Reset form
+      setStartTime('');
+      setEndTime('');
+      setIsRecurring(false);
+      setRecurringDays([]);
+    } catch (error) {
+      console.error('Error saving shift:', error);
+      alert('シフトの保存中にエラーが発生しました。もう一度お試しください。');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+  
+  const handleDeleteShift = async (shiftId: string) => {
+    if (!confirm('このシフトを削除してもよろしいですか？')) {
+      return;
+    }
+    
+    try {
+      // Replace with your actual API call
+      // await fetch(`/api/tutor-shifts/${shiftId}`, {
+      //   method: 'DELETE',
+      // });
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update local state
+      setUpcomingShifts(prev => prev.filter(shift => shift.id !== shiftId));
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+      alert('シフトの削除中にエラーが発生しました。もう一度お試しください。');
+    }
+  };
+
   return (
     <div className="container py-4 md:py-8">
       {/* ヘッダー部分 */}
