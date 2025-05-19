@@ -189,9 +189,11 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
     router.push('/tickets');
   };
 
-  // シフト登録ページへの遷移
+  // シフト登録ページへの遷移 - Window.location直接遷移を使用
   const handleScheduleClick = () => {
-    router.push('/tutor/schedule');
+    // router.pushの代わりにwindow.location.hrefを使用することで
+    // 認証ミドルウェアの処理とセッション状態のリセットを防ぐ
+    window.location.href = '/tutor/schedule';
   };
 
   // 講師プロフィールページへの遷移
