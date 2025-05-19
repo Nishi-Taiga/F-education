@@ -24,7 +24,8 @@ import {
   Book,
   Clock,
   CheckCircle2,
-  XCircle
+  XCircle,
+  CalendarRange
 } from 'lucide-react';
 
 type DashboardProps = {
@@ -188,7 +189,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
     router.push('/tickets');
   };
 
-  // 講師スケジュールページへの遷移
+  // シフト登録ページへの遷移
   const handleScheduleClick = () => {
     router.push('/tutor/schedule');
   };
@@ -248,8 +249,8 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
           {isTutor && (
             <>
               <Button onClick={handleScheduleClick} size="lg" className="shadow-sm">
-                <Calendar className="mr-2 h-5 w-5" />
-                スケジュール管理
+                <CalendarRange className="mr-2 h-5 w-5" />
+                シフト登録
               </Button>
               <Button variant="outline" size="lg" onClick={handleProfileClick} className="shadow-sm">
                 <User className="mr-2 h-5 w-5" />
@@ -469,7 +470,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
                   className="w-full bg-green-600 hover:bg-green-700"
                   onClick={handleScheduleClick}
                 >
-                  スケジュール管理
+                  シフト登録・管理
                 </Button>
               </CardFooter>
             </Card>
