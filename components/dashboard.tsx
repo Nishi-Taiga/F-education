@@ -59,56 +59,75 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        let query = supabase
+        // 予約情報を取得
+        let bookingsQuery = supabase
           .from('bookings')
           .select(`
             *,
             student:student_id(id, first_name, last_name),
-            tutor:tutor_id(id, first_name, last_name),
-            lesson_reports(id, content, status)
+            tutor:tutor_id(id, first_name, last_name)
           `)
           .order('date', { ascending: true });
 
         // ユーザーロールに応じてクエリを絞り込む
         if (isParent) {
           const studentIds = students.map(student => student.id);
-          query = query.in('student_id', studentIds);
+          bookingsQuery = bookingsQuery.in('student_id', studentIds);
         } else if (isStudent) {
-          query = query.eq('student_id', userProfile?.id);
+          bookingsQuery = bookingsQuery.eq('student_id', userProfile?.id);
         } else if (isTutor) {
-          query = query.eq('tutor_id', tutorProfile?.id);
+          bookingsQuery = bookingsQuery.eq('tutor_id', tutorProfile?.id);
         }
 
-        const { data, error } = await query;
+        const { data: bookingsData, error: bookingsError } = await bookingsQuery;
 
-        if (error) {
-          toast({
-            title: "エラー",
-            description: "予約情報の取得に失敗しました。",
-            variant: "destructive",
-          });
-          console.error('Error fetching bookings:', error);
-        } else {
-          // データを整形
-          const formattedBookings = data.map(booking => ({
+        if (bookingsError) {
+          throw bookingsError;
+        }
+
+        // 予約IDのリストを作成
+        const bookingIds = bookingsData?.map(booking => booking.id) || [];
+        
+        // 予約IDに関連するレポート情報を取得
+        const { data: reportsData, error: reportsError } = await supabase
+          .from('lesson_reports')
+          .select('*')
+          .in('booking_id', bookingIds);
+
+        if (reportsError) {
+          throw reportsError;
+        }
+
+        // レポート情報をBooking情報とマージ
+        const formattedBookings = bookingsData.map(booking => {
+          // 対応するレポートを検索
+          const report = reportsData?.find(report => report.booking_id === booking.id);
+          
+          return {
             id: booking.id,
             date: new Date(booking.date),
-            startTime: booking.start_time,
-            endTime: booking.end_time,
+            startTime: booking.time_slot.split('-')[0],
+            endTime: booking.time_slot.split('-')[1],
             status: booking.status,
             subject: booking.subject,
             studentId: booking.student_id,
             tutorId: booking.tutor_id,
             studentName: `${booking.student.last_name} ${booking.student.first_name}`,
             tutorName: booking.tutor ? `${booking.tutor.last_name} ${booking.tutor.first_name}` : '',
-            reportId: booking.lesson_report_id,
-            reportStatus: booking.lesson_reports && booking.lesson_reports.length > 0 ? booking.lesson_reports[0].status : null,
-            reportContent: booking.lesson_reports && booking.lesson_reports.length > 0 ? booking.lesson_reports[0].content : null,
-          }));
-          setBookings(formattedBookings);
-        }
+            reportId: report?.id || null,
+            reportStatus: report?.status || null,
+            reportContent: report?.unit_content || null,
+          };
+        });
+        
+        setBookings(formattedBookings);
       } catch (error) {
-        console.error('Error in fetchBookings:', error);
+        console.error('Error fetching bookings:', error);
+        toast({
+          title: "エラー",
+          description: "予約情報の取得に失敗しました。",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
