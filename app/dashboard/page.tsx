@@ -62,11 +62,49 @@ export default function DashboardPage() {
   const [tutorProfile, setTutorProfile] = useState<TutorProfile | null>(null);
   const [parentProfile, setParentProfile] = useState<ParentProfile | null>(null);
   const [availableTickets, setAvailableTickets] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  // 生徒と利用可能チケットを取得する関数（コード重複を減らすため）
+  const fetchStudentsAndTickets = async (parentId: number) => {
+    let students: Student[] = [];
+    let tickets = 0;
+    
+    // 保護者の場合、生徒データを取得
+    const { data: studentsData, error: studentsError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('parent_id', parentId);
+
+    if (studentsError) {
+      console.error('Error fetching students:', studentsError);
+    } else if (studentsData && studentsData.length > 0) {
+      students = studentsData;
+      setStudents(studentsData);
+    }
+
+    // チケット残数取得
+    const { data: ticketsData, error: ticketsError } = await supabase
+      .from('student_tickets')
+      .select('quantity')
+      .eq('parent_id', parentId)
+      .maybeSingle();
+
+    if (ticketsError) {
+      console.error('Error fetching tickets:', ticketsError);
+    } else if (ticketsData) {
+      tickets = ticketsData.quantity || 0;
+      setAvailableTickets(tickets);
+    }
+    
+    return { students, tickets };
+  };
 
   // ユーザープロフィールを取得
   useEffect(() => {
     const fetchUserData = async () => {
+      console.log("Fetching user data...");
       setLoading(true);
+      setError(null);
       
       try {
         // セッションチェック
@@ -85,9 +123,15 @@ export default function DashboardPage() {
         const userEmail = session.user.email;
         const userId = session.user.id;
         
+        // ログ出力レベルを増やす
+        console.log("Fetching profiles for:", userEmail, userId);
+        
         // 初期は役割が不明なので、全てのプロファイルテーブルを確認
         let foundProfile = false;
         let role = '';
+        let localTutorProfile = null;
+        let localParentProfile = null;
+        let localStudents: Student[] = [];
         
         // 1. 講師プロファイルをメールアドレスで確認
         console.log("Checking tutor profile with email:", userEmail);
@@ -115,7 +159,7 @@ export default function DashboardPage() {
             foundProfile = true;
             role = 'tutor';
             
-            setTutorProfile({
+            localTutorProfile = {
               id: tutorDataById.id,
               user_id: tutorDataById.user_id,
               first_name: tutorDataById.first_name,
@@ -123,14 +167,14 @@ export default function DashboardPage() {
               bio: tutorDataById.bio,
               subjects: tutorDataById.subjects,
               university: tutorDataById.university,
-            });
+            };
           }
         } else if (tutorData) {
           console.log("Found tutor profile by email:", tutorData);
           foundProfile = true;
           role = 'tutor';
           
-          setTutorProfile({
+          localTutorProfile = {
             id: tutorData.id,
             user_id: tutorData.user_id,
             first_name: tutorData.first_name,
@@ -138,7 +182,7 @@ export default function DashboardPage() {
             bio: tutorData.bio,
             subjects: tutorData.subjects,
             university: tutorData.university,
-          });
+          };
         }
         
         // 2. 保護者プロファイルを確認
@@ -166,7 +210,7 @@ export default function DashboardPage() {
               foundProfile = true;
               role = 'parent';
               
-              setParentProfile({
+              localParentProfile = {
                 id: parentDataById.id,
                 user_id: parentDataById.user_id,
                 parent_name: parentDataById.parent_name,
@@ -175,17 +219,18 @@ export default function DashboardPage() {
                 prefecture: parentDataById.prefecture,
                 city: parentDataById.city,
                 address: parentDataById.address,
-              });
+              };
               
               // 保護者の場合、生徒データも取得
-              await fetchStudentsAndTickets(parentDataById.id);
+              const studentsResult = await fetchStudentsAndTickets(parentDataById.id);
+              localStudents = studentsResult.students;
             }
           } else if (parentData) {
             console.log("Found parent profile by email:", parentData);
             foundProfile = true;
             role = 'parent';
             
-            setParentProfile({
+            localParentProfile = {
               id: parentData.id,
               user_id: parentData.user_id,
               parent_name: parentData.parent_name,
@@ -194,10 +239,11 @@ export default function DashboardPage() {
               prefecture: parentData.prefecture,
               city: parentData.city,
               address: parentData.address,
-            });
+            };
             
             // 保護者の場合、生徒データも取得
-            await fetchStudentsAndTickets(parentData.id);
+            const studentsResult = await fetchStudentsAndTickets(parentData.id);
+            localStudents = studentsResult.students;
           }
         }
         
@@ -227,14 +273,14 @@ export default function DashboardPage() {
               role = 'student';
               
               // 生徒情報をセット
-              setStudents([{
+              localStudents = [{
                 id: studentDataById.id,
                 first_name: studentDataById.first_name,
                 last_name: studentDataById.last_name,
                 user_id: studentDataById.user_id,
                 grade: studentDataById.grade,
                 school: studentDataById.school,
-              }]);
+              }];
             }
           } else if (studentData) {
             console.log("Found student profile by email:", studentData);
@@ -242,14 +288,14 @@ export default function DashboardPage() {
             role = 'student';
             
             // 生徒情報をセット
-            setStudents([{
+            localStudents = [{
               id: studentData.id,
               first_name: studentData.first_name,
               last_name: studentData.last_name,
               user_id: studentData.user_id,
               grade: studentData.grade,
               school: studentData.school,
-            }]);
+            }];
           }
         }
         
@@ -280,51 +326,67 @@ export default function DashboardPage() {
         
         console.log(`Setting user profile with role: ${role}`);
         
+        // ローカル変数に保存した値を状態変数に設定
+        if (localTutorProfile) {
+          console.log("Setting tutorProfile state:", localTutorProfile);
+          setTutorProfile(localTutorProfile);
+        }
+        if (localParentProfile) {
+          console.log("Setting parentProfile state:", localParentProfile);
+          setParentProfile(localParentProfile);
+        }
+        if (localStudents.length > 0) {
+          console.log("Setting students state:", localStudents);
+          setStudents(localStudents);
+        }
+        
         // ユーザープロファイル情報を設定
         // ロールに応じた情報を設定
-        if (role === 'tutor' && tutorProfile) {
-          console.log("Creating user profile from tutor profile:", tutorProfile);
-          const userProfileData = {
-            id: tutorProfile.id,
-            display_name: `${tutorProfile.last_name} ${tutorProfile.first_name}`,
-            role: 'tutor' as const,
+        let profileToSet: UserProfile | null = null;
+        
+        if (role === 'tutor' && localTutorProfile) {
+          console.log("Creating user profile from tutor profile:", localTutorProfile);
+          profileToSet = {
+            id: localTutorProfile.id,
+            display_name: `${localTutorProfile.last_name} ${localTutorProfile.first_name}`,
+            role: 'tutor',
             email: session.user.email || '',
             profile_completed: true,
           };
-          console.log("User profile data to set:", userProfileData);
-          setUserProfile(userProfileData);
-        } else if (role === 'parent' && parentProfile) {
-          console.log("Creating user profile from parent profile:", parentProfile);
-          const userProfileData = {
-            id: parentProfile.id,
-            display_name: parentProfile.parent_name,
-            role: 'parent' as const,
+        } else if (role === 'parent' && localParentProfile) {
+          console.log("Creating user profile from parent profile:", localParentProfile);
+          profileToSet = {
+            id: localParentProfile.id,
+            display_name: localParentProfile.parent_name,
+            role: 'parent',
             email: session.user.email || '',
             profile_completed: true,
           };
-          console.log("User profile data to set:", userProfileData);
-          setUserProfile(userProfileData);
-        } else if (role === 'student' && students.length > 0) {
-          console.log("Creating user profile from student profile:", students[0]);
-          const student = students[0];
-          const userProfileData = {
+        } else if (role === 'student' && localStudents.length > 0) {
+          console.log("Creating user profile from student profile:", localStudents[0]);
+          const student = localStudents[0];
+          profileToSet = {
             id: student.id,
             display_name: `${student.last_name} ${student.first_name}`,
-            role: 'student' as const,
+            role: 'student',
             email: session.user.email || '',
             profile_completed: true,
           };
-          console.log("User profile data to set:", userProfileData);
-          setUserProfile(userProfileData);
+        }
+        
+        console.log("Final profile to set:", profileToSet);
+        
+        if (profileToSet) {
+          setUserProfile(profileToSet);
         } else {
-          console.error("Profile found but could not create user profile. Role:", role);
-          console.log("tutorProfile:", tutorProfile);
-          console.log("parentProfile:", parentProfile);
-          console.log("students:", students);
+          console.error("Could not create user profile from found profiles.");
+          setError("プロフィール情報の処理中にエラーが発生しました。");
         }
         
       } catch (error: any) {
         console.error('Failed to fetch user data:', error);
+        setError(error.message || "ユーザー情報の取得中にエラーが発生しました");
+        
         toast({
           title: "データ取得エラー",
           description: error.message || "ユーザー情報の取得中にエラーが発生しました",
@@ -334,52 +396,36 @@ export default function DashboardPage() {
         // エラーが発生した場合でも、プロフィールが設定されていないとみなしてリダイレクト
         router.push('/profile-setup');
       } finally {
-        console.log("Final userProfile state:", userProfile);
-        setLoading(false);
-      }
-    };
-
-    // 生徒と利用可能チケットを取得する関数（コード重複を減らすため）
-    const fetchStudentsAndTickets = async (parentId: number) => {
-      // 保護者の場合、生徒データを取得
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('students')
-        .select('*')
-        .eq('parent_id', parentId);
-
-      if (studentsError) {
-        console.error('Error fetching students:', studentsError);
-      } else if (studentsData && studentsData.length > 0) {
-        setStudents(studentsData);
-      }
-
-      // チケット残数取得
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from('student_tickets')
-        .select('quantity')
-        .eq('parent_id', parentId)
-        .maybeSingle();
-
-      if (ticketsError) {
-        console.error('Error fetching tickets:', ticketsError);
-      } else if (ticketsData) {
-        setAvailableTickets(ticketsData.quantity || 0);
+        setTimeout(() => {
+          console.log("Final states after fetch:");
+          console.log("userProfile:", userProfile);
+          console.log("tutorProfile:", tutorProfile);
+          console.log("parentProfile:", parentProfile);
+          console.log("students:", students);
+          
+          setLoading(false);
+        }, 500); // データの設定が完了するまで少し遅延
       }
     };
 
     fetchUserData();
-  }, [supabase, router, toast, refetch]);
+  }, []);  // 依存配列を空にして初回レンダリング時のみ実行
 
-  // デバッグ用のuseEffectを追加
+  // useEffectのタイミングの問題を解決するため、データが揃ったか確認する
   useEffect(() => {
-    console.log("Render phase - Current state of profiles:");
-    console.log("userProfile:", userProfile);
-    console.log("tutorProfile:", tutorProfile);
-    console.log("parentProfile:", parentProfile);
-    console.log("students:", students);
-    console.log("loading:", loading);
-  });
+    if (!loading && tutorProfile && !userProfile) {
+      console.log("Manual profile creation from tutorProfile after loading:", tutorProfile);
+      setUserProfile({
+        id: tutorProfile.id,
+        display_name: `${tutorProfile.last_name} ${tutorProfile.first_name}`,
+        role: 'tutor',
+        email: '',  // セッションからemailを取得できないため空にする
+        profile_completed: true,
+      });
+    }
+  }, [loading, tutorProfile, userProfile]);
 
+  // Loading状態の表示
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -389,11 +435,53 @@ export default function DashboardPage() {
     );
   }
 
-  // ここで直接state変数をチェックする代わりに変数にキャッシュ
-  const hasProfile = !!userProfile;
-  console.log("Render decision - hasProfile:", hasProfile);
+  // エラーの表示
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h1 className="text-2xl font-bold mb-4">エラーが発生しました</h1>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <div className="flex space-x-4">
+          <button 
+            className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md"
+            onClick={() => router.reload()}
+          >
+            再読み込み
+          </button>
+          <button 
+            className="px-4 py-2 bg-primary text-white rounded-md"
+            onClick={() => router.push('/profile-setup')}
+          >
+            プロフィール設定へ
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  if (!hasProfile) {
+  // ここでは直接tutorProfileを確認して表示を切り替え
+  if (tutorProfile && !userProfile) {
+    console.log("Found tutorProfile but userProfile is not set - creating on-the-fly");
+    // userProfileが設定されていないが、tutorProfileがある場合は強制的にダッシュボードを表示
+    return (
+      <Dashboard
+        userProfile={{
+          id: tutorProfile.id,
+          display_name: `${tutorProfile.last_name} ${tutorProfile.first_name}`,
+          role: 'tutor',
+          email: '',
+          profile_completed: true,
+        }}
+        students={students}
+        tutorProfile={tutorProfile}
+        parentProfile={parentProfile}
+        availableTickets={availableTickets}
+      />
+    );
+  }
+
+  // 通常のプロフィール未設定エラー表示
+  if (!userProfile && !tutorProfile && !parentProfile && students.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h1 className="text-2xl font-bold mb-4">プロフィールが見つかりません</h1>
@@ -408,6 +496,7 @@ export default function DashboardPage() {
     );
   }
 
+  // 標準の表示
   return (
     <Dashboard
       userProfile={userProfile}
