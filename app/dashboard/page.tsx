@@ -81,24 +81,52 @@ export default function DashboardPage() {
         console.log("Dashboard: session found for email:", session.user.email);
         console.log("Dashboard: session user ID:", session.user.id);
         
-        // ユーザーIDを取得
+        // ユーザーメールアドレスとIDを取得
+        const userEmail = session.user.email;
         const userId = session.user.id;
         
         // 初期は役割が不明なので、全てのプロファイルテーブルを確認
         let foundProfile = false;
         let role = '';
         
-        // 1. 講師プロファイルを確認
+        // 1. 講師プロファイルをメールアドレスで確認
+        console.log("Checking tutor profile with email:", userEmail);
         const { data: tutorData, error: tutorError } = await supabase
           .from('tutor_profile')
           .select('*')
-          .eq('user_id', userId)
+          .eq('email', userEmail)
           .maybeSingle();
           
         if (tutorError) {
-          console.error("Error fetching tutor profile:", tutorError);
+          console.error("Error fetching tutor profile by email:", tutorError);
+          
+          // メールで検索できない場合はIDで再試行（既存レコード互換性のため）
+          console.log("Retrying with user_id:", userId);
+          const { data: tutorDataById, error: tutorErrorById } = await supabase
+            .from('tutor_profile')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
+            
+          if (tutorErrorById) {
+            console.error("Error fetching tutor profile by ID:", tutorErrorById);
+          } else if (tutorDataById) {
+            console.log("Found tutor profile by ID:", tutorDataById);
+            foundProfile = true;
+            role = 'tutor';
+            
+            setTutorProfile({
+              id: tutorDataById.id,
+              user_id: tutorDataById.user_id,
+              first_name: tutorDataById.first_name,
+              last_name: tutorDataById.last_name,
+              bio: tutorDataById.bio,
+              subjects: tutorDataById.subjects,
+              university: tutorDataById.university,
+            });
+          }
         } else if (tutorData) {
-          console.log("Found tutor profile:", tutorData);
+          console.log("Found tutor profile by email:", tutorData);
           foundProfile = true;
           role = 'tutor';
           
@@ -118,13 +146,42 @@ export default function DashboardPage() {
           const { data: parentData, error: parentError } = await supabase
             .from('parent_profile')
             .select('*')
-            .eq('user_id', userId)
+            .eq('email', userEmail)
             .maybeSingle();
             
           if (parentError) {
-            console.error("Error fetching parent profile:", parentError);
+            console.error("Error fetching parent profile by email:", parentError);
+            
+            // メールで検索できない場合はIDで再試行
+            const { data: parentDataById, error: parentErrorById } = await supabase
+              .from('parent_profile')
+              .select('*')
+              .eq('user_id', userId)
+              .maybeSingle();
+              
+            if (parentErrorById) {
+              console.error("Error fetching parent profile by ID:", parentErrorById);
+            } else if (parentDataById) {
+              console.log("Found parent profile by ID:", parentDataById);
+              foundProfile = true;
+              role = 'parent';
+              
+              setParentProfile({
+                id: parentDataById.id,
+                user_id: parentDataById.user_id,
+                parent_name: parentDataById.parent_name,
+                phone: parentDataById.phone,
+                postal_code: parentDataById.postal_code,
+                prefecture: parentDataById.prefecture,
+                city: parentDataById.city,
+                address: parentDataById.address,
+              });
+              
+              // 保護者の場合、生徒データも取得
+              await fetchStudentsAndTickets(parentDataById.id);
+            }
           } else if (parentData) {
-            console.log("Found parent profile:", parentData);
+            console.log("Found parent profile by email:", parentData);
             foundProfile = true;
             role = 'parent';
             
@@ -140,29 +197,7 @@ export default function DashboardPage() {
             });
             
             // 保護者の場合、生徒データも取得
-            const { data: studentsData, error: studentsError } = await supabase
-              .from('students')
-              .select('*')
-              .eq('parent_id', parentData.id);
-
-            if (studentsError) {
-              console.error('Error fetching students:', studentsError);
-            } else if (studentsData && studentsData.length > 0) {
-              setStudents(studentsData);
-            }
-
-            // チケット残数取得
-            const { data: ticketsData, error: ticketsError } = await supabase
-              .from('student_tickets')
-              .select('quantity')
-              .eq('parent_id', parentData.id)
-              .maybeSingle();
-
-            if (ticketsError) {
-              console.error('Error fetching tickets:', ticketsError);
-            } else if (ticketsData) {
-              setAvailableTickets(ticketsData.quantity || 0);
-            }
+            await fetchStudentsAndTickets(parentData.id);
           }
         }
         
@@ -171,13 +206,38 @@ export default function DashboardPage() {
           const { data: studentData, error: studentError } = await supabase
             .from('student_profile')
             .select('*')
-            .eq('user_id', userId)
+            .eq('email', userEmail)
             .maybeSingle();
             
           if (studentError) {
-            console.error("Error fetching student profile:", studentError);
+            console.error("Error fetching student profile by email:", studentError);
+            
+            // メールで検索できない場合はIDで再試行
+            const { data: studentDataById, error: studentErrorById } = await supabase
+              .from('student_profile')
+              .select('*')
+              .eq('user_id', userId)
+              .maybeSingle();
+              
+            if (studentErrorById) {
+              console.error("Error fetching student profile by ID:", studentErrorById);
+            } else if (studentDataById) {
+              console.log("Found student profile by ID:", studentDataById);
+              foundProfile = true;
+              role = 'student';
+              
+              // 生徒情報をセット
+              setStudents([{
+                id: studentDataById.id,
+                first_name: studentDataById.first_name,
+                last_name: studentDataById.last_name,
+                user_id: studentDataById.user_id,
+                grade: studentDataById.grade,
+                school: studentDataById.school,
+              }]);
+            }
           } else if (studentData) {
-            console.log("Found student profile:", studentData);
+            console.log("Found student profile by email:", studentData);
             foundProfile = true;
             role = 'student';
             
@@ -196,11 +256,24 @@ export default function DashboardPage() {
         // プロファイルが見つからない場合
         if (!foundProfile) {
           console.log("No profile found for user, redirecting to profile setup");
+          console.log("User Email:", userEmail, "User ID:", userId);
+          
+          // Supabaseのテーブル内容を直接ログに出力（開発環境のみ）
+          if (process.env.NODE_ENV !== 'production') {
+            const { data: allTutorProfiles, error: listError } = await supabase
+              .from('tutor_profile')
+              .select('id, user_id, email')
+              .limit(10);
+              
+            console.log("Sample tutor profiles:", allTutorProfiles, listError);
+          }
+          
           toast({
             title: "プロフィール未設定",
             description: "プロフィール情報を設定してください",
             variant: "default",
           });
+          
           router.push('/profile-setup');
           return;
         }
@@ -246,6 +319,34 @@ export default function DashboardPage() {
         router.push('/profile-setup');
       } finally {
         setLoading(false);
+      }
+    };
+
+    // 生徒と利用可能チケットを取得する関数（コード重複を減らすため）
+    const fetchStudentsAndTickets = async (parentId: number) => {
+      // 保護者の場合、生徒データを取得
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('*')
+        .eq('parent_id', parentId);
+
+      if (studentsError) {
+        console.error('Error fetching students:', studentsError);
+      } else if (studentsData && studentsData.length > 0) {
+        setStudents(studentsData);
+      }
+
+      // チケット残数取得
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from('student_tickets')
+        .select('quantity')
+        .eq('parent_id', parentId)
+        .maybeSingle();
+
+      if (ticketsError) {
+        console.error('Error fetching tickets:', ticketsError);
+      } else if (ticketsData) {
+        setAvailableTickets(ticketsData.quantity || 0);
       }
     };
 
