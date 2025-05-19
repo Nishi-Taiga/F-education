@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { Database } from '@/types/supabase';
 
 // 時間帯のオプション
 const timeOptions = Array.from({ length: 15 }, (_, i) => {
@@ -49,7 +50,7 @@ const timeOptions = Array.from({ length: 15 }, (_, i) => {
 
 export default function TutorSchedulePage() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createClientComponentClient<Database>();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -84,6 +85,8 @@ export default function TutorSchedulePage() {
           router.push('/auth');
           return;
         }
+        
+        console.log("Session found:", session.user.email);
         
         // 講師プロファイルを取得
         const { data: tutorData, error: tutorError } = await supabase
@@ -148,13 +151,14 @@ export default function TutorSchedulePage() {
           description: error.message || "講師情報の取得中にエラーが発生しました",
           variant: "destructive",
         });
+        router.push('/dashboard');
       } finally {
         setLoading(false);
       }
     };
     
     fetchTutorProfile();
-  }, [supabase, router, toast]);
+  }, []);
   
   // シフト情報を取得
   const fetchShifts = async (tutorId: number) => {
