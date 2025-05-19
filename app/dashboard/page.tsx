@@ -278,33 +278,49 @@ export default function DashboardPage() {
           return;
         }
         
+        console.log(`Setting user profile with role: ${role}`);
+        
         // ユーザープロファイル情報を設定
         // ロールに応じた情報を設定
         if (role === 'tutor' && tutorProfile) {
-          setUserProfile({
+          console.log("Creating user profile from tutor profile:", tutorProfile);
+          const userProfileData = {
             id: tutorProfile.id,
             display_name: `${tutorProfile.last_name} ${tutorProfile.first_name}`,
-            role: 'tutor',
+            role: 'tutor' as const,
             email: session.user.email || '',
             profile_completed: true,
-          });
+          };
+          console.log("User profile data to set:", userProfileData);
+          setUserProfile(userProfileData);
         } else if (role === 'parent' && parentProfile) {
-          setUserProfile({
+          console.log("Creating user profile from parent profile:", parentProfile);
+          const userProfileData = {
             id: parentProfile.id,
             display_name: parentProfile.parent_name,
-            role: 'parent',
+            role: 'parent' as const,
             email: session.user.email || '',
             profile_completed: true,
-          });
+          };
+          console.log("User profile data to set:", userProfileData);
+          setUserProfile(userProfileData);
         } else if (role === 'student' && students.length > 0) {
+          console.log("Creating user profile from student profile:", students[0]);
           const student = students[0];
-          setUserProfile({
+          const userProfileData = {
             id: student.id,
             display_name: `${student.last_name} ${student.first_name}`,
-            role: 'student',
+            role: 'student' as const,
             email: session.user.email || '',
             profile_completed: true,
-          });
+          };
+          console.log("User profile data to set:", userProfileData);
+          setUserProfile(userProfileData);
+        } else {
+          console.error("Profile found but could not create user profile. Role:", role);
+          console.log("tutorProfile:", tutorProfile);
+          console.log("parentProfile:", parentProfile);
+          console.log("students:", students);
         }
         
       } catch (error: any) {
@@ -318,6 +334,7 @@ export default function DashboardPage() {
         // エラーが発生した場合でも、プロフィールが設定されていないとみなしてリダイレクト
         router.push('/profile-setup');
       } finally {
+        console.log("Final userProfile state:", userProfile);
         setLoading(false);
       }
     };
@@ -353,6 +370,16 @@ export default function DashboardPage() {
     fetchUserData();
   }, [supabase, router, toast, refetch]);
 
+  // デバッグ用のuseEffectを追加
+  useEffect(() => {
+    console.log("Render phase - Current state of profiles:");
+    console.log("userProfile:", userProfile);
+    console.log("tutorProfile:", tutorProfile);
+    console.log("parentProfile:", parentProfile);
+    console.log("students:", students);
+    console.log("loading:", loading);
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -362,7 +389,11 @@ export default function DashboardPage() {
     );
   }
 
-  if (!userProfile) {
+  // ここで直接state変数をチェックする代わりに変数にキャッシュ
+  const hasProfile = !!userProfile;
+  console.log("Render decision - hasProfile:", hasProfile);
+
+  if (!hasProfile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h1 className="text-2xl font-bold mb-4">プロフィールが見つかりません</h1>
