@@ -118,7 +118,7 @@ export default function TutorProfileSetup() {
           university: formData.university,
           birth_date: formData.birthDate,
           subjects: subjects,
-          email: user.email,
+          email: user.email,  // Emailを明示的に保存
           profile_completed: true,
           is_active: true
         };
@@ -146,6 +146,7 @@ export default function TutorProfileSetup() {
                 university: formData.university,
                 birth_date: formData.birthDate,
                 subjects: subjects,
+                email: user.email,  // 更新時もEmailを明示的に含める
                 profile_completed: true,
                 is_active: true
               })
@@ -176,6 +177,35 @@ export default function TutorProfileSetup() {
         }
         
         console.log("挿入成功:", insertData);
+        
+        // 成功後に検証クエリを実行
+        console.log("プロフィール保存を検証しています...");
+        const { data: verifyProfile, error: verifyError } = await supabase
+          .from('tutor_profile')
+          .select('*')
+          .eq('email', user.email)
+          .maybeSingle();
+          
+        if (verifyError || !verifyProfile) {
+          console.error("プロフィール保存の検証に失敗:", verifyError);
+          // エラーはスローせず、プロフィールが見つからなくても続行
+          console.log("代替手段: user_idでプロフィールを検索します");
+          
+          const { data: verifyByIdProfile, error: verifyByIdError } = await supabase
+            .from('tutor_profile')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          if (verifyByIdProfile) {
+            console.log("user_idによるプロフィール検証成功:", verifyByIdProfile);
+          } else {
+            console.error("user_idによるプロフィール検証失敗:", verifyByIdError);
+          }
+        } else {
+          console.log("プロフィール保存の検証成功:", verifyProfile);
+        }
+        
         toast({
           title: "プロフィール設定完了",
           description: "講師プロフィールが正常に設定されました",
