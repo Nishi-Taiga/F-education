@@ -65,7 +65,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
             *,
             student:student_id(id, first_name, last_name),
             tutor:tutor_id(id, first_name, last_name),
-            lesson_report:lesson_report_id(id, content, status)
+            lesson_reports(id, content, status)
           `)
           .order('date', { ascending: true });
 
@@ -102,8 +102,8 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
             studentName: `${booking.student.last_name} ${booking.student.first_name}`,
             tutorName: booking.tutor ? `${booking.tutor.last_name} ${booking.tutor.first_name}` : '',
             reportId: booking.lesson_report_id,
-            reportStatus: booking.lesson_report?.status || null,
-            reportContent: booking.lesson_report?.content || null,
+            reportStatus: booking.lesson_reports && booking.lesson_reports.length > 0 ? booking.lesson_reports[0].status : null,
+            reportContent: booking.lesson_reports && booking.lesson_reports.length > 0 ? booking.lesson_reports[0].content : null,
           }));
           setBookings(formattedBookings);
         }
