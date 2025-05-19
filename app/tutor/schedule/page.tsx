@@ -14,35 +14,16 @@ import {
   Loader2,
   Save
 } from 'lucide-react';
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardContent,
-  CardTitle,
-  CardFooter,
-  CardDescription,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Label,
-  Calendar,
-  Badge,
-  Separator
-} from '@/components/ui';  // Adjust the import path as needed based on your project structure
-import { cn } from '@/lib/utils';  // Adjust the import path as needed based on your project structure
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardContent, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 // Define the TutorSchedulePage component
 export default function TutorSchedulePage() {
