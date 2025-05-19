@@ -14,7 +14,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Calendar, CreditCard, User, FileText } from 'lucide-react';
+import { 
+  Plus, 
+  Calendar, 
+  CreditCard, 
+  User, 
+  FileText,
+  Ticket,
+  Book,
+  Clock,
+  CheckCircle2,
+  XCircle
+} from 'lucide-react';
 
 type DashboardProps = {
   userProfile: any;
@@ -207,11 +218,11 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">ダッシュボード</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">ダッシュボード</h1>
+          <p className="text-lg text-muted-foreground mt-1">
             {displayName}
             {isParent && 'さん、お子様の学習状況をご確認ください'}
             {isStudent && 'さん、授業の予定を確認しましょう'}
@@ -219,51 +230,51 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
           </p>
         </div>
         
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {(isParent || isStudent) && (
-            <Button onClick={handleBookingPageClick}>
-              <Plus className="mr-2 h-4 w-4" />
-              予約する
+            <Button onClick={handleBookingPageClick} size="lg" className="shadow-sm">
+              <Plus className="mr-2 h-5 w-5" />
+              授業を予約する
             </Button>
           )}
           
           {isParent && (
-            <Button variant="outline" onClick={handleBuyTicketsClick}>
-              <CreditCard className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="lg" onClick={handleBuyTicketsClick} className="shadow-sm">
+              <Ticket className="mr-2 h-5 w-5" />
               チケット購入 ({availableTickets}枚)
             </Button>
           )}
           
           {isTutor && (
             <>
-              <Button onClick={handleScheduleClick}>
-                <Calendar className="mr-2 h-4 w-4" />
+              <Button onClick={handleScheduleClick} size="lg" className="shadow-sm">
+                <Calendar className="mr-2 h-5 w-5" />
                 スケジュール管理
               </Button>
-              <Button variant="outline" onClick={handleProfileClick}>
-                <User className="mr-2 h-4 w-4" />
-                プロフィール
+              <Button variant="outline" size="lg" onClick={handleProfileClick} className="shadow-sm">
+                <User className="mr-2 h-5 w-5" />
+                プロフィール編集
               </Button>
             </>
           )}
           
-          <Button variant="outline" onClick={handleReportsClick}>
-            <FileText className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="lg" onClick={handleReportsClick} className="shadow-sm">
+            <FileText className="mr-2 h-5 w-5" />
             レポート一覧
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>カレンダー</CardTitle>
-            <CardDescription>授業の予定を確認できます</CardDescription>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <Card className="lg:col-span-2 shadow-md">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl">カレンダー</CardTitle>
+            <CardDescription>授業の予定をカレンダーで確認できます</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="space-y-3">
-                <Skeleton className="h-[400px] w-full rounded-lg" />
+                <Skeleton className="h-[450px] w-full rounded-lg" />
               </div>
             ) : (
               <CalendarView 
@@ -276,20 +287,20 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>予約一覧</CardTitle>
-              <CardDescription>授業の予約状況</CardDescription>
+        <div className="space-y-8">
+          <Card className="shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl">授業予約一覧</CardTitle>
+              <CardDescription>今後の授業予定や過去の授業履歴</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="upcoming" value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="upcoming">予定</TabsTrigger>
-                  <TabsTrigger value="past">過去</TabsTrigger>
-                  <TabsTrigger value="cancelled">キャンセル</TabsTrigger>
+            <CardContent className="pt-1">
+              <Tabs defaultValue="upcoming" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger value="upcoming" className="text-sm">予定</TabsTrigger>
+                  <TabsTrigger value="past" className="text-sm">過去</TabsTrigger>
+                  <TabsTrigger value="cancelled" className="text-sm">キャンセル</TabsTrigger>
                 </TabsList>
-                <TabsContent value="upcoming" className="space-y-4 mt-4">
+                <TabsContent value="upcoming" className="space-y-3 mt-1">
                   {loading ? (
                     Array(3).fill(0).map((_, i) => (
                       <Skeleton key={i} className="h-[100px] w-full rounded-lg" />
@@ -303,12 +314,24 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
                       />
                     ))
                   ) : (
-                    <p className="text-center text-muted-foreground py-4">
-                      予定されている授業はありません
-                    </p>
+                    <div className="text-center py-8 px-4 border border-dashed rounded-lg">
+                      <Calendar className="h-10 w-10 mx-auto text-gray-400 mb-3" />
+                      <p className="text-muted-foreground">
+                        予定されている授業はありません
+                      </p>
+                      {(isStudent || isParent) && (
+                        <Button 
+                          variant="outline" 
+                          className="mt-4" 
+                          onClick={handleBookingPageClick}
+                        >
+                          授業を予約する
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </TabsContent>
-                <TabsContent value="past" className="space-y-4 mt-4">
+                <TabsContent value="past" className="space-y-3 mt-1">
                   {loading ? (
                     Array(3).fill(0).map((_, i) => (
                       <Skeleton key={i} className="h-[100px] w-full rounded-lg" />
@@ -323,12 +346,15 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
                       />
                     ))
                   ) : (
-                    <p className="text-center text-muted-foreground py-4">
-                      過去の授業はありません
-                    </p>
+                    <div className="text-center py-8 px-4 border border-dashed rounded-lg">
+                      <Clock className="h-10 w-10 mx-auto text-gray-400 mb-3" />
+                      <p className="text-muted-foreground">
+                        過去の授業はありません
+                      </p>
+                    </div>
                   )}
                 </TabsContent>
-                <TabsContent value="cancelled" className="space-y-4 mt-4">
+                <TabsContent value="cancelled" className="space-y-3 mt-1">
                   {loading ? (
                     Array(3).fill(0).map((_, i) => (
                       <Skeleton key={i} className="h-[100px] w-full rounded-lg" />
@@ -342,53 +368,73 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
                       />
                     ))
                   ) : (
-                    <p className="text-center text-muted-foreground py-4">
-                      キャンセルされた授業はありません
-                    </p>
+                    <div className="text-center py-8 px-4 border border-dashed rounded-lg">
+                      <XCircle className="h-10 w-10 mx-auto text-gray-400 mb-3" />
+                      <p className="text-muted-foreground">
+                        キャンセルされた授業はありません
+                      </p>
+                    </div>
                   )}
                 </TabsContent>
               </Tabs>
             </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" onClick={handleReportsClick}>
+            <CardFooter className="pt-2">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={handleReportsClick}
+              >
                 すべての予約を表示
               </Button>
             </CardFooter>
           </Card>
 
           {isParent && (
-            <Card>
-              <CardHeader>
-                <CardTitle>チケット情報</CardTitle>
+            <Card className="shadow-md bg-gradient-to-br from-blue-50 to-white">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl flex items-center">
+                  <Ticket className="mr-2 h-5 w-5 text-blue-600" />
+                  チケット情報
+                </CardTitle>
                 <CardDescription>保有チケットと使用状況</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between py-2">
+                <div className="flex items-center justify-between py-4">
                   <div>
-                    <p className="text-sm font-medium">保有チケット</p>
-                    <p className="text-2xl font-bold">{availableTickets}枚</p>
+                    <p className="text-sm font-medium text-gray-600">保有チケット</p>
+                    <p className="text-4xl font-bold text-blue-700">{availableTickets}<span className="text-xl ml-1">枚</span></p>
                   </div>
-                  <Button onClick={handleBuyTicketsClick}>
+                  <Button 
+                    onClick={handleBuyTicketsClick}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
                     チケットを購入
                   </Button>
+                </div>
+                <div className="text-sm text-gray-600 mt-2 bg-white p-3 rounded-md border border-blue-100">
+                  <p>1チケットで1時間の授業を予約できます。</p>
+                  <p>チケットはお子様全員で共有して使用できます。</p>
                 </div>
               </CardContent>
             </Card>
           )}
           
           {isTutor && (
-            <Card>
-              <CardHeader>
-                <CardTitle>担当授業集計</CardTitle>
+            <Card className="shadow-md bg-gradient-to-br from-green-50 to-white">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl flex items-center">
+                  <Book className="mr-2 h-5 w-5 text-green-600" />
+                  授業情報
+                </CardTitle>
                 <CardDescription>今月の授業数と完了レポート</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="border rounded-lg p-3 text-center">
-                    <p className="text-sm text-muted-foreground">今月の授業</p>
-                    <p className="text-2xl font-bold">
+                <div className="grid grid-cols-2 gap-4 my-2">
+                  <div className="border rounded-lg p-4 text-center bg-white shadow-sm">
+                    <p className="text-sm text-gray-600 mb-1">今月の授業</p>
+                    <p className="text-3xl font-bold text-green-700">
                       {loading ? (
-                        <Skeleton className="h-8 w-16 mx-auto" />
+                        <Skeleton className="h-9 w-16 mx-auto" />
                       ) : (
                         bookings.filter(b => 
                           b.date.getMonth() === new Date().getMonth() && 
@@ -396,22 +442,33 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
                           b.status !== 'cancelled'
                         ).length
                       )}
+                      <span className="text-lg ml-1">件</span>
                     </p>
                   </div>
-                  <div className="border rounded-lg p-3 text-center">
-                    <p className="text-sm text-muted-foreground">未提出レポート</p>
-                    <p className="text-2xl font-bold">
+                  <div className="border rounded-lg p-4 text-center bg-white shadow-sm">
+                    <p className="text-sm text-gray-600 mb-1">未提出レポート</p>
+                    <p className="text-3xl font-bold text-amber-600">
                       {loading ? (
-                        <Skeleton className="h-8 w-16 mx-auto" />
+                        <Skeleton className="h-9 w-16 mx-auto" />
                       ) : (
                         pastBookings.filter(b => !b.reportId).length
                       )}
+                      <span className="text-lg ml-1">件</span>
                     </p>
                   </div>
                 </div>
+                <div className="text-sm text-gray-600 mt-4 bg-white p-3 rounded-md border border-green-100">
+                  <p className="flex items-center">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 mr-1.5" />
+                    完了した授業のレポートを必ず提出してください。
+                  </p>
+                </div>
               </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full" onClick={handleScheduleClick}>
+              <CardFooter className="pt-2">
+                <Button 
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={handleScheduleClick}
+                >
                   スケジュール管理
                 </Button>
               </CardFooter>
