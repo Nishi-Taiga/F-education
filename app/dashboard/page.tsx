@@ -23,7 +23,7 @@ type Student = {
   id: number;
   first_name: string;
   last_name: string;
-  user_id: number;
+  user_id: string; // UUIDのため文字列型
   grade?: string;
   school?: string;
 };
@@ -31,7 +31,7 @@ type Student = {
 // 講師プロファイルの型
 type TutorProfile = {
   id: number;
-  user_id: number;
+  user_id: string; // UUIDのため文字列型
   first_name: string;
   last_name: string;
   bio?: string;
@@ -42,7 +42,7 @@ type TutorProfile = {
 // 保護者プロファイルの型
 type ParentProfile = {
   id: number;
-  user_id: number;
+  user_id: string; // UUIDのため文字列型
   parent_name: string;
   phone?: string;
   postal_code?: string;
@@ -212,7 +212,7 @@ export default function DashboardPage() {
             id: tutorProfile.id,
             display_name: `${tutorProfile.last_name} ${tutorProfile.first_name}`,
             role: 'tutor',
-            email: session.user.email,
+            email: session.user.email || '',
             profile_completed: true,
           });
         } else if (role === 'parent' && parentProfile) {
@@ -220,7 +220,7 @@ export default function DashboardPage() {
             id: parentProfile.id,
             display_name: parentProfile.parent_name,
             role: 'parent',
-            email: session.user.email,
+            email: session.user.email || '',
             profile_completed: true,
           });
         } else if (role === 'student' && students.length > 0) {
@@ -229,7 +229,7 @@ export default function DashboardPage() {
             id: student.id,
             display_name: `${student.last_name} ${student.first_name}`,
             role: 'student',
-            email: session.user.email,
+            email: session.user.email || '',
             profile_completed: true,
           });
         }
@@ -250,7 +250,7 @@ export default function DashboardPage() {
     };
 
     fetchUserData();
-  }, [supabase, router, toast]);
+  }, [supabase, router, toast, refetch]);
 
   if (loading) {
     return (
