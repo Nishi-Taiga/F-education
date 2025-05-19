@@ -210,7 +210,26 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
 
   // シフト登録ページへの遷移
   const handleScheduleClick = () => {
-    router.push('/tutor/schedule');
+    try {
+      // 前にセッションチェックを追加
+      const session = supabase.auth.getSession();
+      console.log("ナビゲーション前にセッションを確認:", session);
+      
+      // router.pushの前にconsole.logを追加
+      console.log("シフト登録ページへ遷移します");
+      
+      // 直接ナビゲーションするのではなく、イベントループの次のティックで実行
+      setTimeout(() => {
+        router.push('/tutor/schedule');
+      }, 0);
+    } catch (error) {
+      console.error("シフト登録ページへの遷移中にエラーが発生しました:", error);
+      toast({
+        title: "エラー",
+        description: "ページ遷移に失敗しました。もう一度お試しください。",
+        variant: "destructive",
+      });
+    }
   };
 
   // 講師プロフィールページへの遷移
