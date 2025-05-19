@@ -82,7 +82,7 @@ export default function TutorSchedulePage() {
         
         if (!session) {
           console.log("No active session found");
-          router.push('/auth');
+          // ログイン状態を先にチェックせずに、自動でリダイレクトされるようにする
           return;
         }
         
@@ -112,7 +112,6 @@ export default function TutorSchedulePage() {
               description: "講師情報の取得に失敗しました",
               variant: "destructive",
             });
-            router.push('/dashboard');
             return;
           } else if (tutorDataById) {
             console.log("Found tutor profile by ID:", tutorDataById);
@@ -126,7 +125,6 @@ export default function TutorSchedulePage() {
               description: "講師プロフィールの設定が必要です",
               variant: "destructive",
             });
-            router.push('/profile-setup');
             return;
           }
         } else if (tutorData) {
@@ -141,7 +139,6 @@ export default function TutorSchedulePage() {
             description: "講師プロフィールの設定が必要です",
             variant: "destructive",
           });
-          router.push('/profile-setup');
           return;
         }
       } catch (error: any) {
@@ -151,7 +148,6 @@ export default function TutorSchedulePage() {
           description: error.message || "講師情報の取得中にエラーが発生しました",
           variant: "destructive",
         });
-        router.push('/dashboard');
       } finally {
         setLoading(false);
       }
@@ -378,6 +374,21 @@ export default function TutorSchedulePage() {
     setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }));
   };
   
+  // ダッシュボードに戻る処理
+  const handleBackToDashboard = () => {
+    try {
+      // ログイン状態を保持するために、単純にルーターを使う
+      router.push('/dashboard');
+    } catch (error) {
+      console.error("Error navigating to dashboard:", error);
+      toast({
+        title: "エラー",
+        description: "ダッシュボードへの遷移に失敗しました",
+        variant: "destructive",
+      });
+    }
+  };
+  
   // 曜日の配列
   const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
   
@@ -399,7 +410,7 @@ export default function TutorSchedulePage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => router.push('/dashboard')}
+            onClick={handleBackToDashboard}
             className="mr-2"
           >
             <ArrowLeft className="h-5 w-5" />
