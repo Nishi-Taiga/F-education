@@ -263,99 +263,122 @@ export default function TutorSchedulePage() {
   };
   
   // すべての保留中のシフト変更を保存
-  const saveAllPendingShifts = async () => {
-    if (pendingShifts.length === 0) {
-      toast({
-        title: '変更はありません',
-        description: '保存する変更がありません。',
-      });
-      return;
+const saveAllPendingShifts = async () => {
+  if (pendingShifts.length === 0) {
+    toast({
+      title: '変更はありません',
+      description: '保存する変更がありません。',
+    });
+    return;
+  }
+  
+  // 保存開始の通知
+  toast({
+    title: 'シフト設定を保存中...',
+    description: `${pendingShifts.length}件のシフト変更を保存しています。`,
+  });
+  
+  setIsSaving(true);
+  
+  // 保存の失敗回数をカウント
+  let failCount = 0;
+  let successCount = 0;
+  
+  try {
+    console.log('TutorProfile:', tutorProfile); // デバッグログを追加
+    
+    // tutor_idを数値に変換（もし文字列だった場合）
+    const tutorIdNumeric = typeof tutorProfile.id === 'string' 
+      ? parseInt(tutorProfile.id, 10) 
+      : tutorProfile.id;
+    
+    // 科目文字列の取得（科目がない場合は「未設定」）
+    const subjectsString = tutorProfile.subjects || '未設定';
+    
+    for (const shift of pendingShifts) {
+      // 既存のシフトを探す
+      const existingShift = shifts.find(
+        s => s.date === shift.date && s.time_slot === shift.time_slot
+      );
+      
+      if (existingShift) {
+        // 既存のシフトを更新
+        console.log('Updating shift:', existingShift.id, shift.is_available);
+        const { error } = await supabase
+          .from('tutor_shifts')
+          .update({ is_available: shift.is_available })
+          .eq('id', existingShift.id);
+        
+        if (error) {
+          console.error('Error updating shift:', error);
+          throw error;
+        }
+        successCount++;
+      } else {
+        // 新しいシフトを作成
+        const newShift = {
+          tutor_id: tutorIdNumeric, // 数値型に変換したtutor_id
+          date: shift.date,
+          time_slot: shift.time_slot,
+          is_available: shift.is_available,
+          subject: subjectsString // カンマ区切りの科目文字列全体
+        };
+        
+        console.log('Creating new shift:', newShift);
+        const { error } = await supabase
+          .from('tutor_shifts')
+          .insert([newShift]);
+        
+        if (error) {
+          console.error('Error inserting shift:', error);
+          throw error;
+        }
+        successCount++;
+      }
     }
     
-    // 保存開始の通知
+    // シフト情報を再取得
+    const { data, error } = await supabase
+      .from('tutor_shifts')
+      .select('*')
+      .eq('tutor_id', tutorIdNumeric); // ここも数値型を使用
+    
+    if (error) {
+      console.error('Error refetching shifts:', error);
+      throw error;
+    }
+    
+    setShifts(data || []);
+  } catch (error: any) {
+    console.error('Error saving shifts:', error);
+    failCount = pendingShifts.length - successCount;
     toast({
-      title: 'シフト設定を保存中...',
-      description: `${pendingShifts.length}件のシフト変更を保存しています。`,
+      title: 'エラーが発生しました',
+      description: error.message || 'シフトの保存中にエラーが発生しました。',
+      variant: 'destructive',
     });
+  } finally {
+    // 保存完了後に保留中のシフトをクリア
+    const totalChanges = pendingShifts.length;
+    setPendingShifts([]);
+    setIsSaving(false);
     
-    setIsSaving(true);
-    
-    // 保存の失敗回数をカウント
-    let failCount = 0;
-    let successCount = 0;
-    
-    try {
-      for (const shift of pendingShifts) {
-        // 既存のシフトを探す
-        const existingShift = shifts.find(
-          s => s.date === shift.date && s.time_slot === shift.time_slot
-        );
-        
-        if (existingShift) {
-          // 既存のシフトを更新
-          const { error } = await supabase
-            .from('tutor_shifts')
-            .update({ is_available: shift.is_available })
-            .eq('id', existingShift.id);
-          
-          if (error) throw error;
-          successCount++;
-        } else {
-          // 新しいシフトを作成
-          const { error } = await supabase
-            .from('tutor_shifts')
-            .insert([{
-              tutor_id: tutorProfile.id,
-              date: shift.date,
-              time_slot: shift.time_slot,
-              is_available: shift.is_available,
-              subject: tutorProfile.subjects?.[0] || '' // 最初の科目をデフォルトに
-            }]);
-          
-          if (error) throw error;
-          successCount++;
-        }
-      }
-      
-      // シフト情報を再取得
-      const { data, error } = await supabase
-        .from('tutor_shifts')
-        .select('*')
-        .eq('tutor_id', tutorProfile.id);
-      
-      if (error) throw error;
-      
-      setShifts(data || []);
-    } catch (error: any) {
-      console.error('Error saving shifts:', error);
-      failCount = pendingShifts.length - successCount;
+    // 結果の通知を表示
+    if (failCount === 0) {
       toast({
-        title: 'エラーが発生しました',
-        description: error.message || 'シフトの保存中にエラーが発生しました。',
+        title: 'シフト設定の保存完了',
+        description: `${totalChanges}件のシフト変更がすべて正常に保存されました。`,
+        variant: 'default',
+      });
+    } else {
+      toast({
+        title: 'シフト設定の保存完了（一部エラー）',
+        description: `${totalChanges}件中${successCount}件が保存され、${failCount}件が失敗しました。`,
         variant: 'destructive',
       });
-    } finally {
-      // 保存完了後に保留中のシフトをクリア
-      const totalChanges = pendingShifts.length;
-      setPendingShifts([]);
-      setIsSaving(false);
-      
-      // 結果の通知を表示
-      if (failCount === 0) {
-        toast({
-          title: 'シフト設定の保存完了',
-          description: `${totalChanges}件のシフト変更がすべて正常に保存されました。`,
-          variant: 'default',
-        });
-      } else {
-        toast({
-          title: 'シフト設定の保存完了（一部エラー）',
-          description: `${totalChanges}件中${successCount}件が保存され、${failCount}件が失敗しました。`,
-          variant: 'destructive',
-        });
-      }
     }
-  };
+  }
+};
   
   // 読み込み中の表示
   if (isLoading) {
