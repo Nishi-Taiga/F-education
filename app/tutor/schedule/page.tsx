@@ -95,8 +95,8 @@ export default function TutorSchedulePage() {
         
         const { data: userData, error: roleError } = await supabase
           .from('tutor_profile')
-          .select('role')
-          .eq('id', session.user.id)
+          .select('*')
+          .eq('user_id', user.id)
           .single();
         
         if (roleError) {
