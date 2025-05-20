@@ -398,7 +398,7 @@ export default function TutorSchedulePage() {
   return (
     <div className="container py-8">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
-        <h1 className="text-xl md:text-2xl font-bold">シフト管理</h1>
+        <h1 className="text-xl md:text-2xl font-bold">シフト登録</h1>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
@@ -408,21 +408,6 @@ export default function TutorSchedulePage() {
             <Home className="h-3 w-3 md:h-4 md:w-4" />
             <span className="hidden md:inline">ホームに戻る</span>
             <span className="inline md:hidden">ホーム</span>
-          </Button>
-          <Button
-            variant="default"
-            onClick={saveAllPendingShifts}
-            disabled={pendingShifts.length === 0 || isSaving}
-            className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
-          >
-            {isSaving ? (
-              <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin" />
-            ) : (
-              <Save className="h-3 w-3 md:h-4 md:w-4" />
-            )}
-            <span className="hidden md:inline">変更を保存</span>
-            <span className="inline md:hidden">保存</span>
-            {pendingShifts.length > 0 && <span className="font-medium">({pendingShifts.length})</span>}
           </Button>
         </div>
       </div>
