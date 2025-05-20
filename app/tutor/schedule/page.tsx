@@ -46,9 +46,17 @@ const timeSlots = [
 
 export default function TutorSchedulePage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // 講師プロフィールの取得
+  const [tutorProfile, setTutorProfile] = useState<any>(null);
+  
+  // シフト情報の取得
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [isLoadingShifts, setIsLoadingShifts] = useState(true);
+  const [shiftsError, setShiftsError] = useState<string | null>(null);
+  
   const [pendingShifts, setPendingShifts] = useState<Array<{
     date: string;
     time_slot: string;
@@ -61,94 +69,85 @@ export default function TutorSchedulePage() {
     return startOfWeek(new Date(), { weekStartsOn: 0 });
   });
   
-  // 講師プロフィールの取得
-  const [tutorProfile, setTutorProfile] = useState<any>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [profileError, setProfileError] = useState<string | null>(null);
-  
-  // シフト情報の取得
-  const [shifts, setShifts] = useState<Shift[]>([]);
-  const [isLoadingShifts, setIsLoadingShifts] = useState(true);
-  const [shiftsError, setShiftsError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  
-  // ユーザー情報を取得
+  // 講師プロフィール情報を取得
   useEffect(() => {
-    const fetchUser = async () => {
-      setIsLoadingUser(true);
-      setAuthError(null);
+    const fetchTutorProfile = async () => {
+      setIsLoading(true);
       
       try {
-        // ユーザー情報取得
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          setAuthError(error.message);
-          return;
-        }
+        // セッションチェック
+        const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          setAuthError('ユーザーが見つかりません。ログインしてください。');
+          console.log("No active session found");
           router.push('/auth');
           return;
         }
         
-        const { data: userData, error: roleError } = await supabase
+        // 講師プロファイルを取得
+        const { data: tutorData, error: tutorError } = await supabase
           .from('tutor_profile')
           .select('*')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (roleError) {
-          setAuthError(roleError.message);
-          return;
-        }
-        
-        setUser({ ...session.user, role: userData?.role || 'unknown' });
-      } catch (error: any) {
-        setAuthError(error.message || 'ユーザー情報の取得中にエラーが発生しました。');
-      } finally {
-        setIsLoadingUser(false);
-      }
-    };
-    
-    fetchUser();
-  }, [router]);
-  
-  // 講師プロフィールを取得
-  useEffect(() => {
-    const fetchTutorProfile = async () => {
-      if (!user) return;
-      
-      setIsLoadingProfile(true);
-      setProfileError(null);
-      
-      try {
-        const { data, error } = await supabase
-          .from('tutor_profile')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (error) {
-          if (error.code === 'PGRST116') {
-            setProfileError('講師プロフィールが見つかりません。プロフィールの設定が必要です。');
+          .eq('email', session.user.email)
+          .maybeSingle();
+          
+        if (tutorError) {
+          console.error("Error fetching tutor profile by email:", tutorError);
+          
+          // メールで検索できない場合はIDで再試行
+          const { data: tutorDataById, error: tutorErrorById } = await supabase
+            .from('tutor_profile')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+            
+          if (tutorErrorById) {
+            console.error("Error fetching tutor profile by ID:", tutorErrorById);
+            toast({
+              title: "エラー",
+              description: "講師情報の取得に失敗しました",
+              variant: "destructive",
+            });
+            router.push('/dashboard');
+            return;
+          } else if (tutorDataById) {
+            console.log("Found tutor profile by ID:", tutorDataById);
+            setTutorProfile(tutorDataById);
           } else {
-            setProfileError(error.message);
+            toast({
+              title: "講師プロフィールが見つかりません",
+              description: "講師プロフィールの設定が必要です",
+              variant: "destructive",
+            });
+            router.push('/profile-setup');
+            return;
           }
+        } else if (tutorData) {
+          console.log("Found tutor profile:", tutorData);
+          setTutorProfile(tutorData);
+        } else {
+          toast({
+            title: "講師プロフィールが見つかりません",
+            description: "講師プロフィールの設定が必要です",
+            variant: "destructive",
+          });
+          router.push('/profile-setup');
           return;
         }
-        
-        setTutorProfile(data);
       } catch (error: any) {
-        setProfileError(error.message || '講師プロフィールの取得中にエラーが発生しました。');
+        console.error("Error in fetchTutorProfile:", error);
+        toast({
+          title: "エラー",
+          description: error.message || "講師情報の取得中にエラーが発生しました",
+          variant: "destructive",
+        });
       } finally {
-        setIsLoadingProfile(false);
+        setIsLoading(false);
       }
     };
     
     fetchTutorProfile();
-  }, [user]);
+  }, [router]);
   
   // シフト情報を取得
   useEffect(() => {
@@ -359,68 +358,12 @@ export default function TutorSchedulePage() {
   };
   
   // 読み込み中の表示
-  if (isLoadingUser) {
+  if (isLoading) {
     return (
       <div className="container py-8 flex justify-center">
         <div className="text-center">
           <CalendarIcon className="h-8 w-8 mb-4 mx-auto animate-pulse" />
           <p>ユーザー情報を読み込み中...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // 認証エラーの表示
-  if (authError) {
-    return (
-      <div className="container py-8">
-        <Card className="border-red-300">
-          <CardHeader>
-            <CardTitle className="text-red-500">認証エラー</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{authError}</p>
-            <Button 
-              className="mt-4"
-              onClick={() => router.push('/auth')}
-            >
-              ログインページへ
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-  
-  // ユーザーが存在しない場合
-  if (!user) {
-    return (
-      <div className="container py-8">
-        <Card className="border-yellow-300">
-          <CardHeader>
-            <CardTitle className="text-yellow-500">ログインが必要です</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>このページにアクセスするにはログインが必要です。</p>
-            <Button 
-              className="mt-4"
-              onClick={() => router.push('/auth')}
-            >
-              ログインページへ
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-  
-  // プロフィールの読み込み中
-  if (isLoadingProfile) {
-    return (
-      <div className="container py-8 flex justify-center">
-        <div className="text-center">
-          <CalendarIcon className="h-8 w-8 mb-4 mx-auto animate-pulse" />
-          <p>講師プロフィールを読み込み中...</p>
         </div>
       </div>
     );
@@ -435,7 +378,7 @@ export default function TutorSchedulePage() {
             <CardTitle className="text-orange-500">プロフィール設定が必要です</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>{profileError || 'シフトを登録する前に、まずプロフィール情報を入力してください。'}</p>
+            <p>シフトを登録する前に、まずプロフィール情報を入力してください。</p>
             <Button 
               className="mt-4"
               onClick={() => router.push('/tutor/profile')}
