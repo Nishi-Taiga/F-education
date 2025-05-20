@@ -547,21 +547,6 @@ export default function TutorSchedulePage() {
             <span className="hidden md:inline">ホームに戻る</span>
             <span className="inline md:hidden">ホーム</span>
           </Button>
-          <Button
-            variant="default"
-            onClick={saveAllPendingShifts}
-            disabled={pendingShifts.length === 0 || isSaving}
-            className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
-          >
-            {isSaving ? (
-              <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin" />
-            ) : (
-              <Save className="h-3 w-3 md:h-4 md:w-4" />
-            )}
-            <span className="hidden md:inline">変更を保存</span>
-            <span className="inline md:hidden">保存</span>
-            {pendingShifts.length > 0 && <span className="font-medium">({pendingShifts.length})</span>}
-          </Button>
         </div>
       </div>
       
@@ -665,73 +650,62 @@ export default function TutorSchedulePage() {
                     <tr key={timeSlot} className="border-t">
                       <td className="p-2 font-medium">{timeSlot}</td>
                       {weekShifts.map((day) => {
-                        const date = parseISO(day.date);
-                        const dayNum = getDay(date);
-                        const isPast = parseISO(day.date) < subDays(new Date(), 1);
-                        let textColorClass = "";
-                        
-                        // 土曜日は青、日曜日は赤、過去の日付はグレー
-                        if (isPast) {
-                          textColorClass = "text-gray-400"; // 過去の日付はグレーアウト
-                        } else if (dayNum === 6) { // 土曜日
-                          textColorClass = "text-blue-600";
-                        } else if (dayNum === 0) { // 日曜日
-                          textColorClass = "text-red-600";
-                        }
-                        
-                        const shiftInfo = day.shifts[timeSlot];
-                        
-                        // シフトが変更待ちかどうかを確認
-                        const isPending = pendingShifts.some(
-                          shift => shift.date === day.date && shift.time_slot === timeSlot
-                        );
+  const date = parseISO(day.date);
+  const isPast = parseISO(day.date) < subDays(new Date(), 1);
+  
+  const shiftInfo = day.shifts[timeSlot];
+  
+  // シフトが変更待ちかどうかを確認
+  const isPending = pendingShifts.some(
+    shift => shift.date === day.date && shift.time_slot === timeSlot
+  );
 
-                        // 現在の可否状態を確認（保留中の変更があればそれを優先）
-                        const isAvailable = pendingShifts.find(
-                          shift => shift.date === day.date && shift.time_slot === timeSlot
-                        )?.is_available ?? (shiftInfo?.isAvailable ?? false);
-                        
-                        return (
-                          <td 
-                            key={`${day.date}-${timeSlot}`} 
-                            className={`p-2 text-center ${textColorClass} ${
-                              day.date === formattedToday ? "bg-primary/10" : ""
-                            } ${
-                              isPending ? "bg-yellow-50" : ""
-                            } ${
-                              isPast ? "bg-gray-50" : "" // 過去日付の背景も軽くグレーアウト
-                            }`}
-                          >
-                            <div className="flex flex-col items-center">
-                              <Switch
-                                checked={isAvailable}
-                                onCheckedChange={() => 
-                                  handleShiftToggle(
-                                    day.date, 
-                                    timeSlot, 
-                                    isAvailable
-                                  )
-                                }
-                                disabled={isPast || isSaving}
-                                className={isAvailable ? "data-[state=checked]:bg-blue-500" : ""} // 可能時（ON時）は青く表示
-                              />
-                              
-                              <div className={`text-xs mt-1 ${
-                                isAvailable 
-                                  ? "font-medium text-blue-600" // 可能時は青くハイライト
-                                  : "text-muted-foreground"
-                              } ${
-                                isPending ? "font-medium text-yellow-600" : ""
-                              } ${
-                                isPast ? "text-gray-400" : "" // 過去日付はグレーアウト
-                              }`}>
-                                {isAvailable ? "可能" : "不可"}
-                                {isPending && " (未保存)"}
-                              </div>
-                            </div>
-                          </td>
-                        );
-                      })}
+  // 現在の可否状態を確認（保留中の変更があればそれを優先）
+  const isAvailable = pendingShifts.find(
+    shift => shift.date === day.date && shift.time_slot === timeSlot
+  )?.is_available ?? (shiftInfo?.isAvailable ?? false);
+  
+  return (
+    <td 
+      key={`${day.date}-${timeSlot}`} 
+      className={`p-2 text-center ${
+        day.date === formattedToday ? "bg-primary/10" : ""
+      } ${
+        isPending ? "bg-yellow-50" : ""
+      } ${
+        isPast ? "bg-gray-50 text-gray-400" : "" // 過去日付の背景と文字をグレーアウト
+      }`}
+    >
+      <div className="flex flex-col items-center">
+        <Switch
+          checked={isAvailable}
+          onCheckedChange={() => 
+            handleShiftToggle(
+              day.date, 
+              timeSlot, 
+              isAvailable
+            )
+          }
+          disabled={isPast || isSaving}
+          className={isAvailable ? "data-[state=checked]:bg-blue-500" : ""} // 可能時（ON時）は青く表示
+        />
+        
+        <div className={`text-xs mt-1 ${
+          isAvailable 
+            ? "font-medium text-blue-600" // 可能時は青くハイライト
+            : "text-muted-foreground"
+        } ${
+          isPending ? "font-medium text-yellow-600" : ""
+        } ${
+          isPast ? "text-gray-400" : "" // 過去日付はグレーアウト
+        }`}>
+          {isAvailable ? "可能" : "不可"}
+          {isPending && " (未保存)"}
+        </div>
+      </div>
+    </td>
+  );
+})}
                     </tr>
                   ))}
                 </tbody>
