@@ -1,3 +1,48 @@
+                        }
+                        
+                        const shiftInfo = day.shifts[timeSlot];
+                        const isPast = parseISO(day.date) < subDays(new Date(), 1);
+                        
+                        // シフトが変更待ちかどうかを確認
+                        const isPending = pendingShifts.some(
+                          shift => shift.date === day.date && shift.time_slot === timeSlot
+                        );
+                        
+                        return (
+                          <td 
+                            key={`${day.date}-${timeSlot}`} 
+                            className={`p-2 text-center ${textColorClass} ${
+                              day.date === formattedToday ? "bg-primary/10" : ""
+                            } ${
+                              isPending ? "bg-yellow-50" : ""
+                            }`}
+                          >
+                            <div className="flex flex-col items-center">
+                              <Switch
+                                checked={
+                                  // 保留中の変更があればそれを表示
+                                  pendingShifts.find(
+                                    shift => shift.date === day.date && shift.time_slot === timeSlot
+                                  )?.is_available ?? 
+                                  // なければ既存の設定を表示
+                                  (shiftInfo?.isAvailable ?? false)
+                                }
+                                onCheckedChange={() => 
+                                  handleShiftToggle(
+                                    day.date, 
+                                    timeSlot, 
+                                    // 保留中の変更があればそれを基準に切り替え
+                                    pendingShifts.find(
+                                      shift => shift.date === day.date && shift.time_slot === timeSlot
+                                    )?.is_available ?? 
+                                    // なければ既存の設定を基準に切り替え
+                                    (shiftInfo?.isAvailable ?? false)
+                                  )
+                                }
+                                disabled={isPast || isSaving}
+                              />
+                              
+                              <div className={`text-xs mt-1 ${isPending ? "font-medium text-yellow-600" : "text-muted-foreground"}`}>
                                 {pendingShifts.find(
                                   shift => shift.date === day.date && shift.time_slot === timeSlot
                                 )?.is_available ?? 
