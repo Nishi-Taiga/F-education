@@ -6,7 +6,7 @@ import { format, addDays, startOfWeek, subDays, addWeeks, subWeeks, parseISO, ge
 import { ja } from 'date-fns/locale';
 import { CalendarIcon, ChevronLeft, ChevronRight, Home, Save, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/supabase/client'; // Changed to import supabase client directly 
+import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -566,16 +566,7 @@ export default function TutorSchedulePage() {
       </div>
       
       <Card>
-        <CardHeader>
-          <CardTitle>シフト設定</CardTitle>
-          <CardDescription>
-            各時間帯ごとに授業可能なシフトを設定してください。
-            スイッチがONの場合は授業可能、OFFの場合は授業不可を意味します。
-            変更後は「変更を保存」ボタンをクリックして確定してください。
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent>
+        <CardContent className="pt-6"> {/* CardHeader を削除して、CardContent の padding-top を増やしました */}
           {/* 週の選択 */}
           <div className="flex items-center justify-between mb-6">
             <Button 
@@ -641,10 +632,13 @@ export default function TutorSchedulePage() {
                     {weekShifts.map((day) => {
                       const date = parseISO(day.date);
                       const dayNum = getDay(date);
+                      const isPast = parseISO(day.date) < subDays(new Date(), 1);
                       let textColorClass = "";
                       
-                      // 土曜日は青、日曜日は赤
-                      if (dayNum === 6) { // 土曜日
+                      // 土曜日は青、日曜日は赤、過去の日付はグレー
+                      if (isPast) {
+                        textColorClass = "text-gray-400"; // 過去日付のグレーアウト
+                      } else if (dayNum === 6) { // 土曜日
                         textColorClass = "text-blue-600";
                       } else if (dayNum === 0) { // 日曜日
                         textColorClass = "text-red-600";
@@ -655,6 +649,8 @@ export default function TutorSchedulePage() {
                           key={day.date} 
                           className={`p-2 text-center font-medium ${textColorClass} ${
                             day.date === formattedToday ? "bg-primary/10" : ""
+                          } ${
+                            isPast ? "bg-gray-50" : "" // 過去日付の背景も軽くグレーアウト
                           }`}
                         >
                           <div>{day.formattedDate}</div>
@@ -671,22 +667,29 @@ export default function TutorSchedulePage() {
                       {weekShifts.map((day) => {
                         const date = parseISO(day.date);
                         const dayNum = getDay(date);
+                        const isPast = parseISO(day.date) < subDays(new Date(), 1);
                         let textColorClass = "";
                         
-                        // 土曜日は青、日曜日は赤
-                        if (dayNum === 6) { // 土曜日
+                        // 土曜日は青、日曜日は赤、過去の日付はグレー
+                        if (isPast) {
+                          textColorClass = "text-gray-400"; // 過去の日付はグレーアウト
+                        } else if (dayNum === 6) { // 土曜日
                           textColorClass = "text-blue-600";
                         } else if (dayNum === 0) { // 日曜日
                           textColorClass = "text-red-600";
                         }
                         
                         const shiftInfo = day.shifts[timeSlot];
-                        const isPast = parseISO(day.date) < subDays(new Date(), 1);
                         
                         // シフトが変更待ちかどうかを確認
                         const isPending = pendingShifts.some(
                           shift => shift.date === day.date && shift.time_slot === timeSlot
                         );
+
+                        // 現在の可否状態を確認（保留中の変更があればそれを優先）
+                        const isAvailable = pendingShifts.find(
+                          shift => shift.date === day.date && shift.time_slot === timeSlot
+                        )?.is_available ?? (shiftInfo?.isAvailable ?? false);
                         
                         return (
                           <td 
@@ -695,38 +698,34 @@ export default function TutorSchedulePage() {
                               day.date === formattedToday ? "bg-primary/10" : ""
                             } ${
                               isPending ? "bg-yellow-50" : ""
+                            } ${
+                              isPast ? "bg-gray-50" : "" // 過去日付の背景も軽くグレーアウト
                             }`}
                           >
                             <div className="flex flex-col items-center">
                               <Switch
-                                checked={
-                                  // 保留中の変更があればそれを表示
-                                  pendingShifts.find(
-                                    shift => shift.date === day.date && shift.time_slot === timeSlot
-                                  )?.is_available ?? 
-                                  // なければ既存の設定を表示
-                                  (shiftInfo?.isAvailable ?? false)
-                                }
+                                checked={isAvailable}
                                 onCheckedChange={() => 
                                   handleShiftToggle(
                                     day.date, 
                                     timeSlot, 
-                                    // 保留中の変更があればそれを基準に切り替え
-                                    pendingShifts.find(
-                                      shift => shift.date === day.date && shift.time_slot === timeSlot
-                                    )?.is_available ?? 
-                                    // なければ既存の設定を基準に切り替え
-                                    (shiftInfo?.isAvailable ?? false)
+                                    isAvailable
                                   )
                                 }
                                 disabled={isPast || isSaving}
+                                className={isAvailable ? "data-[state=checked]:bg-blue-500" : ""} // 可能時（ON時）は青く表示
                               />
                               
-                              <div className={`text-xs mt-1 ${isPending ? "font-medium text-yellow-600" : "text-muted-foreground"}`}>
-                                {pendingShifts.find(
-                                  shift => shift.date === day.date && shift.time_slot === timeSlot
-                                )?.is_available ?? 
-                                (shiftInfo?.isAvailable ?? false) ? "可能" : "不可"}
+                              <div className={`text-xs mt-1 ${
+                                isAvailable 
+                                  ? "font-medium text-blue-600" // 可能時は青くハイライト
+                                  : "text-muted-foreground"
+                              } ${
+                                isPending ? "font-medium text-yellow-600" : ""
+                              } ${
+                                isPast ? "text-gray-400" : "" // 過去日付はグレーアウト
+                              }`}>
+                                {isAvailable ? "可能" : "不可"}
                                 {isPending && " (未保存)"}
                               </div>
                             </div>
