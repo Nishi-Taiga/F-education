@@ -6,7 +6,7 @@ import { format, addDays, startOfWeek, subDays, addWeeks, subWeeks, parseISO, ge
 import { ja } from 'date-fns/locale';
 import { CalendarIcon, ChevronLeft, ChevronRight, Home, Save, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase/client'; // Changed to import supabase client directly 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -37,25 +37,15 @@ type DayShift = {
   };
 };
 
-// 利用可能な時間枠の定義
+// 利用可能な時間枠の定義 - 指定されたスロットに変更
 const timeSlots = [
-  '09:00-10:00',
-  '10:00-11:00',
-  '11:00-12:00',
-  '12:00-13:00',
-  '13:00-14:00',
-  '14:00-15:00',
-  '15:00-16:00',
-  '16:00-17:00',
-  '17:00-18:00',
-  '18:00-19:00',
-  '19:00-20:00',
-  '20:00-21:00'
+  '16:00-17:30',
+  '18:00-19:30',
+  '20:00-21:30'
 ];
 
 export default function TutorSchedulePage() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
   const [user, setUser] = useState<any>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -89,27 +79,28 @@ export default function TutorSchedulePage() {
       setAuthError(null);
       
       try {
-        // ユーザー情報取得
-        const { data, error } = await supabase.auth.getUser();
+        // ユーザー情報取得 (使用方法を profile ページと同じ方法に変更)
+        const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           setAuthError(error.message);
           return;
         }
         
-        if (!data.user) {
+        if (!session) {
           setAuthError('ユーザーが見つかりません。ログインしてください。');
+          router.push('/auth');
           return;
         }
         
         // テスト用の仮設定 - 開発を容易にするため
-        setUser({ ...data.user, role: 'tutor' });
+        setUser({ ...session.user, role: 'tutor' });
         
         // 本番環境では以下のコードを使ってroleを取得する
         /* const { data: userData, error: roleError } = await supabase
           .from('users')
           .select('role')
-          .eq('id', data.user.id)
+          .eq('id', session.user.id)
           .single();
         
         if (roleError) {
@@ -117,7 +108,7 @@ export default function TutorSchedulePage() {
           return;
         }
         
-        setUser({ ...data.user, role: userData?.role || 'unknown' }); */
+        setUser({ ...session.user, role: userData?.role || 'unknown' }); */
       } catch (error: any) {
         setAuthError(error.message || 'ユーザー情報の取得中にエラーが発生しました。');
       } finally {
@@ -126,7 +117,7 @@ export default function TutorSchedulePage() {
     };
     
     fetchUser();
-  }, [supabase]);
+  }, [router]);
   
   // 講師プロフィールを取得
   useEffect(() => {
@@ -172,7 +163,7 @@ export default function TutorSchedulePage() {
     };
     
     fetchTutorProfile();
-  }, [user, supabase]);
+  }, [user]);
   
   // シフト情報を取得
   useEffect(() => {
@@ -195,7 +186,7 @@ export default function TutorSchedulePage() {
             id: 1,
             tutor_id: tutorProfile.id,
             date: mondayDate,
-            time_slot: '13:00-14:00',
+            time_slot: '16:00-17:30',
             subject: '数学',
             is_available: true,
             created_at: new Date().toISOString()
@@ -204,7 +195,7 @@ export default function TutorSchedulePage() {
             id: 2,
             tutor_id: tutorProfile.id,
             date: mondayDate,
-            time_slot: '14:00-15:00',
+            time_slot: '18:00-19:30',
             subject: '英語',
             is_available: true,
             created_at: new Date().toISOString()
@@ -231,7 +222,7 @@ export default function TutorSchedulePage() {
     };
     
     fetchShifts();
-  }, [tutorProfile, weekStart, supabase]); // weekStartを依存配列に追加して週が変わるたびにデータを取得
+  }, [tutorProfile, weekStart]); // weekStartを依存配列に追加して週が変わるたびにデータを取得
   
   // 一週間分の日付を生成
   const weekDays = Array.from({ length: 7 }, (_, i) => {
