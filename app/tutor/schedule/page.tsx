@@ -79,7 +79,7 @@ export default function TutorSchedulePage() {
       setAuthError(null);
       
       try {
-        // ユーザー情報取得 (使用方法を profile ページと同じ方法に変更)
+        // ユーザー情報取得
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -93,11 +93,7 @@ export default function TutorSchedulePage() {
           return;
         }
         
-        // テスト用の仮設定 - 開発を容易にするため
-        setUser({ ...session.user, role: 'tutor' });
-        
-        // 本番環境では以下のコードを使ってroleを取得する
-        /* const { data: userData, error: roleError } = await supabase
+        const { data: userData, error: roleError } = await supabase
           .from('users')
           .select('role')
           .eq('id', session.user.id)
@@ -108,7 +104,7 @@ export default function TutorSchedulePage() {
           return;
         }
         
-        setUser({ ...session.user, role: userData?.role || 'unknown' }); */
+        setUser({ ...session.user, role: userData?.role || 'unknown' });
       } catch (error: any) {
         setAuthError(error.message || 'ユーザー情報の取得中にエラーが発生しました。');
       } finally {
@@ -128,19 +124,8 @@ export default function TutorSchedulePage() {
       setProfileError(null);
       
       try {
-        // テスト用の仮のプロフィール - 開発を容易にするため
-        setTutorProfile({
-          id: '1',
-          user_id: user.id,
-          lastName: 'テスト',
-          firstName: '講師',
-          subjects: ['数学', '英語'],
-          bio: 'テスト用プロフィール'
-        });
-        
-        /* 本番環境では以下のコードを使ってプロフィールを取得する
         const { data, error } = await supabase
-          .from('tutors')
+          .from('tutor_profile')
           .select('*')
           .eq('user_id', user.id)
           .single();
@@ -154,7 +139,7 @@ export default function TutorSchedulePage() {
           return;
         }
         
-        setTutorProfile(data); */
+        setTutorProfile(data);
       } catch (error: any) {
         setProfileError(error.message || '講師プロフィールの取得中にエラーが発生しました。');
       } finally {
@@ -177,32 +162,6 @@ export default function TutorSchedulePage() {
       setShiftsError(null);
       
       try {
-        // テスト用の仮データ - 開発を容易にするため
-        // 現在の週の月曜日に仮のシフトを設定
-        const mondayDate = format(addDays(weekStart, 1), 'yyyy-MM-dd');
-        
-        setShifts([
-          {
-            id: 1,
-            tutor_id: tutorProfile.id,
-            date: mondayDate,
-            time_slot: '16:00-17:30',
-            subject: '数学',
-            is_available: true,
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            tutor_id: tutorProfile.id,
-            date: mondayDate,
-            time_slot: '18:00-19:30',
-            subject: '英語',
-            is_available: true,
-            created_at: new Date().toISOString()
-          }
-        ]);
-        
-        /* 本番環境では以下のコードを使ってシフトを取得する
         const { data, error } = await supabase
           .from('tutor_shifts')
           .select('*')
@@ -213,7 +172,7 @@ export default function TutorSchedulePage() {
           return;
         }
         
-        setShifts(data || []); */
+        setShifts(data || []);
       } catch (error: any) {
         setShiftsError(error.message || 'シフト情報の取得中にエラーが発生しました。');
       } finally {
@@ -326,47 +285,7 @@ export default function TutorSchedulePage() {
     let failCount = 0;
     let successCount = 0;
     
-    // テスト用：実際のAPIリクエストを送らず、ローカルの状態だけを更新
     try {
-      // 短い遅延を入れて処理中の表示をシミュレート
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // ローカルの配列を更新（テスト用）
-      const updatedShifts = [...shifts];
-      
-      for (const pendingShift of pendingShifts) {
-        const { date, time_slot, is_available } = pendingShift;
-        
-        // 既存のシフトを探す
-        const existingIndex = updatedShifts.findIndex(
-          s => s.date === date && s.time_slot === time_slot
-        );
-        
-        if (existingIndex >= 0) {
-          // 既存のシフトを更新
-          updatedShifts[existingIndex] = {
-            ...updatedShifts[existingIndex],
-            is_available
-          };
-        } else {
-          // 新しいシフトを追加
-          updatedShifts.push({
-            id: Math.floor(Math.random() * 10000), // テスト用のランダムID
-            tutor_id: tutorProfile.id,
-            date,
-            time_slot,
-            subject: tutorProfile.subjects?.[0] || '',
-            is_available,
-            created_at: new Date().toISOString()
-          });
-        }
-        
-        successCount++;
-      }
-      
-      setShifts(updatedShifts);
-      
-      /* 本番環境では以下のコードを使用する
       for (const shift of pendingShifts) {
         // 既存のシフトを探す
         const existingShift = shifts.find(
@@ -407,7 +326,7 @@ export default function TutorSchedulePage() {
       
       if (error) throw error;
       
-      setShifts(data || []); */
+      setShifts(data || []);
     } catch (error: any) {
       console.error('Error saving shifts:', error);
       failCount = pendingShifts.length - successCount;
@@ -547,11 +466,26 @@ export default function TutorSchedulePage() {
             <span className="hidden md:inline">ホームに戻る</span>
             <span className="inline md:hidden">ホーム</span>
           </Button>
+          <Button
+            variant="default"
+            onClick={saveAllPendingShifts}
+            disabled={pendingShifts.length === 0 || isSaving}
+            className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
+          >
+            {isSaving ? (
+              <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin" />
+            ) : (
+              <Save className="h-3 w-3 md:h-4 md:w-4" />
+            )}
+            <span className="hidden md:inline">変更を保存</span>
+            <span className="inline md:hidden">保存</span>
+            {pendingShifts.length > 0 && <span className="font-medium">({pendingShifts.length})</span>}
+          </Button>
         </div>
       </div>
       
       <Card>
-        <CardContent className="pt-6"> {/* CardHeader を削除して、CardContent の padding-top を増やしました */}
+        <CardContent className="pt-6">
           {/* 週の選択 */}
           <div className="flex items-center justify-between mb-6">
             <Button 
@@ -624,9 +558,9 @@ export default function TutorSchedulePage() {
                       if (isPast) {
                         textColorClass = "text-gray-400"; // 過去日付のグレーアウト
                       } else if (dayNum === 6) { // 土曜日
-                        textColorClass = "text-blue-600";
+                        textColorClass = "text-blue-600"; // 土曜日は青色に
                       } else if (dayNum === 0) { // 日曜日
-                        textColorClass = "text-red-600";
+                        textColorClass = "text-red-600"; // 日曜日は赤色に
                       }
                       
                       return (
@@ -650,62 +584,62 @@ export default function TutorSchedulePage() {
                     <tr key={timeSlot} className="border-t">
                       <td className="p-2 font-medium">{timeSlot}</td>
                       {weekShifts.map((day) => {
-  const date = parseISO(day.date);
-  const isPast = parseISO(day.date) < subDays(new Date(), 1);
-  
-  const shiftInfo = day.shifts[timeSlot];
-  
-  // シフトが変更待ちかどうかを確認
-  const isPending = pendingShifts.some(
-    shift => shift.date === day.date && shift.time_slot === timeSlot
-  );
+                        const date = parseISO(day.date);
+                        const isPast = parseISO(day.date) < subDays(new Date(), 1);
+                        
+                        const shiftInfo = day.shifts[timeSlot];
+                        
+                        // シフトが変更待ちかどうかを確認
+                        const isPending = pendingShifts.some(
+                          shift => shift.date === day.date && shift.time_slot === timeSlot
+                        );
 
-  // 現在の可否状態を確認（保留中の変更があればそれを優先）
-  const isAvailable = pendingShifts.find(
-    shift => shift.date === day.date && shift.time_slot === timeSlot
-  )?.is_available ?? (shiftInfo?.isAvailable ?? false);
-  
-  return (
-    <td 
-      key={`${day.date}-${timeSlot}`} 
-      className={`p-2 text-center ${
-        day.date === formattedToday ? "bg-primary/10" : ""
-      } ${
-        isPending ? "bg-yellow-50" : ""
-      } ${
-        isPast ? "bg-gray-50 text-gray-400" : "" // 過去日付の背景と文字をグレーアウト
-      }`}
-    >
-      <div className="flex flex-col items-center">
-        <Switch
-          checked={isAvailable}
-          onCheckedChange={() => 
-            handleShiftToggle(
-              day.date, 
-              timeSlot, 
-              isAvailable
-            )
-          }
-          disabled={isPast || isSaving}
-          className={isAvailable ? "data-[state=checked]:bg-blue-500" : ""} // 可能時（ON時）は青く表示
-        />
-        
-        <div className={`text-xs mt-1 ${
-          isAvailable 
-            ? "font-medium text-blue-600" // 可能時は青くハイライト
-            : "text-muted-foreground"
-        } ${
-          isPending ? "font-medium text-yellow-600" : ""
-        } ${
-          isPast ? "text-gray-400" : "" // 過去日付はグレーアウト
-        }`}>
-          {isAvailable ? "可能" : "不可"}
-          {isPending && " (未保存)"}
-        </div>
-      </div>
-    </td>
-  );
-})}
+                        // 現在の可否状態を確認（保留中の変更があればそれを優先）
+                        const isAvailable = pendingShifts.find(
+                          shift => shift.date === day.date && shift.time_slot === timeSlot
+                        )?.is_available ?? (shiftInfo?.isAvailable ?? false);
+                        
+                        return (
+                          <td 
+                            key={`${day.date}-${timeSlot}`} 
+                            className={`p-2 text-center ${
+                              day.date === formattedToday ? "bg-primary/10" : ""
+                            } ${
+                              isPending ? "bg-yellow-50" : ""
+                            } ${
+                              isPast ? "bg-gray-50 text-gray-400" : "" // 過去日付の背景と文字をグレーアウト
+                            }`}
+                          >
+                            <div className="flex flex-col items-center">
+                              <Switch
+                                checked={isAvailable}
+                                onCheckedChange={() => 
+                                  handleShiftToggle(
+                                    day.date, 
+                                    timeSlot, 
+                                    isAvailable
+                                  )
+                                }
+                                disabled={isPast || isSaving}
+                                className={isAvailable ? "data-[state=checked]:bg-blue-500" : ""} // 可能時（ON時）は青く表示
+                              />
+                              
+                              <div className={`text-xs mt-1 ${
+                                isAvailable 
+                                  ? "font-medium text-blue-600" // 可能時は青くハイライト
+                                  : "text-muted-foreground"
+                              } ${
+                                isPending ? "font-medium text-yellow-600" : ""
+                              } ${
+                                isPast ? "text-gray-400" : "" // 過去日付はグレーアウト
+                              }`}>
+                                {isAvailable ? "可能" : "不可"}
+                                {isPending && " (未保存)"}
+                              </div>
+                            </div>
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
