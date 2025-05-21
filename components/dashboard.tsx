@@ -25,7 +25,8 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  CalendarRange
+  CalendarRange,
+  LogOut
 } from 'lucide-react';
 
 type DashboardProps = {
@@ -242,6 +243,28 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
     router.push('/reports');
   };
 
+  // ログアウト処理
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast({
+        title: "ログアウト完了",
+        description: "ログアウトしました。",
+      });
+      
+      router.push('/auth');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        title: "エラー",
+        description: "ログアウトに失敗しました。",
+        variant: "destructive",
+      });
+    }
+  };
+
   // 表示名を決定
   let displayName = userProfile?.display_name || '';
   if (!displayName) {
@@ -300,6 +323,12 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
           <Button variant="outline" size="lg" onClick={handleReportsClick} className="shadow-sm">
             <FileText className="mr-2 h-5 w-5" />
             レポート一覧
+          </Button>
+          
+          {/* ログアウトボタン追加 */}
+          <Button variant="outline" size="lg" onClick={handleLogout} className="shadow-sm text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700">
+            <LogOut className="mr-2 h-5 w-5" />
+            ログアウト
           </Button>
         </div>
       </div>
