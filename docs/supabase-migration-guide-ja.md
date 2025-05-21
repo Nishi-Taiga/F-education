@@ -46,7 +46,18 @@ Replitから移行する際に必要なテーブル設定とデータ構造に�
 | student_account_id  | integer                     |
 ```
 
-### 2. アプリケーションコードの更新について
+### 2. テーブル構造の変更（必要に応じて）
+
+もし `student_profile` テーブルの `user_id` カラムが integer 型ではなく UUID 型として使用される場合は、以下のようにテーブル構造を変更してください：
+
+```sql
+-- student_profile テーブルの user_id カラムの型を変更
+ALTER TABLE student_profile ALTER COLUMN user_id TYPE uuid USING user_id::uuid;
+```
+
+これにより、Supabase Authentication の UUID が正しく保存できるようになります。
+
+### 3. アプリケーションコードの更新について
 
 保護者プロフィール設定画面のコードは、以下のテーブル・カラム構造に合わせて更新されています：
 
@@ -59,26 +70,33 @@ Replitから移行する際に必要なテーブル設定とデータ構造に�
    - テーブル: `student_profile`
    - 主要フィールド: `user_id`, `last_name`, `first_name`, `last_name_furigana`, `first_name_furigana`, `gender`, `school`, `grade`, `birth_date`
    - 特記事項: `birth_date` は日付型で保存されます
-   - 親子関連付け: `user_id` フィールドに親のID (`parent_profile.id`) が設定されます
+   - 親子関連付け: `user_id` フィールドに Supabase Authentication の UUID が設定されます
 
-### 3. トラブルシューティング
+### 4. トラブルシューティング
 
 #### 保護者プロフィール設定時のエラー対処法
 
-**症状1: 保護者プロフィールが保存されたが、生徒情報が保存されない**
+**症状1: user_id に関するエラーが発生する**
 
-原因: テーブル構造やカラム名の不一致
+原因: `user_id` の型が不適切
 
 解決策:
-- `student_profile`テーブルの`user_id`カラムが正しいデータ型か確認
-- コンソールログでエラーメッセージを確認
+```sql
+-- student_profile テーブルの user_id カラムの型がわからない場合、確認する
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'student_profile' AND column_name = 'user_id';
+
+-- user_id が UUID 型でない場合、変更する
+ALTER TABLE student_profile ALTER COLUMN user_id TYPE uuid USING user_id::uuid;
+```
 
 **症状2: 日付形式に関するエラーが発生する**
 
 原因: `birth_date`カラムがdate型だが、文字列が送信されている
 
 解決策:
-- 更新済みのコードでは、日付を適切なフォーマット（ISO 日付形式）に変換しています
+- コードでは、日付を適切なフォーマット（ISO 日付形式）に変換しています
 - それでも問題が発生する場合は、Supabaseのテーブル定義で`birth_date`をtext型に変更するか検討
 
 **症状3: 認証エラーが発生する**
@@ -118,6 +136,6 @@ ORDER BY
 
 ## 注意事項
 
-- 既存のデータを損なわないよう、作業前にバックアップを取ることをお勧めします
-- テーブル構造を変更する場合は、関連するすべてのコードも更新する必要があります
+- user_id カラムの型が UUID に対応していない場合、エラーが発生します
+- テーブル構造を変更する前に、必ずバックアップを取ることをお勧めします
 - 正常に動作しない場合は、ブラウザのコンソールログを確認し、発生しているエラーメッセージを確認してください
