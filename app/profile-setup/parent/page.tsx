@@ -264,7 +264,7 @@ export default function ParentProfileSetup() {
             const { error: studentError } = await supabase
               .from('student_profile')
               .insert([{
-                user_id: parentData.id, // 親のIDを設定
+                user_id: user.id, // Supabase AuthenticationのUUIDを使用
                 last_name: student.lastName,
                 first_name: student.firstName,
                 last_name_furigana: student.lastNameFurigana,
