@@ -425,7 +425,7 @@ const saveAllPendingShifts = async () => {
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/dashboard')}
             className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
           >
             <Home className="h-3 w-3 md:h-4 md:w-4" />
