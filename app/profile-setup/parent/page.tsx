@@ -186,9 +186,9 @@ export default function ParentProfileSetup() {
       console.log("Creating or updating parent profile...");
 
       // まず基本ユーザー情報を設定
-      // parent_profileテーブルの代わりにparent_profilesが正しければ修正
+      // テーブル名を parent_profiles にする (複数形)
       const { data: existingParent, error: checkError } = await supabase
-        .from('parent_profile')
+        .from('parent_profiles')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
@@ -200,9 +200,10 @@ export default function ParentProfileSetup() {
       if (existingParent) {
         // 既存プロファイルを更新
         const { data, error } = await supabase
-          .from('parent_profile')
+          .from('parent_profiles')
           .update({
-            parent_name: parentName,
+            // column name = name (not parent_name)
+            name: parentName,
             phone: phone,
             postal_code: postalCode,
             prefecture: prefecture,
@@ -221,10 +222,11 @@ export default function ParentProfileSetup() {
       } else {
         // 新規プロファイルを作成
         const { data, error } = await supabase
-          .from('parent_profile')
+          .from('parent_profiles')
           .insert([{
             user_id: user.id,
-            parent_name: parentName,
+            // column name = name (not parent_name)
+            name: parentName,
             phone: phone,
             postal_code: postalCode,
             prefecture: prefecture,
