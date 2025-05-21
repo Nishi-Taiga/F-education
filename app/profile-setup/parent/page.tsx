@@ -173,16 +173,6 @@ export default function ParentProfileSetup() {
         throw new Error("ユーザー認証情報が見つかりません");
       }
 
-      // 名前を分解して姓と名に分割（保護者名に空白が含まれる場合）
-      let lastName = parentName;
-      let firstName = "";
-      
-      if (parentName.includes(" ")) {
-        const nameParts = parentName.split(" ");
-        lastName = nameParts[0];
-        firstName = nameParts.slice(1).join(" ");
-      }
-
       console.log("Creating or updating parent profile...");
 
       // 既存のparent_profileテーブル構造に合わせて保存
@@ -243,51 +233,65 @@ export default function ParentProfileSetup() {
 
       console.log("Parent profile saved:", parentData);
 
-      // ユーザー情報のプロフィール完了フラグを設定
-      const { error: userUpdateError } = await supabase
-        .from('users')
-        .update({ 
-          profile_completed: true,
-          role: 'parent'
-        })
-        .eq('auth_user_id', user.id);
+      try {
+        // usersテーブルが存在しない場合でも処理を継続するため、try-catchで囲む
+        const { error: userUpdateError } = await supabase
+          .from('users')
+          .update({ 
+            profile_completed: true,
+            role: 'parent'
+          })
+          .eq('auth_user_id', user.id);
 
-      if (userUpdateError) {
+        if (userUpdateError) {
+          console.warn("Warning: Could not update user profile_completed flag:", userUpdateError);
+          // エラーをスローせずに続行
+        }
+      } catch (userUpdateError) {
         console.warn("Warning: Could not update user profile_completed flag:", userUpdateError);
         // エラーをスローせずに続行
       }
 
-      // 生徒情報を保存
-      const studentPromises = students.map(student => {
-        return supabase
-          .from('students')
-          .insert([{
-            parent_id: parentData.id,
-            last_name: student.lastName,
-            first_name: student.firstName,
-            last_name_furigana: student.lastNameFurigana,
-            first_name_furigana: student.firstNameFurigana,
-            gender: student.gender,
-            school: student.school,
-            grade: student.grade,
-            birth_date: student.birthDate
-          }]);
-      });
+      let studentSuccess = true;
 
-      const studentResults = await Promise.all(studentPromises);
-      
-      // 生徒データのエラーチェック
-      for (const result of studentResults) {
-        if (result.error) {
-          console.error("Error saving student:", result.error);
-          throw result.error;
+      try {
+        // 生徒情報を保存
+        for (const student of students) {
+          try {
+            const { error: studentError } = await supabase
+              .from('students')
+              .insert([{
+                parent_id: parentData.id,
+                last_name: student.lastName,
+                first_name: student.firstName,
+                last_name_furigana: student.lastNameFurigana,
+                first_name_furigana: student.firstNameFurigana,
+                gender: student.gender,
+                school: student.school,
+                grade: student.grade,
+                birth_date: student.birthDate
+              }]);
+
+            if (studentError) {
+              console.error("Error saving student:", studentError);
+              studentSuccess = false;
+            }
+          } catch (error) {
+            console.error("Error in student insert:", error);
+            studentSuccess = false;
+          }
         }
+      } catch (studentsError) {
+        console.error("Error processing students:", studentsError);
+        studentSuccess = false;
       }
 
       // 成功通知
       toast({
         title: "プロフィール設定完了",
-        description: "保護者プロフィールが正常に設定されました",
+        description: studentSuccess 
+          ? "保護者プロフィールが正常に設定されました" 
+          : "保護者プロフィールは保存されましたが、生徒情報の保存に失敗しました",
       });
 
       // ダッシュボードへリダイレクト
