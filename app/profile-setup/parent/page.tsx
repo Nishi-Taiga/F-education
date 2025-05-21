@@ -183,70 +183,86 @@ export default function ParentProfileSetup() {
         firstName = nameParts.slice(1).join(" ");
       }
 
-      console.log("Creating or updating user profile...");
+      console.log("Creating or updating parent profile...");
 
-      // まず既存のユーザーを確認
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', user.email)
+      // まず基本ユーザー情報を設定
+      // parent_profileテーブルの代わりにparent_profilesが正しければ修正
+      const { data: existingParent, error: checkError } = await supabase
+        .from('parent_profile')
+        .select('*')
+        .eq('user_id', user.id)
         .maybeSingle();
 
-      console.log("Existing user check:", { existingUser, checkError });
-
-      let userData;
+      console.log("Existing parent profile check:", { existingParent, checkError });
       
-      if (existingUser) {
-        // 既存ユーザーを更新
+      let parentData;
+      
+      if (existingParent) {
+        // 既存プロファイルを更新
         const { data, error } = await supabase
-          .from('users')
+          .from('parent_profile')
           .update({
-            display_name: parentName,
-            email: user.email,
+            parent_name: parentName,
             phone: phone,
             postal_code: postalCode,
             prefecture: prefecture,
             city: city,
             address: address,
-            profile_completed: true,
-            role: 'parent'
+            email: user.email
           })
-          .eq('id', existingUser.id)
+          .eq('id', existingParent.id)
           .select();
           
-        if (error) throw error;
-        userData = data[0];
+        if (error) {
+          console.error("Error updating parent profile:", error);
+          throw error;
+        }
+        parentData = data[0];
       } else {
-        // 新規ユーザーを作成
+        // 新規プロファイルを作成
         const { data, error } = await supabase
-          .from('users')
+          .from('parent_profile')
           .insert([{
-            username: user.email,
-            email: user.email,
-            display_name: parentName,
+            user_id: user.id,
+            parent_name: parentName,
             phone: phone,
             postal_code: postalCode,
             prefecture: prefecture,
             city: city,
             address: address,
-            profile_completed: true,
-            role: 'parent',
-            password: 'supabase_auth_managed' // ダミーパスワード（Supabaseで認証管理）
+            email: user.email
           }])
           .select();
           
-        if (error) throw error;
-        userData = data[0];
+        if (error) {
+          console.error("Error inserting parent profile:", error);
+          throw error;
+        }
+        parentData = data[0];
       }
 
-      console.log("User data saved:", userData);
+      console.log("Parent profile saved:", parentData);
+
+      // ユーザー情報のプロフィール完了フラグを設定
+      const { error: userUpdateError } = await supabase
+        .from('users')
+        .update({ 
+          profile_completed: true,
+          role: 'parent'
+        })
+        .eq('auth_id', user.id);
+
+      if (userUpdateError) {
+        console.warn("Warning: Could not update user profile_completed flag:", userUpdateError);
+        // エラーをスローせずに続行
+      }
 
       // 生徒情報を保存
       const studentPromises = students.map(student => {
         return supabase
           .from('students')
           .insert([{
-            user_id: userData.id,
+            parent_id: parentData.id,
             last_name: student.lastName,
             first_name: student.firstName,
             last_name_furigana: student.lastNameFurigana,
@@ -262,7 +278,10 @@ export default function ParentProfileSetup() {
       
       // 生徒データのエラーチェック
       for (const result of studentResults) {
-        if (result.error) throw result.error;
+        if (result.error) {
+          console.error("Error saving student:", result.error);
+          throw result.error;
+        }
       }
 
       // 成功通知
