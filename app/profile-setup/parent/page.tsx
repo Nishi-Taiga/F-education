@@ -255,13 +255,16 @@ export default function ParentProfileSetup() {
       let studentSuccess = true;
 
       try {
-        // 生徒情報を保存
+        // 生徒情報を保存 - student_profileテーブルに保存
         for (const student of students) {
           try {
+            // 日付形式の変換（birth_dateカラムはdateタイプのため）
+            const birthDate = student.birthDate ? new Date(student.birthDate).toISOString().split('T')[0] : null;
+            
             const { error: studentError } = await supabase
-              .from('students')
+              .from('student_profile')
               .insert([{
-                parent_id: parentData.id,
+                user_id: parentData.id, // 親のIDを設定
                 last_name: student.lastName,
                 first_name: student.firstName,
                 last_name_furigana: student.lastNameFurigana,
@@ -269,7 +272,7 @@ export default function ParentProfileSetup() {
                 gender: student.gender,
                 school: student.school,
                 grade: student.grade,
-                birth_date: student.birthDate
+                birth_date: birthDate // ISO日付形式で保存
               }]);
 
             if (studentError) {
