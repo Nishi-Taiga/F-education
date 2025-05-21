@@ -28,12 +28,12 @@ Replitから移行する際に必要なテーブル設定とデータ構造に�
 | parent_id    | integer                     |
 ```
 
-#### student_profile テーブル
+#### student_profile テーブル（最新版）
 ```
 | column_name         | data_type                   |
 | ------------------- | --------------------------- |
 | id                  | integer                     |
-| user_id             | integer                     |
+| parent_id           | integer                     |
 | last_name           | text                        |
 | first_name          | text                        |
 | last_name_furigana  | text                        |
@@ -43,19 +43,41 @@ Replitから移行する際に必要なテーブル設定とデータ構造に�
 | grade               | text                        |
 | birth_date          | date                        |
 | created_at          | timestamp without time zone |
-| student_account_id  | integer                     |
 ```
 
-### 2. テーブル構造の変更（必要に応じて）
+### 2. テーブル構造の変更（必要な場合）
 
-もし `student_profile` テーブルの `user_id` カラムが integer 型ではなく UUID 型として使用される場合は、以下のようにテーブル構造を変更してください：
+もし `student_profile` テーブルが存在しない場合、または構造が異なる場合は、以下のSQLで作成または変更してください：
 
 ```sql
--- student_profile テーブルの user_id カラムの型を変更
-ALTER TABLE student_profile ALTER COLUMN user_id TYPE uuid USING user_id::uuid;
-```
+-- student_profile テーブルの作成または修正
+CREATE TABLE IF NOT EXISTS public.student_profile (
+  id SERIAL PRIMARY KEY,
+  parent_id INTEGER NOT NULL, -- parent_profile.id を参照
+  last_name TEXT NOT NULL,
+  first_name TEXT NOT NULL,
+  last_name_furigana TEXT,
+  first_name_furigana TEXT,
+  gender TEXT,
+  school TEXT,
+  grade TEXT,
+  birth_date DATE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 
-これにより、Supabase Authentication の UUID が正しく保存できるようになります。
+-- インデックスの作成
+CREATE INDEX IF NOT EXISTS idx_student_profile_parent_id ON public.student_profile(parent_id);
+
+-- RLSの設定
+ALTER TABLE public.student_profile ENABLE ROW LEVEL SECURITY;
+
+-- RLSポリシーの作成（認証されたユーザーが全操作可能）
+CREATE POLICY "Allow authenticated users full access" 
+  ON public.student_profile 
+  FOR ALL 
+  TO authenticated 
+  USING (true);
+```
 
 ### 3. アプリケーションコードの更新について
 
@@ -68,44 +90,60 @@ ALTER TABLE student_profile ALTER COLUMN user_id TYPE uuid USING user_id::uuid;
 
 2. **生徒情報の保存:**
    - テーブル: `student_profile`
-   - 主要フィールド: `user_id`, `last_name`, `first_name`, `last_name_furigana`, `first_name_furigana`, `gender`, `school`, `grade`, `birth_date`
+   - 主要フィールド: `parent_id`, `last_name`, `first_name`, `last_name_furigana`, `first_name_furigana`, `gender`, `school`, `grade`, `birth_date`
    - 特記事項: `birth_date` は日付型で保存されます
-   - 親子関連付け: `user_id` フィールドに Supabase Authentication の UUID が設定されます
+   - 親子関連付け: `parent_id` フィールドに親のID (`parent_profile.id`) が設定されます
 
 ### 4. トラブルシューティング
 
 #### 保護者プロフィール設定時のエラー対処法
 
-**症状1: user_id に関するエラーが発生する**
+**症状1: student_profile テーブルが見つからない**
 
-原因: `user_id` の型が不適切
+原因: テーブルが存在しない
 
 解決策:
 ```sql
--- student_profile テーブルの user_id カラムの型がわからない場合、確認する
-SELECT column_name, data_type 
-FROM information_schema.columns 
-WHERE table_name = 'student_profile' AND column_name = 'user_id';
+-- テーブルの存在確認
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' AND table_name = 'student_profile';
 
--- user_id が UUID 型でない場合、変更する
-ALTER TABLE student_profile ALTER COLUMN user_id TYPE uuid USING user_id::uuid;
+-- テーブルが存在しない場合は上記のCREATE TABLE文を実行
 ```
 
-**症状2: 日付形式に関するエラーが発生する**
+**症状2: parent_id に関するエラーが発生する**
 
-原因: `birth_date`カラムがdate型だが、文字列が送信されている
+原因: `parent_id` の型が不適切、または外部キー制約の問題
 
 解決策:
-- コードでは、日付を適切なフォーマット（ISO 日付形式）に変換しています
-- それでも問題が発生する場合は、Supabaseのテーブル定義で`birth_date`をtext型に変更するか検討
+```sql
+-- parent_id カラムの型を確認
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'student_profile' AND column_name = 'parent_id';
 
-**症状3: 認証エラーが発生する**
+-- parent_id が integer でない場合は変更
+ALTER TABLE public.student_profile 
+ALTER COLUMN parent_id TYPE INTEGER;
+```
+
+**症状3: RLS（Row Level Security）によるアクセス拒否**
 
 原因: アクセス権限の問題
 
 解決策:
-- Supabase設定でテーブルのRow Level Security (RLS)ポリシーを確認
-- 必要に応じて公開アクセスを許可または適切なポリシーを設定
+```sql
+-- RLSポリシーの確認
+SELECT * FROM pg_policies WHERE tablename = 'student_profile';
+
+-- 必要に応じてポリシーを追加
+CREATE POLICY "Allow authenticated users full access" 
+  ON public.student_profile 
+  FOR ALL 
+  TO authenticated 
+  USING (true);
+```
 
 #### テーブルスキーマの確認
 
@@ -120,6 +158,7 @@ FROM
   information_schema.columns 
 WHERE 
   table_schema = 'public' 
+  AND table_name IN ('parent_profile', 'student_profile')
 ORDER BY 
   table_name, 
   ordinal_position;
@@ -136,6 +175,7 @@ ORDER BY
 
 ## 注意事項
 
-- user_id カラムの型が UUID に対応していない場合、エラーが発生します
+- `parent_id` は `parent_profile` テーブルの `id` カラムを参照します
+- `student_profile` テーブルのRLSポリシーが適切に設定されていることを確認してください
 - テーブル構造を変更する前に、必ずバックアップを取ることをお勧めします
 - 正常に動作しない場合は、ブラウザのコンソールログを確認し、発生しているエラーメッセージを確認してください
