@@ -185,12 +185,11 @@ export default function ParentProfileSetup() {
 
       console.log("Creating or updating parent profile...");
 
-      // まず基本ユーザー情報を設定
-      // テーブル名を parent_profiles にする (複数形)
+      // 既存のparent_profileテーブル構造に合わせて保存
       const { data: existingParent, error: checkError } = await supabase
-        .from('parent_profiles')
+        .from('parent_profile')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('email', user.email)
         .maybeSingle();
 
       console.log("Existing parent profile check:", { existingParent, checkError });
@@ -200,16 +199,15 @@ export default function ParentProfileSetup() {
       if (existingParent) {
         // 既存プロファイルを更新
         const { data, error } = await supabase
-          .from('parent_profiles')
+          .from('parent_profile')
           .update({
-            // column name = name (not parent_name)
             name: parentName,
             phone: phone,
             postal_code: postalCode,
             prefecture: prefecture,
             city: city,
             address: address,
-            email: user.email
+            role: 'parent'
           })
           .eq('id', existingParent.id)
           .select();
@@ -222,17 +220,17 @@ export default function ParentProfileSetup() {
       } else {
         // 新規プロファイルを作成
         const { data, error } = await supabase
-          .from('parent_profiles')
+          .from('parent_profile')
           .insert([{
-            user_id: user.id,
-            // column name = name (not parent_name)
             name: parentName,
+            email: user.email,
             phone: phone,
             postal_code: postalCode,
             prefecture: prefecture,
             city: city,
             address: address,
-            email: user.email
+            role: 'parent',
+            ticket_count: 0
           }])
           .select();
           
@@ -252,7 +250,7 @@ export default function ParentProfileSetup() {
           profile_completed: true,
           role: 'parent'
         })
-        .eq('auth_id', user.id);
+        .eq('auth_user_id', user.id);
 
       if (userUpdateError) {
         console.warn("Warning: Could not update user profile_completed flag:", userUpdateError);
