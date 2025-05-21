@@ -29,6 +29,7 @@ type AuthContextType = {
   loginMutation: UseMutationResult<{ email: string }, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<{ email: string }, Error, RegisterData>;
+  refetch: () => Promise<any>;
 };
 
 type LoginData = {
@@ -70,27 +71,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         console.log("Session found, user email:", session.user.email);
+        console.log("Session user ID:", session.user.id);
         
-        // セッションがあれば、ユーザー情報を取得
-        // まずは単純に一覧で取得して、クライアント側でフィルタリング
-        const { data: usersList, error: usersError } = await supabase
+        // まずはusersテーブルからauth_idをチェック
+        const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('*');
+          .select('*')
+          .eq('auth_id', session.user.id)
+          .maybeSingle();
           
-        if (usersError) {
-          console.error("Error fetching users list:", usersError);
-          return null;
+        if (userError) {
+          console.error("Error fetching user by auth_id:", userError);
         }
         
-        // メールアドレスが一致するユーザーを検索
-        const userData = usersList?.find(user => 
-          user.email?.toLowerCase() === session.user.email.toLowerCase() || 
-          user.username?.toLowerCase() === session.user.email.toLowerCase()
-        );
+        if (userData) {
+          console.log("Found user by auth_id:", userData);
+          return {
+            id: userData.id,
+            auth_id: session.user.id,
+            displayName: userData.display_name || '',
+            username: userData.username || session.user.email,
+            role: userData.role,
+            email: userData.email || session.user.email,
+            profileCompleted: userData.profile_completed
+          };
+        }
         
-        if (!userData) {
-          console.log("User not found for email in DB:", session.user.email);
-          // データベースにユーザーが見つからない場合は、認証情報を元に最小限のユーザー情報を返す
+        // auth_idでマッチするデータがない場合は、メールアドレスで検索
+        const { data: userDataByEmail, error: userErrorByEmail } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', session.user.email)
+          .maybeSingle();
+          
+        if (userErrorByEmail) {
+          console.error("Error fetching user by email:", userErrorByEmail);
+        }
+        
+        if (userDataByEmail) {
+          console.log("Found user by email:", userDataByEmail);
+          
+          // auth_idを更新
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ auth_id: session.user.id })
+            .eq('id', userDataByEmail.id);
+            
+          if (updateError) {
+            console.error("Error updating auth_id:", updateError);
+          }
+          
+          return {
+            id: userDataByEmail.id,
+            auth_id: session.user.id,
+            displayName: userDataByEmail.display_name || '',
+            username: userDataByEmail.username || session.user.email,
+            role: userDataByEmail.role,
+            email: userDataByEmail.email || session.user.email,
+            profileCompleted: userDataByEmail.profile_completed
+          };
+        }
+        
+        // ユーザーが存在しない場合は基本情報のみでユーザーエントリを作成
+        console.log("Creating new user entry for:", session.user.email);
+        const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert([{
+            auth_id: session.user.id,
+            email: session.user.email,
+            username: session.user.email,
+            role: 'parent',  // デフォルトロール
+            profile_completed: false
+          }])
+          .select();
+          
+        if (insertError) {
+          console.error("Error creating new user:", insertError);
           return {
             id: 0,
             auth_id: session.user.id,
@@ -104,19 +160,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
         }
         
-        console.log("Found user in DB:", userData);
+        if (newUser && newUser.length > 0) {
+          return {
+            id: newUser[0].id,
+            auth_id: session.user.id,
+            displayName: '',
+            username: session.user.email,
+            role: 'parent',
+            email: session.user.email,
+            profileCompleted: false
+          };
+        }
         
-        // フロントエンド用のユーザーオブジェクト形式に変換
+        // 最終的に何かしらのユーザー情報を返す
         return {
-          id: userData.id,
-          auth_id: session.user.id, // SupabaseのAuth UIを格納
-          displayName: userData.display_name || '',
-          username: userData.username,
-          firstName: '', // DBにはないが、フロントエンド側で使用するプロパティ
-          lastName: '',  // DBにはないが、フロントエンド側で使用するプロパティ
-          role: userData.role,
-          email: userData.email || session.user.email,
-          profileCompleted: userData.profile_completed
+          id: 0,
+          auth_id: session.user.id,
+          displayName: '',
+          username: session.user.email,
+          firstName: '',
+          lastName: '',
+          role: 'parent', // デフォルト値
+          email: session.user.email,
+          profileCompleted: false
         };
       } catch (error) {
         console.error("Error in user query:", error);
@@ -157,6 +223,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       console.log("Successful login with Supabase auth, user id:", data.user.id);
+      
+      // セッション情報を更新
+      await refetch();
       
       // 認証情報のみを返す - データベース情報は後で取得
       return {
@@ -208,6 +277,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (!authData.user) {
         throw new Error("認証は成功しましたが、ユーザー情報が取得できませんでした");
+      }
+      
+      // usersテーブルに基本情報を登録
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .insert([{
+          auth_id: authData.user.id,
+          email: data.email,
+          username: data.email,
+          role: 'parent',  // デフォルトロール
+          profile_completed: false
+        }])
+        .select();
+        
+      if (userError) {
+        console.error("Error creating user record:", userError);
+        // 登録は成功しているのでエラーはスローしない
+      } else {
+        console.log("Created user record:", userData);
       }
       
       // 認証が成功した場合、メールアドレスのみを返す
@@ -264,6 +352,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        refetch
       }}
     >
       {children}
