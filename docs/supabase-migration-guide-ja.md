@@ -4,90 +4,90 @@
 
 Replitから移行する際に必要なテーブル設定とデータ構造について説明します。Supabaseのプロジェクトを新規作成したあと、以下の手順でデータベースを設定してください。
 
-### 1. ベーステーブルスキーマの作成
+### 1. テーブル構造の確認
 
-1. Supabaseダッシュボードにログインします
-2. 「SQL」エディターを開きます
-3. 以下のスクリプトファイルを順番に実行します：
+現在のデータベースには以下のテーブルが存在します：
 
-#### 必須テーブル
-
-1. **parent_profile.sql** - 保護者プロフィールテーブル
-   - 保護者情報を保存するテーブルです
-   - 生徒情報の親テーブルとなります
-
-2. **users_students.sql** - ユーザーおよび生徒テーブル
-   - 認証情報と生徒情報を保存するテーブルです
-   - 保護者テーブルと関連付けられています
-
-### 2. テーブル構造
-
-#### parent_profile
-
-```sql
-CREATE TABLE IF NOT EXISTS parent_profile (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT UNIQUE, 
-  phone TEXT,
-  postal_code TEXT,
-  prefecture TEXT,
-  city TEXT,
-  address TEXT,
-  ticket_count INTEGER,
-  role TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  student_id INTEGER,
-  parent_id INTEGER
-);
+#### parent_profile テーブル
+```
+| column_name  | data_type                   |
+| ------------ | --------------------------- |
+| id           | integer                     |
+| name         | text                        |
+| password     | text                        |
+| email        | text                        |
+| phone        | text                        |
+| postal_code  | text                        |
+| prefecture   | text                        |
+| city         | text                        |
+| address      | text                        |
+| ticket_count | integer                     |
+| role         | text                        |
+| created_at   | timestamp without time zone |
+| student_id   | integer                     |
+| parent_id    | integer                     |
 ```
 
-#### users
-
-```sql
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  auth_user_id UUID UNIQUE NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  first_name TEXT,
-  last_name TEXT,
-  role TEXT NOT NULL DEFAULT 'parent',
-  profile_completed BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+#### student_profile テーブル
+```
+| column_name         | data_type                   |
+| ------------------- | --------------------------- |
+| id                  | integer                     |
+| user_id             | integer                     |
+| last_name           | text                        |
+| first_name          | text                        |
+| last_name_furigana  | text                        |
+| first_name_furigana | text                        |
+| gender              | text                        |
+| school              | text                        |
+| grade               | text                        |
+| birth_date          | date                        |
+| created_at          | timestamp without time zone |
+| student_account_id  | integer                     |
 ```
 
-#### students
+### 2. アプリケーションコードの更新について
 
-```sql
-CREATE TABLE IF NOT EXISTS students (
-  id SERIAL PRIMARY KEY,
-  parent_id INTEGER NOT NULL,
-  last_name TEXT NOT NULL,
-  first_name TEXT NOT NULL,
-  last_name_furigana TEXT,
-  first_name_furigana TEXT,
-  gender TEXT,
-  school TEXT,
-  grade TEXT,
-  birth_date TEXT,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
+保護者プロフィール設定画面のコードは、以下のテーブル・カラム構造に合わせて更新されています：
+
+1. **保護者情報の保存:**
+   - テーブル: `parent_profile`
+   - 主要フィールド: `name`, `email`, `phone`, `postal_code`, `prefecture`, `city`, `address`
+   - 特記事項: `ticket_count` は初期値 0 で設定されます
+
+2. **生徒情報の保存:**
+   - テーブル: `student_profile`
+   - 主要フィールド: `user_id`, `last_name`, `first_name`, `last_name_furigana`, `first_name_furigana`, `gender`, `school`, `grade`, `birth_date`
+   - 特記事項: `birth_date` は日付型で保存されます
+   - 親子関連付け: `user_id` フィールドに親のID (`parent_profile.id`) が設定されます
 
 ### 3. トラブルシューティング
 
 #### 保護者プロフィール設定時のエラー対処法
 
-**症状**: プロフィール設定時に、データベーステーブルが見つからないエラーが発生する
+**症状1: 保護者プロフィールが保存されたが、生徒情報が保存されない**
 
-**解決策**:
-1. Supabaseコンソールの「SQL」タブで、各スクリプトファイルが正常に実行されたか確認してください
-2. テーブルが存在するか、Supabaseコンソールの「テーブルエディタ」で確認してください
-3. すべてのテーブル（parent_profile, users, students）が作成されていない場合は、スクリプトファイルを再度実行してください
+原因: テーブル構造やカラム名の不一致
+
+解決策:
+- `student_profile`テーブルの`user_id`カラムが正しいデータ型か確認
+- コンソールログでエラーメッセージを確認
+
+**症状2: 日付形式に関するエラーが発生する**
+
+原因: `birth_date`カラムがdate型だが、文字列が送信されている
+
+解決策:
+- 更新済みのコードでは、日付を適切なフォーマット（ISO 日付形式）に変換しています
+- それでも問題が発生する場合は、Supabaseのテーブル定義で`birth_date`をtext型に変更するか検討
+
+**症状3: 認証エラーが発生する**
+
+原因: アクセス権限の問題
+
+解決策:
+- Supabase設定でテーブルのRow Level Security (RLS)ポリシーを確認
+- 必要に応じて公開アクセスを許可または適切なポリシーを設定
 
 #### テーブルスキーマの確認
 
@@ -109,13 +109,15 @@ ORDER BY
 
 ## 動作確認手順
 
-1. parent_profileテーブルの作成と確認
-2. users_students.sqlファイルの実行
-3. アプリケーションへのログインとプロフィール設定
-4. ダッシュボードへのリダイレクト確認
+1. アプリケーションにログインする
+2. プロフィール設定画面に進む
+3. 保護者情報と生徒情報を入力
+4. 「プロフィールを保存」ボタンをクリック
+5. ダッシュボードにリダイレクトされることを確認
+6. Supabaseダッシュボードで`parent_profile`と`student_profile`テーブルのデータを確認
 
 ## 注意事項
 
-- 必ず上記の順番でSQLファイルを実行してください
-- Supabaseの「認証」機能と「ストレージ」機能も設定する必要がある場合は、別途手順書を参照してください
+- 既存のデータを損なわないよう、作業前にバックアップを取ることをお勧めします
+- テーブル構造を変更する場合は、関連するすべてのコードも更新する必要があります
 - 正常に動作しない場合は、ブラウザのコンソールログを確認し、発生しているエラーメッセージを確認してください
