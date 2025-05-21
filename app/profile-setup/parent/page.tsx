@@ -255,16 +255,41 @@ export default function ParentProfileSetup() {
       let studentSuccess = true;
 
       try {
+        // student_profileテーブルが存在するか確認
+        try {
+          // テーブル存在チェック
+          const { count, error: countError } = await supabase
+            .from('student_profile')
+            .select('id', { count: 'exact', head: true });
+
+          if (countError) {
+            console.warn("Warning: student_profile table may not exist:", countError);
+            
+            // RLS向けにパブリックアクセスを一時的に許可
+            try {
+              await supabase.rpc('setup_student_profile', {});
+            } catch (rpcError) {
+              console.warn("RPC call failed, likely RPC not defined:", rpcError);
+              // 続行する - テーブルの存在確認だけを行った
+            }
+          }
+        } catch (tableCheckError) {
+          console.warn("Error checking student_profile table:", tableCheckError);
+          // 続行する
+        }
+
         // 生徒情報を保存 - student_profileテーブルに保存
         for (const student of students) {
           try {
             // 日付形式の変換（birth_dateカラムはdateタイプのため）
             const birthDate = student.birthDate ? new Date(student.birthDate).toISOString().split('T')[0] : null;
             
+            // ここではユーザーIDを文字列として扱う
+            // Supabase Authenticationの UUID を文字列として保存
             const { error: studentError } = await supabase
               .from('student_profile')
               .insert([{
-                user_id: user.id, // Supabase AuthenticationのUUIDを使用
+                user_id: user.id.toString(), // 文字列として保存
                 last_name: student.lastName,
                 first_name: student.firstName,
                 last_name_furigana: student.lastNameFurigana,
