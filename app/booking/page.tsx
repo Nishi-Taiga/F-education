@@ -1,67 +1,301 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
+import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ArrowLeft, Calendar as CalendarIcon, Clock, User, BookOpen, Ticket } from "lucide-react";
+import { ArrowLeft, Calendar, Loader2, User, BookOpen, GraduationCap, Info } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
-// 講師情報の型
-type Tutor = {
+// Replit版から移植した型定義
+type Student = {
   id: number;
   firstName: string;
   lastName: string;
-  specialization?: string;
-  bio?: string;
+  grade: string;
+  ticketCount?: number;
 };
 
-// 予約時間スロットの型
-type TimeSlot = {
-  id: string;
+type Booking = {
+  id: number;
+  date: string;
+  timeSlot: string;
+  studentId: number;
   tutorId: number;
-  date: Date;
-  startTime: string;
-  endTime: string;
-  isAvailable: boolean;
+  status: string;
+  subject?: string;
 };
+
+type BookingSelection = {
+  date: string;
+  formattedDate: string;
+  timeSlot: string;
+  studentId?: number;
+  studentName?: string;
+  subject: string;
+  tutorId: number;
+  tutorShiftId: number;
+  tutorName: string;
+};
+
+type SchoolLevel = "elementary" | "junior_high" | "high_school";
+
+// Replit版から移植した定数
+const timeSlots = [
+  "16:00 - 17:30",
+  "18:00 - 19:30", 
+  "20:00 - 21:30"
+];
+
+const subjectsBySchoolLevel = {
+  elementary: ["国語", "算数", "理科", "社会", "英語"],
+  junior_high: ["国語", "数学", "理科", "社会", "英語"],
+  high_school: ["現代文", "古文", "数学Ⅰ", "数学Ⅱ", "数学Ⅲ", "数学A", "数学B", "物理", "化学", "生物", "日本史", "世界史", "地理", "英語"]
+};
+
+const getSchoolLevelFromGrade = (grade: string): SchoolLevel => {
+  if (grade.includes("小") || grade.includes("1年") || grade.includes("2年") || grade.includes("3年") || grade.includes("4年") || grade.includes("5年") || grade.includes("6年")) {
+    return "elementary";
+  } else if (grade.includes("中") || grade.includes("7年") || grade.includes("8年") || grade.includes("9年")) {
+    return "junior_high";
+  } else {
+    return "high_school";
+  }
+};
+
+// Replit版のCalendarViewを簡易再現
+function CalendarView({ 
+  bookings, 
+  onSelectDate, 
+  interactive = true,
+  showLegend = false 
+}: { 
+  bookings: Booking[];
+  onSelectDate?: (date: string) => void;
+  interactive?: boolean;
+  showLegend?: boolean;
+}) {
+  const today = new Date();
+  const [currentMonth, setCurrentMonth] = useState(today);
+  
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    
+    // 前月の日付で埋める
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // 現在の月の日付
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    
+    return days;
+  };
+  
+  const getDateAvailability = (date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    const bookedSlots = bookings.filter(b => b.date === dateStr);
+    return {
+      hasAvailable: bookedSlots.length < timeSlots.length,
+      isFullyBooked: bookedSlots.length === timeSlots.length
+    };
+  };
+  
+  const isPastDate = (date: Date) => {
+    return date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  };
+  
+  const days = getDaysInMonth(currentMonth);
+  
+  return (
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-4">
+        <Button
+          variant="outline"
+          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+        >
+          ←
+        </Button>
+        <h3 className="text-lg font-medium">
+          {format(currentMonth, "yyyy年M月", { locale: ja })}
+        </h3>
+        <Button
+          variant="outline"
+          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+        >
+          →
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {["日", "月", "火", "水", "木", "金", "土"].map(day => (
+          <div key={day} className="text-center text-sm font-medium text-gray-600 p-2">
+            {day}
+          </div>
+        ))}
+      </div>
+      
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((day, index) => {
+          if (!day) {
+            return <div key={index} className="p-2"></div>;
+          }
+          
+          const dateStr = format(day, "yyyy-MM-dd");
+          const { hasAvailable, isFullyBooked } = getDateAvailability(day);
+          const isPast = isPastDate(day);
+          const isSunday = day.getDay() === 0;
+          
+          return (
+            <button
+              key={index}
+              className={`p-2 text-sm border rounded transition-colors min-h-[40px] ${
+                isPast || isSunday
+                  ? "text-gray-300 cursor-not-allowed bg-gray-50"
+                  : isFullyBooked
+                  ? "bg-red-100 border-red-200 text-red-700 cursor-not-allowed"
+                  : hasAvailable && !isPast && !isSunday
+                  ? "bg-green-100 border-green-200 text-green-700 hover:bg-green-200 cursor-pointer"
+                  : "hover:bg-gray-100 border-gray-200 cursor-pointer"
+              }`}
+              disabled={isPast || isSunday || isFullyBooked || !interactive}
+              onClick={() => interactive && onSelectDate && !isPast && !isSunday && !isFullyBooked && onSelectDate(dateStr)}
+            >
+              {day.getDate()}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// 予約確認モーダル（簡易版）
+function BookingConfirmationModal({
+  isOpen,
+  bookings,
+  onCancel,
+  onConfirm,
+  isProcessing
+}: {
+  isOpen: boolean;
+  bookings: BookingSelection[];
+  onCancel: () => void;
+  onConfirm: () => void;
+  isProcessing: boolean;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl max-h-[80vh] overflow-y-auto">
+        <h3 className="text-xl font-semibold mb-4">予約確認</h3>
+        <p className="mb-4 text-gray-600">以下の内容で予約を確定しますか？</p>
+        
+        <div className="space-y-3 mb-6">
+          {bookings.map((booking, index) => (
+            <div key={index} className="p-3 bg-gray-50 rounded-md">
+              <div className="font-medium">{booking.formattedDate}</div>
+              <div className="text-sm text-gray-600">{booking.timeSlot}</div>
+              <div className="text-sm text-gray-600">{booking.subject}</div>
+              <div className="text-sm text-gray-600">{booking.tutorName}</div>
+              {booking.studentName && (
+                <div className="text-sm text-primary">{booking.studentName}</div>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        <div className="flex space-x-3">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={onCancel}
+            disabled={isProcessing}
+          >
+            キャンセル
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={onConfirm}
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                処理中...
+              </>
+            ) : (
+              "予約確定"
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function BookingPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedTutor, setSelectedTutor] = useState<string>("all");
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
-  const [selectedSubject, setSelectedSubject] = useState<string>("all");
-  const [tutors, setTutors] = useState<Tutor[]>([]);
-  const [availableTutors, setAvailableTutors] = useState<Tutor[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [remainingTickets, setRemainingTickets] = useState(0);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+  const [isLoadingTutors, setIsLoadingTutors] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [selectedBookings, setSelectedBookings] = useState<BookingSelection[]>([]);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [studentSchoolLevel, setStudentSchoolLevel] = useState<SchoolLevel | null>(null);
+  const [selectedTutorId, setSelectedTutorId] = useState<number | null>(null);
+  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
+  const [availableTutors, setAvailableTutors] = useState<any[]>([]);
+  
+  const timeSlotSectionRef = useRef<HTMLDivElement>(null);
 
-  // ユーザー情報とチケット情報を取得
+  // 科目選択時の共通処理
+  const handleSubjectChange = (value: string) => {
+    setSelectedSubject(value);
+    // 日付が既に選択されている場合はスクロール
+    if (selectedDate) {
+      setTimeout(() => {
+        timeSlotSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  };
+
+  // ユーザー情報を取得
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setIsLoading(true);
         
-        // セッションの確認
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (!session) {
-          // 未ログインの場合はホームに戻す
           router.push('/');
           return;
         }
         
-        // ユーザー情報の取得
+        // ユーザー情報取得
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('*')
@@ -70,270 +304,277 @@ export default function BookingPage() {
           
         if (userError) {
           console.error("ユーザー情報取得エラー:", userError);
-          toast({
-            title: "エラー",
-            description: "ユーザー情報の取得に失敗しました",
-            variant: "destructive",
-          });
           return;
         }
         
-        setUserId(userData.id);
+        setUser(userData);
         
-        // チケット残数の取得
-        const { data: ticketData, error: ticketError } = await supabase
-          .from('student_tickets')
-          .select('quantity')
-          .eq('studentId', userData.id)
-          .order('createdAt', { ascending: false })
-          .limit(1);
-          
-        if (!ticketError && ticketData && ticketData.length > 0) {
-          setRemainingTickets(ticketData[0].quantity);
-        } else {
-          setRemainingTickets(0);
+        // 生徒アカウントの場合は初期設定
+        if (userData.role === 'student') {
+          if (userData.studentId) {
+            console.log("生徒ID設定:", userData.studentId);
+            setSelectedStudentId(userData.studentId);
+            setStudentSchoolLevel("junior_high");
+          } else {
+            console.log("生徒IDがありません。フォールバックを使用します");
+            setStudentSchoolLevel("junior_high");
+          }
         }
         
-        // 講師一覧の取得
-        const { data: tutorData, error: tutorError } = await supabase
-          .from('tutors')
-          .select('*');
-          
-        if (tutorError) {
-          console.error("講師情報取得エラー:", tutorError);
-          toast({
-            title: "エラー",
-            description: "講師情報の取得に失敗しました",
-            variant: "destructive",
-          });
-        } else if (tutorData) {
-          setTutors(tutorData);
-        }
-        
-        // 初期の時間スロットを取得
-        if (selectedDate) {
-          fetchTimeSlots(selectedDate, selectedTutor, selectedSubject);
-        }
       } catch (error) {
         console.error("データ取得エラー:", error);
-        toast({
-          title: "エラー",
-          description: "データの読み込みに失敗しました",
-          variant: "destructive",
-        });
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchUserData();
-  }, [router, toast]);
+  }, [router]);
 
-  // 科目と日付が選択された後、利用可能な講師を取得
-  const fetchAvailableTutors = async (date: Date, subject: string) => {
-    try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
+  // 生徒情報を取得
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (!user || user.role === 'student') return;
       
-      // その日に出勤可能な講師をtutor_shiftsから取得
-      let query = supabase
-        .from('tutor_shifts')
-        .select(`
-          tutorId,
-          tutors (id, firstName, lastName, specialization)
-        `)
-        .eq('date', formattedDate)
-        .eq('isBooked', false);
-      
-      const { data: shiftData, error: shiftError } = await query;
-      
-      if (shiftError) {
-        console.error("利用可能講師取得エラー:", shiftError);
+      setIsLoadingStudents(true);
+      try {
+        const { data: studentsData, error: studentsError } = await supabase
+          .from('students')
+          .select('*')
+          .eq('parentId', user.id);
+          
+        if (!studentsError && studentsData) {
+          // チケット数を含める（実装に応じて調整）
+          const studentsWithTickets = studentsData.map(student => ({
+            ...student,
+            ticketCount: 5 // 仮の値、実際はticket関連テーブルから取得
+          }));
+          setStudents(studentsWithTickets);
+        }
+      } catch (error) {
+        console.error("生徒情報取得エラー:", error);
+      } finally {
+        setIsLoadingStudents(false);
+      }
+    };
+    
+    fetchStudents();
+  }, [user]);
+
+  // 生徒選択時の処理（保護者アカウント）
+  useEffect(() => {
+    if (user?.role === 'student') return;
+    
+    if (selectedStudentId && students.length > 0) {
+      const selectedStudent = students.find(student => student.id === selectedStudentId);
+      if (selectedStudent) {
+        const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
+        setStudentSchoolLevel(schoolLevel);
+      } else {
+        setStudentSchoolLevel(null);
+      }
+    }
+  }, [selectedStudentId, students, user]);
+
+  // 既存予約を取得
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setIsLoadingBookings(true);
+      try {
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('*');
+          
+        if (!bookingsError && bookingsData) {
+          setExistingBookings(bookingsData);
+        }
+      } catch (error) {
+        console.error("予約情報取得エラー:", error);
+      } finally {
+        setIsLoadingBookings(false);
+      }
+    };
+    
+    fetchBookings();
+  }, []);
+
+  // 利用可能な講師を取得
+  useEffect(() => {
+    const fetchAvailableTutors = async () => {
+      if (!selectedSubject || !selectedDate || !selectedTimeSlot || !studentSchoolLevel) {
         setAvailableTutors([]);
         return;
       }
       
-      // 重複を除去して講師リストを作成
-      const uniqueTutors = new Map();
-      (shiftData || []).forEach(shift => {
-        if (shift.tutors && !uniqueTutors.has(shift.tutors.id)) {
-          // 科目フィルターを適用（specialization に含まれているかチェック）
-          if (subject === "all" || !shift.tutors.specialization || 
-              shift.tutors.specialization.includes(getSubjectName(subject))) {
-            uniqueTutors.set(shift.tutors.id, shift.tutors);
-          }
+      setIsLoadingTutors(true);
+      try {
+        const startTime = selectedTimeSlot.split(' - ')[0];
+        
+        const { data: shiftsData, error: shiftsError } = await supabase
+          .from('tutor_shifts')
+          .select(`
+            *,
+            tutors (id, firstName, lastName, specialization)
+          `)
+          .eq('date', selectedDate)
+          .eq('startTime', startTime)
+          .eq('isBooked', false);
+          
+        if (shiftsError) {
+          console.error("講師取得エラー:", shiftsError);
+          setAvailableTutors([]);
+          return;
         }
-      });
-      
-      setAvailableTutors(Array.from(uniqueTutors.values()));
-    } catch (error) {
-      console.error("利用可能講師取得エラー:", error);
-      setAvailableTutors([]);
-    }
-  };
-
-  // 科目名を取得するヘルパー関数
-  const getSubjectName = (subject: string) => {
-    const subjectMap: { [key: string]: string } = {
-      math: "数学",
-      english: "英語",
-      science: "理科",
-      japanese: "国語",
-      social: "社会"
+        
+        // 科目でフィルタリング
+        const filteredTutors = (shiftsData || []).filter(shift => {
+          if (!shift.tutors?.specialization) return true;
+          return shift.tutors.specialization.includes(selectedSubject);
+        }).map(shift => ({
+          tutorId: shift.tutorId,
+          shiftId: shift.id,
+          name: `${shift.tutors.lastName} ${shift.tutors.firstName}`,
+          subject: selectedSubject,
+          specialization: shift.tutors.specialization
+        }));
+        
+        setAvailableTutors(filteredTutors);
+      } catch (error) {
+        console.error("講師取得エラー:", error);
+        setAvailableTutors([]);
+      } finally {
+        setIsLoadingTutors(false);
+      }
     };
-    return subjectMap[subject] || subject;
-  };
-
-  // 日付、講師、科目が変更されたら時間スロットを再取得
-  const fetchTimeSlots = async (date: Date, tutorId: string, subject: string) => {
-    try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      
-      // 講師シフトから利用可能な時間スロットを取得
-      let query = supabase
-        .from('tutor_shifts')
-        .select(`
-          *,
-          tutors (id, firstName, lastName, specialization)
-        `)
-        .eq('date', formattedDate)
-        .eq('isBooked', false);
-      
-      // 講師フィルターを適用
-      if (tutorId !== "all") {
-        query = query.eq('tutorId', parseInt(tutorId));
-      }
-      
-      const { data: shiftData, error: shiftError } = await query;
-      
-      if (shiftError) {
-        console.error("シフト情報取得エラー:", shiftError);
-        setTimeSlots([]);
-        return;
-      }
-      
-      // シフトデータをTimeSlot形式に変換
-      const slots: TimeSlot[] = (shiftData || []).map(shift => ({
-        id: shift.id.toString(),
-        tutorId: shift.tutorId,
-        date: new Date(shift.date),
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        isAvailable: !shift.isBooked,
-      }));
-      
-      setTimeSlots(slots);
-    } catch (error) {
-      console.error("時間スロット取得エラー:", error);
-      setTimeSlots([]);
-    }
-  };
-
-  // 日付が変更されたときの処理
-  const handleDateChange = (date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(date);
-      setSelectedTutor("all"); // 講師選択をリセット
-      fetchTimeSlots(date, "all", selectedSubject);
-      fetchAvailableTutors(date, selectedSubject);
-    }
-  };
-
-  // 講師が変更されたときの処理
-  const handleTutorChange = (tutorId: string) => {
-    setSelectedTutor(tutorId);
-    if (selectedDate) {
-      fetchTimeSlots(selectedDate, tutorId, selectedSubject);
-    }
-  };
-
-  // 科目が変更されたときの処理
-  const handleSubjectChange = (subject: string) => {
-    setSelectedSubject(subject);
-    setSelectedTutor("all"); // 講師選択をリセット
-    if (selectedDate) {
-      fetchTimeSlots(selectedDate, "all", subject);
-      fetchAvailableTutors(selectedDate, subject);
-    }
-  };
-
-  // 時間スロットが選択されたときの処理
-  const handleTimeSlotSelect = (slot: TimeSlot) => {
-    if (!slot.isAvailable) return;
     
-    setSelectedTimeSlot(slot);
-    setShowConfirmModal(true);
+    fetchAvailableTutors();
+  }, [selectedSubject, selectedDate, selectedTimeSlot, studentSchoolLevel]);
+
+  const handleDateSelection = (date: string) => {
+    setSelectedDate(date);
+    setSelectedTimeSlot(null);
+    
+    // 生徒と科目が選択されていれば時間選択セクションまでスクロール
+    if (selectedStudentId && selectedSubject) {
+      setTimeout(() => {
+        timeSlotSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
   };
 
-  // 予約を確定する処理
-  const confirmBooking = async () => {
-    if (!selectedTimeSlot || !userId || !selectedDate) return;
+  const handleTimeSlotSelection = (timeSlot: string) => {
+    setSelectedTimeSlot(timeSlot);
+    // 講師と生徒情報はこの時点では選択されていない
+    // 講師選択UIが後ほど表示される
+  };
+
+  const removeBooking = (index: number) => {
+    const newBookings = [...selectedBookings];
+    newBookings.splice(index, 1);
+    setSelectedBookings(newBookings);
+  };
+
+  const confirmBooking = () => {
+    setShowConfirmationModal(true);
+  };
+
+  // 講師選択した時の処理
+  const handleTutorSelection = () => {
+    if (!selectedStudentId || !selectedSubject || !selectedDate || !selectedTimeSlot || !selectedTutorId || !selectedShiftId) {
+      toast({
+        title: "予約情報が不足しています",
+        description: "生徒、科目、日時、講師をすべて選択してください",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // 選択済みの講師情報を取得
+    const tutor = availableTutors?.find((t: any) => t.tutorId === selectedTutorId && t.shiftId === selectedShiftId);
+    if (!tutor) {
+      toast({
+        title: "講師情報が見つかりません",
+        description: "別の講師を選択してください",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // 生徒情報を取得
+    let studentName: string | undefined = undefined;
+    if (selectedStudentId && students) {
+      const student = students.find((s: Student) => s.id === selectedStudentId);
+      if (student) {
+        studentName = `${student.lastName} ${student.firstName}`;
+      }
+    }
+    
+    const dateObj = parse(selectedDate, "yyyy-MM-dd", new Date());
+    const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
+    
+    // 予約を追加
+    setSelectedBookings([...selectedBookings, {
+      date: selectedDate,
+      formattedDate,
+      timeSlot: selectedTimeSlot,
+      studentId: selectedStudentId,
+      studentName,
+      subject: selectedSubject,
+      tutorId: selectedTutorId,
+      tutorShiftId: selectedShiftId,
+      tutorName: tutor.name
+    }]);
+    
+    // 選択をリセット
+    setSelectedTutorId(null);
+    setSelectedShiftId(null);
+    setSelectedTimeSlot(null);
+  };
+  
+  const completeBooking = async () => {
+    if (selectedBookings.length === 0) return;
     
     try {
       setIsLoading(true);
       
-      // チケットの残数チェック
-      if (remainingTickets <= 0) {
-        toast({
-          title: "チケット不足",
-          description: "予約にはチケットが必要です。チケットを購入してください。",
-          variant: "destructive",
-        });
-        router.push('/tickets');
-        return;
-      }
-      
-      // 予約データの作成
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert([
-          {
-            studentId: userId,
-            tutorId: selectedTimeSlot.tutorId,
-            date: format(selectedDate, 'yyyy-MM-dd'),
-            startTime: selectedTimeSlot.startTime,
-            endTime: selectedTimeSlot.endTime,
-            status: 'pending',
-            ticketsUsed: 1,
-          }
-        ]);
+      // Create an array of booking data to send to the mutation
+      for (const booking of selectedBookings) {
+        const { error: bookingError } = await supabase
+          .from('bookings')
+          .insert([
+            {
+              date: booking.date,
+              timeSlot: booking.timeSlot,
+              studentId: booking.studentId,
+              subject: booking.subject,
+              tutorId: booking.tutorId,
+              status: 'confirmed'
+            }
+          ]);
+          
+        if (bookingError) {
+          throw bookingError;
+        }
         
-      if (error) {
-        throw error;
+        // シフトを予約済みに更新
+        const { error: shiftError } = await supabase
+          .from('tutor_shifts')
+          .update({ isBooked: true })
+          .eq('id', booking.tutorShiftId);
+          
+        if (shiftError) {
+          console.error("シフト更新エラー:", shiftError);
+        }
       }
-      
-      // シフトを予約済みに更新
-      const { error: shiftError } = await supabase
-        .from('tutor_shifts')
-        .update({ isBooked: true })
-        .eq('id', parseInt(selectedTimeSlot.id));
-        
-      if (shiftError) {
-        console.error("シフト更新エラー:", shiftError);
-      }
-      
-      // チケット残数を更新
-      const newRemainingTickets = remainingTickets - 1;
-      const { error: ticketError } = await supabase
-        .from('student_tickets')
-        .update({ quantity: newRemainingTickets })
-        .eq('studentId', userId);
-        
-      if (ticketError) {
-        console.error("チケット更新エラー:", ticketError);
-      }
-      
-      setRemainingTickets(newRemainingTickets);
       
       toast({
         title: "予約完了",
-        description: "授業の予約が完了しました。",
+        description: "授業の予約が完了しました",
       });
       
-      // モーダルを閉じる
-      setShowConfirmModal(false);
-      
-      // ダッシュボードに戻る
-      router.push('/dashboard');
+      setSelectedBookings([]);
+      setShowConfirmationModal(false);
+      router.push("/dashboard");
     } catch (error: any) {
       console.error("予約エラー:", error);
       toast({
@@ -346,265 +587,513 @@ export default function BookingPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600">読み込み中...</p>
-        </div>
-      </div>
-    );
-  }
+  // Check if a date has any already-booked time slots for the selected student
+  const getDateAvailability = (date: string): {hasAvailable: boolean, isFullyBooked: boolean} => {
+    if (!existingBookings) return {hasAvailable: true, isFullyBooked: false};
+    
+    // 生徒が選択されている場合、その生徒の予約のみをチェック
+    if (selectedStudentId) {
+      const bookedSlotsForStudentAndDate = existingBookings.filter(
+        b => b.date === date && b.studentId === selectedStudentId
+      );
+      
+      return {
+        hasAvailable: bookedSlotsForStudentAndDate.length < timeSlots.length,
+        isFullyBooked: bookedSlotsForStudentAndDate.length === timeSlots.length
+      };
+    }
+    
+    // 生徒が選択されていない場合は、すべての予約をチェック（古い動作と互換性を保つ）
+    const bookedSlotsForDate = existingBookings.filter(b => b.date === date);
+    return {
+      hasAvailable: bookedSlotsForDate.length < timeSlots.length,
+      isFullyBooked: bookedSlotsForDate.length === timeSlots.length
+    };
+  };
+
+  // Check if a specific time slot on a date is already booked for the selected student
+  const isTimeSlotBooked = (date: string, timeSlot: string): boolean => {
+    if (!existingBookings) return false;
+    
+    // 生徒が選択されている場合は、その生徒の予約のみをチェック
+    if (selectedStudentId) {
+      return existingBookings.some(
+        b => b.date === date && 
+          b.timeSlot === timeSlot && 
+          b.studentId === selectedStudentId
+      );
+    }
+    
+    // 生徒が選択されていない場合は、すべての予約をチェック（古い動作と互換性を保つ）
+    return existingBookings.some(b => b.date === date && b.timeSlot === timeSlot);
+  };
 
   return (
-    <div className="container mx-auto p-4 md:py-8 space-y-6">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => router.push('/dashboard')}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">授業予約</h1>
-            <p className="text-gray-600">希望の日時と講師を選択してください</p>
+    <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.push("/dashboard")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            <span className="text-gray-700">{user?.displayName || user?.username}</span>
           </div>
         </div>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 左側: カレンダー */}
-        <div className="lg:col-span-1">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CalendarIcon className="h-5 w-5" />
-                <span>日付選択</span>
-              </CardTitle>
-              <CardDescription>授業を受けたい日を選択してください</CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDateChange}
-                className="rounded-md border scale-125 origin-center"
-                locale={ja}
-                disabled={(date) => date < new Date() || date.getDay() === 0} // 過去の日付と日曜日を無効化
-              />
-            </CardContent>
-          </Card>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-gray-900">授業予約</h2>
+          <p className="mt-1 text-sm text-gray-600">希望する日時を選択してください</p>
         </div>
-        
-        {/* 中央: フィルター */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <BookOpen className="h-5 w-5" />
-                <span>フィルター</span>
-              </CardTitle>
-              <CardDescription>条件を選択してください</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">科目</label>
-                <Select value={selectedSubject} onValueChange={handleSubjectChange}>
-                  <SelectTrigger className="bg-white border-2 shadow-sm">
-                    <SelectValue placeholder="科目を選択" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-2 shadow-lg z-50">
-                    <SelectItem value="all">すべての科目</SelectItem>
-                    <SelectItem value="math">数学</SelectItem>
-                    <SelectItem value="english">英語</SelectItem>
-                    <SelectItem value="science">理科</SelectItem>
-                    <SelectItem value="japanese">国語</SelectItem>
-                    <SelectItem value="social">社会</SelectItem>
-                  </SelectContent>
-                </Select>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Calendar for booking */}
+          <div className="lg:col-span-2">
+            <Card className="p-3">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-base font-medium text-gray-900">カレンダー</h3>
               </div>
               
-              <div className="space-y-2">
-                <label className="text-sm font-medium">講師</label>
-                <Select value={selectedTutor} onValueChange={handleTutorChange}>
-                  <SelectTrigger className="bg-white border-2 shadow-sm">
-                    <SelectValue placeholder="講師を選択" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-2 shadow-lg z-50">
-                    <SelectItem value="all">すべての講師</SelectItem>
-                    {availableTutors.map((tutor) => (
-                      <SelectItem key={tutor.id} value={tutor.id.toString()}>
-                        {tutor.lastName} {tutor.firstName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* チケット情報 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Ticket className="h-5 w-5" />
-                <span>チケット情報</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">残りチケット</span>
-                  <span className="font-bold text-lg">{remainingTickets} 枚</span>
-                </div>
-                {remainingTickets <= 0 && (
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => router.push('/tickets')}
-                  >
-                    チケットを購入
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* 右側: 時間スロット */}
-        <div className="lg:col-span-1">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Clock className="h-5 w-5" />
-                <span>
-                  {selectedDate && format(selectedDate, 'yyyy年MM月dd日 (EEE)', { locale: ja })}の授業時間
-                </span>
-              </CardTitle>
-              <CardDescription>
-                {selectedTutor !== "all" 
-                  ? `講師: ${availableTutors.find(t => t.id.toString() === selectedTutor)?.lastName} ${availableTutors.find(t => t.id.toString() === selectedTutor)?.firstName}`
-                  : "すべての講師の予約枠を表示しています"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {timeSlots.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {timeSlots.map((slot) => {
-                    const tutor = tutors.find(t => t.id === slot.tutorId);
-                    return (
-                      <button
-                        key={slot.id}
-                        className={`p-4 rounded-lg border text-left transition-all duration-200 ${
-                          slot.isAvailable 
-                            ? 'hover:bg-blue-50 hover:border-blue-300 border-gray-200 cursor-pointer hover:shadow-md' 
-                            : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
-                        }`}
-                        onClick={() => slot.isAvailable && handleTimeSlotSelect(slot)}
-                        disabled={!slot.isAvailable}
-                      >
-                        <div className="space-y-2">
-                          <div className="font-medium text-lg">
-                            {slot.startTime} - {slot.endTime}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            <User className="h-3 w-3 inline mr-1" />
-                            {tutor ? `${tutor.lastName} ${tutor.firstName}` : "未設定"}
-                          </div>
-                          <div className={`text-xs px-2 py-1 rounded ${
-                            slot.isAvailable 
-                              ? "bg-green-100 text-green-700" 
-                              : "bg-gray-100 text-gray-500"
-                          }`}>
-                            {slot.isAvailable ? "予約可能" : "予約不可"}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">この日の授業スケジュールはありません</p>
-                  <p className="text-sm text-gray-400 mt-2">別の日付を選択してください</p>
+              {/* 生徒選択 (保護者アカウントの場合のみ表示) */}
+              {user?.role !== 'student' && (
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <User className="h-4 w-4 text-primary" />
+                    <Label className="text-sm font-medium">受講する生徒を選択</Label>
+                  </div>
+                  {isLoadingStudents ? (
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <span className="text-sm text-gray-500">生徒情報を読み込み中...</span>
+                    </div>
+                  ) : students && students.length > 0 ? (
+                    <Select 
+                      value={selectedStudentId?.toString() || ""} 
+                      onValueChange={(value) => {
+                        const studentId = parseInt(value);
+                        setSelectedStudentId(studentId);
+                        setSelectedSubject(null);
+                        
+                        // 生徒の学年から学校レベルを取得
+                        const selectedStudent = students.find(student => student.id === studentId);
+                        if (selectedStudent) {
+                          const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
+                          setStudentSchoolLevel(schoolLevel);
+                        } else {
+                          setStudentSchoolLevel(null);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full bg-white border-2 shadow-sm">
+                        <SelectValue placeholder="生徒を選択してください" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-2 shadow-lg z-50">
+                        {students.map((student) => (
+                          <SelectItem key={student.id} value={student.id.toString()}>
+                            <div className="flex justify-between items-center w-full">
+                              <span>{student.lastName} {student.firstName}</span>
+                              {'ticketCount' in student && (
+                                <span className="text-xs font-medium text-primary ml-2">
+                                  残り {(student as any).ticketCount} 枚
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700">
+                      生徒情報が登録されていません。設定ページから生徒情報を登録してください。
+                    </div>
+                  )}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-      
-      {/* 予約確認モーダル */}
-      {showConfirmModal && selectedTimeSlot && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
-            <h3 className="text-xl font-semibold mb-4 flex items-center">
-              <CalendarIcon className="h-5 w-5 mr-2 text-blue-600" />
-              予約確認
-            </h3>
-            <p className="mb-6 text-gray-600">以下の内容で予約を確定しますか？</p>
+              
+              {/* 科目選択 */}
+              <div className="mb-6">
+                <div className="flex items-center space-x-2 mb-2">
+                  <BookOpen className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-medium">授業科目を選択</Label>
+                </div>
+                {user?.role === 'student' ? (
+                  // 生徒アカウントの場合は学年から科目選択
+                  studentSchoolLevel ? (
+                    <Select
+                      value={selectedSubject || ""}
+                      onValueChange={handleSubjectChange}
+                    >
+                      <SelectTrigger className="w-full bg-white border-2 shadow-sm">
+                        <SelectValue placeholder="科目を選択してください" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-2 shadow-lg z-50">
+                        {subjectsBySchoolLevel[studentSchoolLevel].map((subject) => (
+                          <SelectItem key={subject} value={subject}>
+                            {subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-600">
+                        学年情報が取得できませんでした。中学生用の科目から選択できます。
+                      </div>
+                      <Select
+                        value={selectedSubject || ""}
+                        onValueChange={handleSubjectChange}
+                      >
+                        <SelectTrigger className="w-full bg-white border-2 shadow-sm">
+                          <SelectValue placeholder="科目を選択してください" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-2 shadow-lg z-50">
+                          {subjectsBySchoolLevel["junior_high"].map((subject) => (
+                            <SelectItem key={subject} value={subject}>
+                              {subject}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )
+                ) : (
+                  // 親アカウントの場合は生徒選択必須
+                  !selectedStudentId ? (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
+                      先に生徒を選択してください
+                    </div>
+                  ) : studentSchoolLevel ? (
+                    <Select
+                      value={selectedSubject || ""}
+                      onValueChange={handleSubjectChange}
+                    >
+                      <SelectTrigger className="w-full bg-white border-2 shadow-sm">
+                        <SelectValue placeholder="科目を選択してください" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-2 shadow-lg z-50">
+                        {subjectsBySchoolLevel[studentSchoolLevel].map((subject) => (
+                          <SelectItem key={subject} value={subject}>
+                            {subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-600">
+                        学年情報が取得できませんでした。中学生用の科目から選択できます。
+                      </div>
+                      <Select
+                        value={selectedSubject || ""}
+                        onValueChange={handleSubjectChange}
+                      >
+                        <SelectTrigger className="w-full bg-white border-2 shadow-sm">
+                          <SelectValue placeholder="科目を選択してください" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-2 shadow-lg z-50">
+                          {subjectsBySchoolLevel["junior_high"].map((subject) => (
+                            <SelectItem key={subject} value={subject}>
+                              {subject}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )
+                )}
+              </div>
+              
+              {isLoadingBookings ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : ((user?.role !== 'student' && !selectedStudentId) || !selectedSubject) ? (
+                <div className="border rounded-md p-6 text-center bg-gray-50">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">授業の予約には以下の情報が必要です</p>
+                  <ul className="text-sm text-gray-600 mb-4 space-y-1">
+                    {user?.role !== 'student' && (
+                      <li className="flex items-center justify-center">
+                        <User className="h-3.5 w-3.5 text-primary mr-1.5" />
+                        <span>受講する生徒</span>
+                      </li>
+                    )}
+                    <li className="flex items-center justify-center">
+                      <BookOpen className="h-3.5 w-3.5 text-primary mr-1.5" />
+                      <span>授業科目</span>
+                    </li>
+                  </ul>
+                </div>
+              ) : (
+                <CalendarView 
+                  bookings={existingBookings || []} 
+                  onSelectDate={handleDateSelection}
+                  interactive={true}
+                  showLegend={false} // 生徒・保護者の予約ページには凡例を表示しない
+                />
+              )}
+            </Card>
+          </div>
+
+          {/* Time slots and selected bookings */}
+          <div className="lg:col-span-1">
+            <Card className="p-3 mb-3">
+              <div ref={timeSlotSectionRef}>
+                <h3 className="text-base font-medium text-gray-900 mb-3">授業時間を選択</h3>
+              </div>
+              
+              {((user?.role !== 'student' && !selectedStudentId) || (!user?.role && !selectedStudentId) || !selectedSubject) ? (
+                <div className="p-4 border rounded-md bg-gray-50 text-center">
+                  <p className="text-gray-600 mb-2">授業時間を選択するには</p>
+                  <ul className="text-sm text-gray-600 mb-2 space-y-1">
+                    {user?.role !== 'student' && !selectedStudentId && (
+                      <li className="flex items-center justify-center">
+                        <User className="h-3.5 w-3.5 text-amber-500 mr-1.5" />
+                        <span className="text-amber-700">生徒を選択してください</span>
+                      </li>
+                    )}
+                    {!selectedSubject && (
+                      <li className="flex items-center justify-center">
+                        <BookOpen className="h-3.5 w-3.5 text-amber-500 mr-1.5" />
+                        <span className="text-amber-700">科目を選択してください</span>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              ) : selectedDate ? (
+                <div id="date-selection" className="mb-4">
+                  <div className="text-sm text-gray-600 mb-2">選択した日付</div>
+                  <div className="font-medium text-gray-900 mb-4">
+                    {format(
+                      parse(selectedDate, "yyyy-MM-dd", new Date()),
+                      "yyyy年M月d日 (E)",
+                      { locale: ja }
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm text-gray-600">時間帯を選択</div>
+                  </div>
+                  <div className="space-y-2">
+                    {timeSlots.map((timeSlot) => {
+                      const isBooked = isTimeSlotBooked(selectedDate, timeSlot);
+                      return (
+                        <Button
+                          key={timeSlot}
+                          variant="outline"
+                          className="w-full justify-start h-auto py-3"
+                          disabled={isBooked}
+                          onClick={() => handleTimeSlotSelection(timeSlot)}
+                        >
+                          <span className="font-medium">{timeSlot}</span>
+                          {isBooked && <span className="ml-2 text-xs text-red-500">(予約済み)</span>}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* 講師選択 */}
+                  {selectedTimeSlot && selectedDate && selectedSubject && (
+                    <div className="mt-6">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <GraduationCap className="h-4 w-4 text-primary" />
+                        <Label className="text-sm font-medium">講師を選択</Label>
+                      </div>
+                      
+                      {isLoadingTutors ? (
+                        <div className="flex items-center space-x-2 p-4">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <span className="text-sm text-gray-500">講師情報を読み込み中...</span>
+                        </div>
+                      ) : availableTutors && availableTutors.length > 0 ? (
+                        <div className="space-y-3">
+                          {availableTutors.map((tutor: any) => (
+                            <div 
+                              key={`${tutor.tutorId}-${tutor.shiftId}`}
+                              className={`p-3 border rounded-md cursor-pointer transition-colors 
+                                ${selectedTutorId === tutor.tutorId && selectedShiftId === tutor.shiftId 
+                                  ? 'bg-primary/10 border-primary' 
+                                  : 'bg-white hover:bg-gray-50'}`}
+                              onClick={() => {
+                                setSelectedTutorId(tutor.tutorId);
+                                setSelectedShiftId(tutor.shiftId);
+                              }}
+                            >
+                              <div className="font-medium text-gray-900">{tutor.name}</div>
+                              <div className="text-sm text-gray-600 mt-1">
+                                <div className="flex items-center">
+                                  <BookOpen className="h-3.5 w-3.5 text-gray-500 mr-1.5" />
+                                  <span>{tutor.subject}</span>
+                                </div>
+                                <div className="flex items-center mt-1">
+                                  <Calendar className="h-3.5 w-3.5 text-gray-500 mr-1.5" />
+                                  <span>
+                                    {format(parse(selectedDate, "yyyy-MM-dd", new Date()), "MM/dd")} ({selectedTimeSlot})
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          
+                          <Button
+                            className="w-full mt-3"
+                            disabled={!selectedTutorId || !selectedShiftId}
+                            onClick={handleTutorSelection}
+                          >
+                            この講師で予約する
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="p-4 border rounded-md bg-yellow-50 text-yellow-700 text-sm">
+                          <div className="flex items-start">
+                            <span className="mr-2">⚠️</span>
+                            <div>
+                              <p className="font-medium mb-1">予約可能な講師が見つかりません</p>
+                              <p>選択した日時・科目に予約可能な講師がいません。別の日時や科目を選択してください。</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">カレンダーから日付を選択してください</p>
+                </div>
+              )}
+            </Card>
             
-            <div className="space-y-3 mb-6 bg-gray-50 p-4 rounded-lg">
-              <div className="flex justify-between">
-                <span className="text-gray-600">日付:</span>
-                <span className="font-medium">
-                  {selectedDate && format(selectedDate, 'yyyy年MM月dd日 (EEE)', { locale: ja })}
-                </span>
+            <Card className="p-3">
+              <h3 className="text-base font-medium text-gray-900 mb-3">選択済み授業</h3>
+              
+              <div className="flex items-center mt-1 mb-3 p-2 bg-amber-50 text-amber-700 rounded-md text-xs">
+                <Info className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span>授業開始の24時間前を過ぎると、予約のキャンセルができなくなります。（葬儀等の緊急時はLINEにてご連絡ください）</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">時間:</span>
-                <span className="font-medium">{selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}</span>
+              
+              <div className="space-y-2 mb-4 card-container">
+                {selectedBookings.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-gray-600">授業が選択されていません</p>
+                  </div>
+                ) : (
+                  selectedBookings.map((booking, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                      <div>
+                        <div className="font-medium">{booking.formattedDate}</div>
+                        <div className="text-sm text-gray-600">{booking.timeSlot}</div>
+                        {booking.subject && (
+                          <div className="flex items-center mt-1">
+                            <BookOpen className="h-3 w-3 text-gray-600 mr-1" />
+                            <span className="text-xs text-gray-600">{booking.subject}</span>
+                          </div>
+                        )}
+                        {booking.studentName && (
+                          <div className="flex items-center mt-1">
+                            <User className="h-3 w-3 text-primary mr-1" />
+                            <span className="text-xs text-primary">{booking.studentName}</span>
+                          </div>
+                        )}
+                        {booking.tutorName && (
+                          <div className="flex items-center mt-1">
+                            <GraduationCap className="h-3 w-3 text-blue-600 mr-1" />
+                            <span className="text-xs text-blue-600">{booking.tutorName}</span>
+                          </div>
+                        )}
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="text-gray-500 hover:text-red-500" 
+                        onClick={() => removeBooking(index)}
+                      >
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </Button>
+                    </div>
+                  ))
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">講師:</span>
-                <span className="font-medium">
-                  {tutors.find(t => t.id === selectedTimeSlot.tutorId)?.lastName} 
-                  {tutors.find(t => t.id === selectedTimeSlot.tutorId)?.firstName}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">使用チケット:</span>
-                <span className="font-medium">1枚</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">予約後の残りチケット:</span>
-                <span className="font-medium">{remainingTickets - 1}枚</span>
-              </div>
-            </div>
-            
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowConfirmModal(false)}
-                disabled={isLoading}
-              >
-                キャンセル
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={confirmBooking}
-                disabled={isLoading || remainingTickets <= 0}
-              >
-                {isLoading ? "処理中..." : "予約確定"}
-              </Button>
-            </div>
-            
-            {remainingTickets <= 0 && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600 text-sm text-center">
-                  チケットが不足しています。先にチケットを購入してください。
-                </p>
-              </div>
-            )}
+              
+              {(() => {
+                // チケット数チェック
+                let hasEnoughTickets = true;
+                let ticketErrorMessage = "";
+                
+                // 生徒が選択されていて、その生徒のチケット情報がある場合
+                if (selectedStudentId && students) {
+                  const selectedStudent = students.find(s => s.id === selectedStudentId);
+                  if (selectedStudent && 'ticketCount' in selectedStudent) {
+                    const studentTicketCount = (selectedStudent as any).ticketCount;
+                    // 生徒のチケットが予約数より少ない場合
+                    if (studentTicketCount < selectedBookings.length) {
+                      hasEnoughTickets = false;
+                      ticketErrorMessage = `${selectedStudent.lastName} ${selectedStudent.firstName}のチケットが不足しています（残り${studentTicketCount}枚、必要${selectedBookings.length}枚）`;
+                    }
+                  }
+                } 
+                // 生徒が選択されていない場合や生徒のチケット情報がない場合は従来通りユーザー全体のチケット数をチェック
+                else if (user && user.ticketCount < selectedBookings.length) {
+                  hasEnoughTickets = false;
+                  ticketErrorMessage = `チケットが不足しています（残り${user.ticketCount}枚、必要${selectedBookings.length}枚）`;
+                }
+                
+                if (!hasEnoughTickets) {
+                  return (
+                    <div>
+                      <Button 
+                        className="w-full mb-2" 
+                        variant="destructive"
+                        disabled={true}
+                      >
+                        {ticketErrorMessage}
+                      </Button>
+                      <div className="text-center">
+                        <a href="/tickets" className="text-sm text-primary hover:underline">チケットを購入する</a>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <Button 
+                    className="w-full" 
+                    disabled={selectedBookings.length === 0 || isLoading}
+                    onClick={confirmBooking}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        処理中...
+                      </>
+                    ) : (
+                      "予約を確認する"
+                    )}
+                  </Button>
+                );
+              })()}
+            </Card>
           </div>
         </div>
-      )}
+      </main>
+
+      <BookingConfirmationModal
+        isOpen={showConfirmationModal}
+        bookings={selectedBookings}
+        onCancel={() => setShowConfirmationModal(false)}
+        onConfirm={completeBooking}
+        isProcessing={isLoading}
+      />
     </div>
   );
 }
