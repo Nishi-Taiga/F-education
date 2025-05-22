@@ -311,7 +311,7 @@ export default function BookingPage() {
 
         // 保護者プロフィール取得を追加
         const { data: parentData, error: parentError } = await supabase
-          .from('parent_profiles')
+          .from('parent_profile')
           .select('*')
           .eq('userId', userData.id)
           .single();
@@ -352,7 +352,7 @@ export default function BookingPage() {
         const { data: studentsData, error: studentsError } = await supabase
           .from('student_profile')
           .select('*')
-          .eq('parentId', parentProfile.id);
+          .eq('parent_id', parentProfile.id);
           
         if (!studentsError && studentsData) {
           // チケット数を含める（実装に応じて調整）
