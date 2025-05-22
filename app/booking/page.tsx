@@ -416,7 +416,7 @@ export default function BookingPage() {
           .from('tutor_shifts')
           .select(`
             *,
-            tutor_profile (id, first_name, last_name, specialization)
+            tutor_profile (id, first_name, last_name, subjects)
           `)
           .eq('date', selectedDate)
           .eq('time_slot', normalizedTimeSlot)
@@ -430,14 +430,14 @@ export default function BookingPage() {
         
         // 科目でフィルタリング
         const filteredTutors = (shiftsData || []).filter(shift => {
-          if (!shift.tutor_profile?.specialization) return true;
-          return shift.tutor_profile.specialization.includes(selectedSubject);
+          if (!shift.tutor_profile?.subjects) return true;
+          return shift.tutor_profile.subjects.includes(selectedSubject);
         }).map(shift => ({
           tutorId: shift.tutor_profile.id,
           shiftId: shift.id,
           name: `${shift.tutor_profile.last_name} ${shift.tutor_profile.first_name}`,
           subject: selectedSubject,
-          specialization: shift.tutor_profile.specialization
+          specialization: shift.tutor_profile.subjects
         }));
         
         setAvailableTutors(filteredTutors);
