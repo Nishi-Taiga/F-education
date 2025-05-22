@@ -6,6 +6,13 @@ import {
   eachDayOfInterval, isSameMonth, isToday, isBefore, getDay,
   addDays, subDays
 } from "date-fns";
+// SSR対応: innerWidthをstateで管理
+const [innerWidth, setInnerWidth] = useState(1024); // デフォルト値
+useEffect(() => {
+  if (typeof window !== "undefined") {
+    setInnerWidth(window.innerWidth);
+  }
+}, []);
 // 基本的な予約型（tutor-bookings-pageと一致させる）
 type Booking = {
   id: number;
@@ -242,14 +249,14 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
           return (
             <div key={day.toString()} className={`p-0.5 min-w-0 ${hasThreeOrMoreBookings ? 'aspect-auto' : 'aspect-square'}`} 
                  style={{
-                   height: hasThreeOrMoreBookings ? (window.innerWidth < 640 ? '100px' : '180px') : 'auto'
+                   height: hasThreeOrMoreBookings ? (innerWidth < 640 ? '100px' : '180px') : 'auto'
                  }}>
               <div 
                 className={`h-full rounded-md ${isSelectable ? 'hover:bg-gray-50 cursor-pointer' : ''} 
                   ${isPast && !isCurrentDay ? 'opacity-60' : ''} 
                   overflow-hidden flex flex-col`}
                 style={{ 
-                  minHeight: hasThreeOrMoreBookings ? (window.innerWidth < 640 ? '95px' : '170px') : (window.innerWidth < 640 ? '60px' : '80px'), 
+                  minHeight: hasThreeOrMoreBookings ? (innerWidth < 640 ? '95px' : '170px') : (innerWidth < 640 ? '60px' : '80px'), 
                   height: '100%'
                 }}
                 onClick={() => isSelectable && handleDayClick(day)}
@@ -277,7 +284,7 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
                   return (
                     <div key={index} className={`${index > 0 ? 'mt-1 md:mt-1.5' : 'mt-0.5'} min-w-0 w-full`}>
                       <div 
-                        className={`${window.innerWidth < 640 ? 'px-1 py-0.5' : 'px-1 py-0.5'} rounded ${bgColorClass} text-white relative cursor-pointer flex flex-col`}
+                        className={`${innerWidth < 640 ? 'px-1 py-0.5' : 'px-1 py-0.5'} rounded ${bgColorClass} text-white relative cursor-pointer flex flex-col`}
                         title={booking.studentName ? `${booking.studentName} (${booking.timeSlot})${lessonStatus === 'completed-no-report' ? ' - 報告未作成' : ''}` : '予約済み'}
                         onClick={(e) => {
                           e.stopPropagation(); // 日付クリックイベントが発火するのを防ぐ
