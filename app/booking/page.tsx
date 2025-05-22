@@ -294,37 +294,23 @@ export default function BookingPage() {
           router.push('/');
           return;
         }
-        
-        // ユーザー情報取得
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', session.user.email)
-          .single();
-          
-        if (userError) {
-          console.error("ユーザー情報取得エラー:", userError);
-          return;
-        }
-        
-        setUser(userData);
+        // ここでsession.userを直接使う
+        setUser(session.user);
 
         // 保護者プロフィール取得を追加
         const { data: parentData, error: parentError } = await supabase
           .from('parent_profile')
           .select('*')
-          .eq('userId', userData.id)
+          .eq('user_id', session.user.id)
           .single();
-          
         if (!parentError && parentData) {
           setParentProfile(parentData);
         }
-        
         // 生徒アカウントの場合は初期設定
-        if (userData.role === 'student') {
-          if (userData.studentId) {
-            console.log("生徒ID設定:", userData.studentId);
-            setSelectedStudentId(userData.studentId);
+        if (session.user.role === 'student') {
+          if (session.user.studentId) {
+            console.log("生徒ID設定:", session.user.studentId);
+            setSelectedStudentId(session.user.studentId);
             setStudentSchoolLevel("junior_high");
           } else {
             console.log("生徒IDがありません。フォールバックを使用します");
@@ -346,19 +332,25 @@ export default function BookingPage() {
   useEffect(() => {
     const fetchStudents = async () => {
       if (!user || user.role === 'student' || !parentProfile) return;
-      
       setIsLoadingStudents(true);
       try {
         const { data: studentsData, error: studentsError } = await supabase
           .from('student_profile')
           .select('*')
           .eq('parent_id', parentProfile.id);
-          
         if (!studentsError && studentsData) {
-          // チケット数を含める（実装に応じて調整）
-          const studentsWithTickets = studentsData.map(student => ({
-            ...student,
-            ticketCount: 5 // 仮の値、実際はticket関連テーブルから取得
+          // 生徒ごとにstudent_ticketsからチケット数を取得
+          const studentsWithTickets = await Promise.all(studentsData.map(async student => {
+            const { data: ticketsData } = await supabase
+              .from('student_tickets')
+              .select('quantity')
+              .eq('student_id', student.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            return {
+              ...student,
+              ticketCount: ticketsData && ticketsData.length > 0 ? ticketsData[0].quantity : 0
+            };
           }));
           setStudents(studentsWithTickets);
         }
@@ -368,7 +360,6 @@ export default function BookingPage() {
         setIsLoadingStudents(false);
       }
     };
-    
     fetchStudents();
   }, [user, parentProfile]);
 
@@ -708,12 +699,7 @@ export default function BookingPage() {
                         {students.map((student) => (
                           <SelectItem key={student.id} value={student.id.toString()}>
                             <div className="flex justify-between items-center w-full">
-                              <span>{student.lastName} {student.firstName}</span>
-                              {'ticketCount' in student && (
-                                <span className="text-xs font-medium text-primary ml-2">
-                                  残り {(student as any).ticketCount} 枚
-                                </span>
-                              )}
+                              <span>{student.lastName} {student.firstName}（残り{('ticketCount' in student ? (student as any).ticketCount : 0)}枚）</span>
                             </div>
                           </SelectItem>
                         ))}
