@@ -41,6 +41,7 @@ export default function BookingPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [availableTutors, setAvailableTutors] = useState<Tutor[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [remainingTickets, setRemainingTickets] = useState(0);
@@ -128,6 +129,60 @@ export default function BookingPage() {
     fetchUserData();
   }, [router, toast]);
 
+  // 科目と日付が選択された後、利用可能な講師を取得
+  const fetchAvailableTutors = async (date: Date, subject: string) => {
+    try {
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      
+      // その日に出勤可能な講師をtutor_shiftsから取得
+      let query = supabase
+        .from('tutor_shifts')
+        .select(`
+          tutorId,
+          tutors (id, firstName, lastName, specialization)
+        `)
+        .eq('date', formattedDate)
+        .eq('isBooked', false);
+      
+      const { data: shiftData, error: shiftError } = await query;
+      
+      if (shiftError) {
+        console.error("利用可能講師取得エラー:", shiftError);
+        setAvailableTutors([]);
+        return;
+      }
+      
+      // 重複を除去して講師リストを作成
+      const uniqueTutors = new Map();
+      (shiftData || []).forEach(shift => {
+        if (shift.tutors && !uniqueTutors.has(shift.tutors.id)) {
+          // 科目フィルターを適用（specialization に含まれているかチェック）
+          if (subject === "all" || !shift.tutors.specialization || 
+              shift.tutors.specialization.includes(getSubjectName(subject))) {
+            uniqueTutors.set(shift.tutors.id, shift.tutors);
+          }
+        }
+      });
+      
+      setAvailableTutors(Array.from(uniqueTutors.values()));
+    } catch (error) {
+      console.error("利用可能講師取得エラー:", error);
+      setAvailableTutors([]);
+    }
+  };
+
+  // 科目名を取得するヘルパー関数
+  const getSubjectName = (subject: string) => {
+    const subjectMap: { [key: string]: string } = {
+      math: "数学",
+      english: "英語",
+      science: "理科",
+      japanese: "国語",
+      social: "社会"
+    };
+    return subjectMap[subject] || subject;
+  };
+
   // 日付、講師、科目が変更されたら時間スロットを再取得
   const fetchTimeSlots = async (date: Date, tutorId: string, subject: string) => {
     try {
@@ -177,7 +232,9 @@ export default function BookingPage() {
   const handleDateChange = (date: Date | undefined) => {
     if (date) {
       setSelectedDate(date);
-      fetchTimeSlots(date, selectedTutor, selectedSubject);
+      setSelectedTutor("all"); // 講師選択をリセット
+      fetchTimeSlots(date, "all", selectedSubject);
+      fetchAvailableTutors(date, selectedSubject);
     }
   };
 
@@ -192,8 +249,10 @@ export default function BookingPage() {
   // 科目が変更されたときの処理
   const handleSubjectChange = (subject: string) => {
     setSelectedSubject(subject);
+    setSelectedTutor("all"); // 講師選択をリセット
     if (selectedDate) {
-      fetchTimeSlots(selectedDate, selectedTutor, subject);
+      fetchTimeSlots(selectedDate, "all", subject);
+      fetchAvailableTutors(selectedDate, subject);
     }
   };
 
@@ -315,16 +374,34 @@ export default function BookingPage() {
             <p className="text-gray-600">希望の日時と講師を選択してください</p>
           </div>
         </div>
-        <div className="flex items-center space-x-2 text-sm">
-          <Ticket className="h-4 w-4 text-blue-600" />
-          <span className="font-medium">残り {remainingTickets} 枚</span>
-        </div>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* 左側: フィルターとカレンダー */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 左側: カレンダー */}
+        <div className="lg:col-span-1">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <CalendarIcon className="h-5 w-5" />
+                <span>日付選択</span>
+              </CardTitle>
+              <CardDescription>授業を受けたい日を選択してください</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateChange}
+                className="rounded-md border scale-125 origin-center"
+                locale={ja}
+                disabled={(date) => date < new Date() || date.getDay() === 0} // 過去の日付と日曜日を無効化
+              />
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* 中央: フィルター */}
         <div className="lg:col-span-1 space-y-6">
-          {/* フィルター */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -337,10 +414,10 @@ export default function BookingPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">科目</label>
                 <Select value={selectedSubject} onValueChange={handleSubjectChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white border-2 shadow-sm">
                     <SelectValue placeholder="科目を選択" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white border-2 shadow-lg z-50">
                     <SelectItem value="all">すべての科目</SelectItem>
                     <SelectItem value="math">数学</SelectItem>
                     <SelectItem value="english">英語</SelectItem>
@@ -354,12 +431,12 @@ export default function BookingPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">講師</label>
                 <Select value={selectedTutor} onValueChange={handleTutorChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white border-2 shadow-sm">
                     <SelectValue placeholder="講師を選択" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white border-2 shadow-lg z-50">
                     <SelectItem value="all">すべての講師</SelectItem>
-                    {tutors.map((tutor) => (
+                    {availableTutors.map((tutor) => (
                       <SelectItem key={tutor.id} value={tutor.id.toString()}>
                         {tutor.lastName} {tutor.firstName}
                       </SelectItem>
@@ -367,27 +444,6 @@ export default function BookingPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </CardContent>
-          </Card>
-          
-          {/* カレンダー */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CalendarIcon className="h-5 w-5" />
-                <span>日付選択</span>
-              </CardTitle>
-              <CardDescription>授業を受けたい日を選択</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDateChange}
-                className="rounded-md border"
-                locale={ja}
-                disabled={(date) => date < new Date() || date.getDay() === 0} // 過去の日付と日曜日を無効化
-              />
             </CardContent>
           </Card>
           
@@ -420,7 +476,7 @@ export default function BookingPage() {
         </div>
         
         {/* 右側: 時間スロット */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-1">
           <Card className="h-full">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -431,13 +487,13 @@ export default function BookingPage() {
               </CardTitle>
               <CardDescription>
                 {selectedTutor !== "all" 
-                  ? `講師: ${tutors.find(t => t.id.toString() === selectedTutor)?.lastName} ${tutors.find(t => t.id.toString() === selectedTutor)?.firstName}`
+                  ? `講師: ${availableTutors.find(t => t.id.toString() === selectedTutor)?.lastName} ${availableTutors.find(t => t.id.toString() === selectedTutor)?.firstName}`
                   : "すべての講師の予約枠を表示しています"}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {timeSlots.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {timeSlots.map((slot) => {
                     const tutor = tutors.find(t => t.id === slot.tutorId);
                     return (
