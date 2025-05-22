@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -45,14 +44,12 @@ export default function BookingPage() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [remainingTickets, setRemainingTickets] = useState(0);
-  const [dbError, setDbError] = useState<string | null>(null);
 
   // ユーザー情報とチケット情報を取得
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setIsLoading(true);
-        setDbError(null);
         
         // セッションの確認
         const { data: { session } } = await supabase.auth.getSession();
@@ -63,28 +60,64 @@ export default function BookingPage() {
           return;
         }
         
-        // 仮のユーザーIDを設定（データベーステーブルが存在しない場合）
-        setUserId(1);
-        setRemainingTickets(5); // 仮のチケット数
+        // ユーザー情報の取得
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', session.user.email)
+          .single();
+          
+        if (userError) {
+          console.error("ユーザー情報取得エラー:", userError);
+          toast({
+            title: "エラー",
+            description: "ユーザー情報の取得に失敗しました",
+            variant: "destructive",
+          });
+          return;
+        }
         
-        // ダミーの講師データを設定
-        const dummyTutors: Tutor[] = [
-          { id: 1, firstName: "太郎", lastName: "田中", specialization: "数学・英語" },
-          { id: 2, firstName: "花子", lastName: "佐藤", specialization: "国語・社会" },
-          { id: 3, firstName: "次郎", lastName: "鈴木", specialization: "理科・数学" },
-        ];
-        setTutors(dummyTutors);
+        setUserId(userData.id);
+        
+        // チケット残数の取得
+        const { data: ticketData, error: ticketError } = await supabase
+          .from('student_tickets')
+          .select('quantity')
+          .eq('studentId', userData.id)
+          .order('createdAt', { ascending: false })
+          .limit(1);
+          
+        if (!ticketError && ticketData && ticketData.length > 0) {
+          setRemainingTickets(ticketData[0].quantity);
+        } else {
+          setRemainingTickets(0);
+        }
+        
+        // 講師一覧の取得
+        const { data: tutorData, error: tutorError } = await supabase
+          .from('tutors')
+          .select('*');
+          
+        if (tutorError) {
+          console.error("講師情報取得エラー:", tutorError);
+          toast({
+            title: "エラー",
+            description: "講師情報の取得に失敗しました",
+            variant: "destructive",
+          });
+        } else if (tutorData) {
+          setTutors(tutorData);
+        }
         
         // 初期の時間スロットを取得
         if (selectedDate) {
           fetchTimeSlots(selectedDate, selectedTutor, selectedSubject);
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("データ取得エラー:", error);
-        setDbError("データベースに接続できません。システム管理者にお問い合わせください。");
         toast({
-          title: "接続エラー",
-          description: "データベースに接続できません。",
+          title: "エラー",
+          description: "データの読み込みに失敗しました",
           variant: "destructive",
         });
       } finally {
@@ -97,33 +130,47 @@ export default function BookingPage() {
 
   // 日付、講師、科目が変更されたら時間スロットを再取得
   const fetchTimeSlots = async (date: Date, tutorId: string, subject: string) => {
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    
-    // ダミーの時間スロットを生成
-    const dummySlots: TimeSlot[] = [];
-    
-    // 9:00から17:00まで1時間おきに生成
-    for (let hour = 9; hour < 17; hour++) {
-      const startHour = `${hour.toString().padStart(2, '0')}:00`;
-      const endHour = `${(hour + 1).toString().padStart(2, '0')}:00`;
+    try {
+      const formattedDate = format(date, 'yyyy-MM-dd');
       
-      // ランダムに利用可能かどうかを設定
-      const isAvailable = Math.random() > 0.3;
+      // 講師シフトから利用可能な時間スロットを取得
+      let query = supabase
+        .from('tutor_shifts')
+        .select(`
+          *,
+          tutors (id, firstName, lastName, specialization)
+        `)
+        .eq('date', formattedDate)
+        .eq('isBooked', false);
       
       // 講師フィルターを適用
-      const targetTutorId = tutorId === "all" ? Math.floor(Math.random() * 3) + 1 : parseInt(tutorId);
+      if (tutorId !== "all") {
+        query = query.eq('tutorId', parseInt(tutorId));
+      }
       
-      dummySlots.push({
-        id: `slot-${formattedDate}-${hour}`,
-        tutorId: targetTutorId,
-        date: date,
-        startTime: startHour,
-        endTime: endHour,
-        isAvailable: isAvailable,
-      });
+      const { data: shiftData, error: shiftError } = await query;
+      
+      if (shiftError) {
+        console.error("シフト情報取得エラー:", shiftError);
+        setTimeSlots([]);
+        return;
+      }
+      
+      // シフトデータをTimeSlot形式に変換
+      const slots: TimeSlot[] = (shiftData || []).map(shift => ({
+        id: shift.id.toString(),
+        tutorId: shift.tutorId,
+        date: new Date(shift.date),
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        isAvailable: !shift.isBooked,
+      }));
+      
+      setTimeSlots(slots);
+    } catch (error) {
+      console.error("時間スロット取得エラー:", error);
+      setTimeSlots([]);
     }
-    
-    setTimeSlots(dummySlots);
   };
 
   // 日付が変更されたときの処理
@@ -176,12 +223,46 @@ export default function BookingPage() {
         return;
       }
       
-      // 実際の実装では、ここでサーバーに予約データを送信
-      // 現在はダミー処理
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 予約データの作成
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert([
+          {
+            studentId: userId,
+            tutorId: selectedTimeSlot.tutorId,
+            date: format(selectedDate, 'yyyy-MM-dd'),
+            startTime: selectedTimeSlot.startTime,
+            endTime: selectedTimeSlot.endTime,
+            status: 'pending',
+            ticketsUsed: 1,
+          }
+        ]);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // シフトを予約済みに更新
+      const { error: shiftError } = await supabase
+        .from('tutor_shifts')
+        .update({ isBooked: true })
+        .eq('id', parseInt(selectedTimeSlot.id));
+        
+      if (shiftError) {
+        console.error("シフト更新エラー:", shiftError);
+      }
       
       // チケット残数を更新
       const newRemainingTickets = remainingTickets - 1;
+      const { error: ticketError } = await supabase
+        .from('student_tickets')
+        .update({ quantity: newRemainingTickets })
+        .eq('studentId', userId);
+        
+      if (ticketError) {
+        console.error("チケット更新エラー:", ticketError);
+      }
+      
       setRemainingTickets(newRemainingTickets);
       
       toast({
@@ -213,24 +294,6 @@ export default function BookingPage() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <p className="text-gray-600">読み込み中...</p>
         </div>
-      </div>
-    );
-  }
-
-  if (dbError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle className="text-red-600">接続エラー</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 mb-4">{dbError}</p>
-            <Button onClick={() => router.push('/dashboard')} className="w-full">
-              ダッシュボードに戻る
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     );
   }
