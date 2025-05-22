@@ -45,7 +45,6 @@ type BookingSelection = {
 
 type SchoolLevel = "elementary" | "junior_high" | "high_school";
 
-// Replit版から移植した定数
 const timeSlots = [
   "16:00 - 17:30",
   "18:00 - 19:30", 
@@ -59,9 +58,9 @@ const subjectsBySchoolLevel = {
 };
 
 const getSchoolLevelFromGrade = (grade: string): SchoolLevel => {
-  if (grade.includes("小") || grade.includes("1年") || grade.includes("2年") || grade.includes("3年") || grade.includes("4年") || grade.includes("5年") || grade.includes("6年")) {
+  if (grade.includes("小")) {
     return "elementary";
-  } else if (grade.includes("中") || grade.includes("7年") || grade.includes("8年") || grade.includes("9年")) {
+  } else if (grade.includes("中")) {
     return "junior_high";
   } else {
     return "high_school";
@@ -257,6 +256,7 @@ export default function BookingPage() {
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   const [isLoadingTutors, setIsLoadingTutors] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [parentProfile, setParentProfile] = useState<any>(null); 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [selectedBookings, setSelectedBookings] = useState<BookingSelection[]>([]);
@@ -308,6 +308,17 @@ export default function BookingPage() {
         }
         
         setUser(userData);
+
+        // 保護者プロフィール取得を追加
+        const { data: parentData, error: parentError } = await supabase
+          .from('parent_profiles')
+          .select('*')
+          .eq('userId', userData.id)
+          .single();
+          
+        if (!parentError && parentData) {
+          setParentProfile(parentData);
+        }
         
         // 生徒アカウントの場合は初期設定
         if (userData.role === 'student') {
@@ -334,14 +345,14 @@ export default function BookingPage() {
   // 生徒情報を取得
   useEffect(() => {
     const fetchStudents = async () => {
-      if (!user || user.role === 'student') return;
+      if (!user || user.role === 'student' || !parentProfile) return;
       
       setIsLoadingStudents(true);
       try {
         const { data: studentsData, error: studentsError } = await supabase
-          .from('students')
+          .from('student_profile')
           .select('*')
-          .eq('parentId', user.id);
+          .eq('parentId', parentProfile.id);
           
         if (!studentsError && studentsData) {
           // チケット数を含める（実装に応じて調整）
@@ -359,7 +370,7 @@ export default function BookingPage() {
     };
     
     fetchStudents();
-  }, [user]);
+  }, [user, parentProfile]);
 
   // 生徒選択時の処理（保護者アカウント）
   useEffect(() => {
