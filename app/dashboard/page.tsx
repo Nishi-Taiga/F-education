@@ -66,37 +66,41 @@ export default function DashboardPage() {
 
   // 生徒と利用可能チケットを取得する関数（コード重複を減らすため）
   const fetchStudentsAndTickets = async (parentId: number) => {
-    let students: Student[] = [];
-    let tickets = 0;
-    
-    // 保護者の場合、生徒データを取得
+    let students: (Student & { ticketCount?: number })[] = [];
+    let totalTickets = 0;
+
+    // student_profileから生徒一覧を取得
     const { data: studentsData, error: studentsError } = await supabase
-      .from('students')
+      .from('student_profile')
       .select('*')
       .eq('parent_id', parentId);
 
     if (studentsError) {
       console.error('Error fetching students:', studentsError);
     } else if (studentsData && studentsData.length > 0) {
-      students = studentsData;
-      setStudents(studentsData);
+      // 各生徒ごとにチケット残数を取得
+      const studentsWithTickets = await Promise.all(
+        studentsData.map(async (student: any) => {
+          const { data: ticketData, error: ticketError } = await supabase
+            .from('student_tickets')
+            .select('quantity')
+            .eq('student_id', student.id)
+            .maybeSingle();
+          let ticketCount = 0;
+          if (ticketError) {
+            console.error('Error fetching tickets:', ticketError);
+          } else if (ticketData) {
+            ticketCount = ticketData.quantity || 0;
+            totalTickets += ticketCount;
+          }
+          return { ...student, ticketCount };
+        })
+      );
+      students = studentsWithTickets;
+      setStudents(studentsWithTickets);
+      setAvailableTickets(totalTickets);
     }
-
-    // チケット残数取得
-    const { data: ticketsData, error: ticketsError } = await supabase
-      .from('student_tickets')
-      .select('quantity')
-      .eq('parent_id', parentId)
-      .maybeSingle();
-
-    if (ticketsError) {
-      console.error('Error fetching tickets:', ticketsError);
-    } else if (ticketsData) {
-      tickets = ticketsData.quantity || 0;
-      setAvailableTickets(tickets);
-    }
-    
-    return { students, tickets };
+    return { students, tickets: totalTickets };
   };
 
   // ユーザープロフィールを取得
