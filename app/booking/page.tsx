@@ -410,6 +410,8 @@ export default function BookingPage() {
       
       setIsLoadingTutors(true);
       try {
+        // time_slotの値（例: 16:00-17:30）に合わせてスペースを除去
+        const normalizedTimeSlot = selectedTimeSlot.replace(/\s/g, "");
         const { data: shiftsData, error: shiftsError } = await supabase
           .from('tutor_shifts')
           .select(`
@@ -417,7 +419,7 @@ export default function BookingPage() {
             tutor_profile (id, first_name, last_name, specialization)
           `)
           .eq('date', selectedDate)
-          .eq('time_slot', selectedTimeSlot)
+          .eq('time_slot', normalizedTimeSlot)
           .eq('is_available', true);
           
         if (shiftsError) {
