@@ -53,34 +53,40 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
     // 月の最初と最後の日を取得
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
-    
-    // 前月の最後の日曜日を計算
-    // 月の最初の日の曜日を取得（0は日曜日）
-    const startDay = getDay(monthStart);
-    // 日曜日でない場合は前の日曜日まで戻る
-    let calendarStart = monthStart;
-    if (startDay > 0) {
-      // startDay日分前に戻る
-      calendarStart = subDays(monthStart, startDay);
+
+    // バリデーション: 日付が不正なら空配列
+    if (
+      !monthStart ||
+      !monthEnd ||
+      isNaN(monthStart.getTime()) ||
+      isNaN(monthEnd.getTime()) ||
+      monthEnd < monthStart
+    ) {
+      setCalendarDays([]);
+      return;
     }
-    
-    // 月の最後の日を土曜日までに調整する
-    // 月の最後の日の曜日を取得（0は日曜日、6は土曜日）
-    const endDay = getDay(monthEnd);
-    let calendarEnd = monthEnd;
-    
-    if (endDay < 6) {
-      // 土曜日でない場合、6 - endDay日分先に進む（土曜日までを含める）
-      calendarEnd = addDays(monthEnd, 6 - endDay);
-    } else if (endDay > 6) {
-      // 不正な値の場合（通常は発生しない）、土曜日に調整
-      calendarEnd = addDays(monthEnd, 6 - (endDay % 7));
+
+    try {
+      // 前月の最後の日曜日を計算
+      const startDay = getDay(monthStart);
+      let calendarStart = monthStart;
+      if (startDay > 0) {
+        calendarStart = subDays(monthStart, startDay);
+      }
+      const endDay = getDay(monthEnd);
+      let calendarEnd = monthEnd;
+      if (endDay < 6) {
+        calendarEnd = addDays(monthEnd, 6 - endDay);
+      } else if (endDay > 6) {
+        calendarEnd = addDays(monthEnd, 6 - (endDay % 7));
+      }
+      // endDay === 6 (土曜日)の場合は何もしない
+      const daysInCalendar = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+      setCalendarDays(daysInCalendar);
+    } catch (e) {
+      setCalendarDays([]);
+      console.error('カレンダー日付生成エラー:', e);
     }
-    // endDay === 6 (土曜日)の場合は何もしない（すでに土曜日で終わっている）
-    
-    // 計算された期間の日付配列を生成
-    const daysInCalendar = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-    setCalendarDays(daysInCalendar);
   }, [currentDate]);
 
   const goToPreviousMonth = () => {
