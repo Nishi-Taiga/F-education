@@ -410,8 +410,6 @@ export default function BookingPage() {
       
       setIsLoadingTutors(true);
       try {
-        const startTime = selectedTimeSlot.split(' - ')[0];
-        
         const { data: shiftsData, error: shiftsError } = await supabase
           .from('tutor_shifts')
           .select(`
@@ -419,8 +417,8 @@ export default function BookingPage() {
             tutor_profile (id, first_name, last_name, specialization)
           `)
           .eq('date', selectedDate)
-          .eq('startTime', startTime)
-          .eq('isBooked', false);
+          .eq('time_slot', selectedTimeSlot)
+          .eq('is_available', true);
           
         if (shiftsError) {
           console.error("講師取得エラー:", shiftsError);
