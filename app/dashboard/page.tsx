@@ -444,7 +444,7 @@ export default function DashboardPage() {
         <div className="flex space-x-4">
           <button 
             className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md"
-            onClick={() => router.reload()}
+            onClick={() => window.location.reload()}
           >
             再読み込み
           </button>
@@ -496,14 +496,71 @@ export default function DashboardPage() {
     );
   }
 
-  // 標準の表示
+  // ここにhome-page.tsxのUIを移植します
   return (
-    <Dashboard
-      userProfile={userProfile}
-      students={students}
-      tutorProfile={tutorProfile}
-      parentProfile={parentProfile}
-      availableTickets={availableTickets}
-    />
+    <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
+      {/* 共通ヘッダー */}
+      {/* <CommonHeader /> ← 必要に応じてインポート・実装 */}
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">
+        {/* チケット残数表示 (ユーザーが親の場合) */}
+        {userProfile?.role === 'parent' && (
+          <div className="flex justify-end mb-4">
+            <div className="flex items-center">
+              <div className="mr-1 bg-green-50 p-0.5 rounded-full">
+                {/* <Ticket className="text-green-600 h-3 w-3" /> ← 必要に応じてインポート */}
+              </div>
+              <div className="flex flex-wrap gap-1 ml-1">
+                {/* 生徒ごとのチケット残数をここに表示（ロジックは後で追加） */}
+                <div className="flex items-center bg-gray-50 py-0.5 px-1.5 rounded-md whitespace-nowrap text-xs">
+                  <span className="font-medium truncate">生徒名:</span>
+                  <span className="font-bold ml-1">0枚</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* チケット残数表示 (ユーザーが生徒の場合) */}
+        {userProfile?.role === 'student' && (
+          <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-800">チケット残数</h3>
+              <div className="flex items-center bg-green-50 py-1 px-3 rounded-full">
+                {/* <Ticket className="text-green-600 h-4 w-4 mr-1.5" /> */}
+                <span className="font-bold text-green-700">0枚</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 予約一覧（例：カードやカレンダー） */}
+        <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-base font-bold text-gray-900">予約済み授業</h3>
+          </div>
+          {/* ここに予約一覧やカレンダーを配置（ロジックは後で追加） */}
+          <div className="py-8 text-center text-gray-500">予約がありません</div>
+        </div>
+
+        {/* アクションボタン例（チケット購入・授業予約・レポート一覧） */}
+        <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-md py-3 pb-4 mt-4 z-10">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
+              <button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+                <span className="text-xs md:text-sm font-medium text-gray-900">チケット購入</span>
+              </button>
+              <button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+                <span className="text-xs md:text-sm font-medium text-gray-900">授業予約</span>
+              </button>
+              <button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+                <span className="text-xs md:text-sm font-medium text-gray-900">授業レポート</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }
