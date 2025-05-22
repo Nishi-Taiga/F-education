@@ -15,8 +15,8 @@ import { Label } from "@/components/ui/label";
 // Replit版から移植した型定義
 type Student = {
   id: number;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   grade: string;
   ticketCount?: number;
 };
@@ -416,7 +416,7 @@ export default function BookingPage() {
           .from('tutor_shifts')
           .select(`
             *,
-            tutors (id, firstName, lastName, specialization)
+            tutors (id, first_name, last_name, specialization)
           `)
           .eq('date', selectedDate)
           .eq('startTime', startTime)
@@ -435,7 +435,7 @@ export default function BookingPage() {
         }).map(shift => ({
           tutorId: shift.tutorId,
           shiftId: shift.id,
-          name: `${shift.tutors.lastName} ${shift.tutors.firstName}`,
+          name: `${shift.tutors.last_name} ${shift.tutors.first_name}`,
           subject: selectedSubject,
           specialization: shift.tutors.specialization
         }));
@@ -507,7 +507,7 @@ export default function BookingPage() {
     if (selectedStudentId && students) {
       const student = students.find((s: Student) => s.id === selectedStudentId);
       if (student) {
-        studentName = `${student.lastName} ${student.firstName}`;
+        studentName = `${student.last_name} ${student.first_name}`;
       }
     }
     
@@ -699,7 +699,7 @@ export default function BookingPage() {
                         {students.map((student) => (
                           <SelectItem key={student.id} value={student.id.toString()}>
                             <div className="flex justify-between items-center w-full">
-                              <span>{student.lastName} {student.firstName}（残り{('ticketCount' in student ? (student as any).ticketCount : 0)}枚）</span>
+                              <span>{student.last_name} {student.first_name}（残り{('ticketCount' in student ? (student as any).ticketCount : 0)}枚）</span>
                             </div>
                           </SelectItem>
                         ))}
@@ -1035,7 +1035,7 @@ export default function BookingPage() {
                     // 生徒のチケットが予約数より少ない場合
                     if (studentTicketCount < selectedBookings.length) {
                       hasEnoughTickets = false;
-                      ticketErrorMessage = `${selectedStudent.lastName} ${selectedStudent.firstName}のチケットが不足しています（残り${studentTicketCount}枚、必要${selectedBookings.length}枚）`;
+                      ticketErrorMessage = `${selectedStudent.last_name} ${selectedStudent.first_name}のチケットが不足しています（残り${studentTicketCount}枚、必要${selectedBookings.length}枚）`;
                     }
                   }
                 } 
