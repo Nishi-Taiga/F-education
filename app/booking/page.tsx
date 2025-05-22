@@ -481,8 +481,8 @@ export default function BookingPage() {
   };
 
   // 講師選択した時の処理
-  const handleTutorSelection = () => {
-    if (!selectedStudentId || !selectedSubject || !selectedDate || !selectedTimeSlot || !selectedTutorId || !selectedShiftId) {
+  const handleTutorSelection = (tutorId?: number, shiftId?: number) => {
+    if (!selectedStudentId || !selectedSubject || !selectedDate || !selectedTimeSlot || !tutorId || !shiftId) {
       toast({
         title: "予約情報が不足しています",
         description: "生徒、科目、日時、講師をすべて選択してください",
@@ -492,7 +492,7 @@ export default function BookingPage() {
     }
     
     // 選択済みの講師情報を取得
-    const tutor = availableTutors?.find((t: any) => t.tutorId === selectedTutorId && t.shiftId === selectedShiftId);
+    const tutor = availableTutors?.find((t: any) => t.tutorId === tutorId && t.shiftId === shiftId);
     if (!tutor) {
       toast({
         title: "講師情報が見つかりません",
@@ -522,8 +522,8 @@ export default function BookingPage() {
       studentId: selectedStudentId,
       studentName,
       subject: selectedSubject,
-      tutorId: selectedTutorId,
-      tutorShiftId: selectedShiftId,
+      tutorId,
+      tutorShiftId: shiftId,
       tutorName: tutor.name
     }]);
     
@@ -918,12 +918,7 @@ export default function BookingPage() {
                                   ? 'bg-primary/10 border-primary' 
                                   : 'bg-white hover:bg-gray-50'}`}
                               onClick={() => {
-                                setSelectedTutorId(tutor.tutorId);
-                                setSelectedShiftId(tutor.shiftId);
-                                // カードクリック時に即予約
-                                setTimeout(() => {
-                                  handleTutorSelection();
-                                }, 0);
+                                handleTutorSelection(tutor.tutorId, tutor.shiftId);
                               }}
                             >
                               <div className="font-medium text-gray-900">{tutor.name}</div>
