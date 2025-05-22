@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase/client";
 import { Dashboard } from "@/components/dashboard";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { CalendarView, ExtendedBooking } from "@/components/calendar-view";
+import { BookingCard } from "@/components/booking-card";
 
 // ユーザー情報の型
 type UserProfile = {
@@ -539,14 +541,30 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 予約一覧（例：カードやカレンダー） */}
+        {/* カレンダー表示 */}
         <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-base font-bold text-gray-900">予約済み授業</h3>
           </div>
-          {/* ここに予約一覧やカレンダーを配置（ロジックは後で追加） */}
-          <div className="py-8 text-center text-gray-500">予約がありません</div>
+          <CalendarView 
+            bookings={[] as ExtendedBooking[]}
+            showLegend={!!userProfile && userProfile.role === 'tutor'}
+            interactive={!!userProfile && userProfile.role === 'tutor'}
+            // onBookingClick={...} // 詳細表示等のハンドラ
+          />
         </div>
+
+        {/* 予約一覧（保護者・生徒向け） */}
+        {userProfile?.role !== 'tutor' && (
+          <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-base font-bold text-gray-900">予約一覧</h3>
+            </div>
+            <div className="space-y-2">
+              {/* ここにBookingCardで予約リストを表示 */}
+            </div>
+          </div>
+        )}
 
         {/* アクションボタン例（チケット購入・授業予約・レポート一覧） */}
         <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-md py-3 pb-4 mt-4 z-10">
