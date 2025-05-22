@@ -920,6 +920,10 @@ export default function BookingPage() {
                               onClick={() => {
                                 setSelectedTutorId(tutor.tutorId);
                                 setSelectedShiftId(tutor.shiftId);
+                                // カードクリック時に即予約
+                                setTimeout(() => {
+                                  handleTutorSelection();
+                                }, 0);
                               }}
                             >
                               <div className="font-medium text-gray-900">{tutor.name}</div>
@@ -937,14 +941,6 @@ export default function BookingPage() {
                               </div>
                             </div>
                           ))}
-                          
-                          <Button
-                            className="w-full mt-3"
-                            disabled={!selectedTutorId || !selectedShiftId}
-                            onClick={handleTutorSelection}
-                          >
-                            この講師で予約する
-                          </Button>
                         </div>
                       ) : (
                         <div className="p-4 border rounded-md bg-yellow-50 text-yellow-700 text-sm">
