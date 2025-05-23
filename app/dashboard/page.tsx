@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Ticket, Calendar, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { SimpleCalendar } from "@/components/simple-calendar";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -44,6 +45,8 @@ export default function DashboardPage() {
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
       <CommonHeader />
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">
+        {/* カレンダー表示 */}
+        <SimpleCalendar />
         {/* チケット残数表示 (親/生徒) */}
         {user?.role === 'parent' && (
           <div className="flex justify-end mb-4">
