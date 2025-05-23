@@ -46,6 +46,7 @@ export default function TicketPurchasePage() {
   const [cartItems, setCartItems] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [userId, setUserId] = useState(null);
   const router = useRouter();
 
   // 生徒・チケット残数をSupabaseから取得
@@ -54,6 +55,13 @@ export default function TicketPurchasePage() {
       // 認証情報からparent_profile取得
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+      // usersテーブルのid取得
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', session.user.id)
+        .single();
+      if (userRow) setUserId(userRow.id);
       const { data: parent, error: parentError } = await supabase
         .from('parent_profile')
         .select('*')
@@ -238,6 +246,7 @@ export default function TicketPurchasePage() {
                       for (const item of cartItems) {
                         await supabase.from('student_tickets').insert({
                           student_id: item.studentId,
+                          user_id: userId,
                           quantity: item.quantity,
                           description: item.course ? item.course : "通常コース",
                         });
