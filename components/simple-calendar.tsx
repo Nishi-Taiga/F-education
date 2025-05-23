@@ -27,6 +27,7 @@ interface SimpleCalendarProps {
 }
 
 export const SimpleCalendar: React.FC<SimpleCalendarProps> = ({ bookings = [] }) => {
+  // todayを毎回レンダリング時に取得
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-indexed
