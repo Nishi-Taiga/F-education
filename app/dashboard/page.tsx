@@ -46,7 +46,7 @@ export default function DashboardPage() {
       <CommonHeader />
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">
         {/* カレンダー表示 */}
-        <SimpleCalendar />
+        <SimpleCalendar bookings={dummyBookings} />
         {/* チケット残数表示 (親/生徒) */}
         {user?.role === 'parent' && (
           <div className="flex justify-end mb-4">

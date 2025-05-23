@@ -12,7 +12,21 @@ function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
-export const SimpleCalendar: React.FC = () => {
+// 予約データ型
+export type CalendarBooking = {
+  id: string;
+  date: Date;
+  startTime: string;
+  endTime: string;
+  subject: string;
+  [key: string]: any;
+};
+
+interface SimpleCalendarProps {
+  bookings?: CalendarBooking[];
+}
+
+export const SimpleCalendar: React.FC<SimpleCalendarProps> = ({ bookings = [] }) => {
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-indexed
@@ -60,6 +74,17 @@ export const SimpleCalendar: React.FC = () => {
     return thisDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
   };
 
+  // 指定日付の予約一覧
+  const getBookingsForDay = (day: number) => {
+    return bookings.filter(b => {
+      return (
+        b.date.getFullYear() === currentYear &&
+        b.date.getMonth() === currentMonth &&
+        b.date.getDate() === day
+      );
+    });
+  };
+
   return (
     <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto bg-white rounded-lg shadow p-4 mb-6">
       <div className="flex items-center justify-between mb-2">
@@ -69,7 +94,7 @@ export const SimpleCalendar: React.FC = () => {
         </div>
         <button onClick={handleNextMonth} className="px-2 py-1 rounded hover:bg-gray-100">→</button>
       </div>
-      <table className="w-full text-center select-none table-fixed" style={{ minHeight: '340px' }}>
+      <table className="w-full text-center select-none table-fixed" style={{ minHeight: '510px' }}>
         <thead>
           <tr>
             {WEEKDAYS.map((wd, idx) => (
@@ -99,11 +124,12 @@ export const SimpleCalendar: React.FC = () => {
                   currentMonth === today.getMonth() &&
                   day === today.getDate();
                 const isPast = day && isPastDay(day);
+                const dayBookings = day ? getBookingsForDay(day) : [];
                 return (
                   <td
                     key={j}
                     className={
-                      "py-1 w-10 h-12 sm:w-16 sm:h-16 "+
+                      "align-top py-1 w-10 h-24 sm:w-16 sm:h-24 "+
                       (isToday
                         ? " bg-blue-500 text-white rounded-full font-bold"
                         : isPast
@@ -113,7 +139,16 @@ export const SimpleCalendar: React.FC = () => {
                         : "")
                     }
                   >
-                    {day ? day : ""}
+                    <div>{day ? day : ""}</div>
+                    {dayBookings.length > 0 && (
+                      <div className="mt-1 flex flex-col gap-0.5">
+                        {dayBookings.map(b => (
+                          <div key={b.id} className="text-[10px] sm:text-xs bg-blue-100 text-blue-700 rounded px-1 py-0.5 truncate">
+                            {b.subject}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </td>
                 );
               })}
