@@ -9,6 +9,24 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { CalendarView } from "@/components/calendar-view";
 import { BookingCard } from "@/components/booking-card";
+import { BookingCancellationModal } from "@/components/booking-cancellation-modal";
+import { ReportViewModal } from "@/components/report-view-modal";
+import { BookingDetailModal } from "@/components/booking-detail-modal";
+import { CommonHeader } from "@/components/common-header";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Ticket, CalendarCheck, Settings, Plus, UserCircle, ClipboardList, UserCog, Clock, BookOpen, Scroll, MapPin, GraduationCap, Copy, Check, FileText } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
+import type { Booking, Student } from "@shared/schema";
+import type { ExtendedBooking } from "@/components/calendar-view";
 
 // ユーザー情報の型
 type UserProfile = {
@@ -71,7 +89,7 @@ export default function DashboardPage() {
   useEffect(() => { setMounted(true); }, []);
 
   // ダミーの予約データ（見た目確認用）
-  const dummyBookings = [
+  const dummyBookings: ExtendedBooking[] = [
     {
       id: 1,
       userId: 1,
@@ -541,20 +559,16 @@ export default function DashboardPage() {
   // ここにhome-page.tsxのUIを移植します
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
-      {/* 共通ヘッダー */}
-      {/* <CommonHeader /> ← 必要に応じてインポート・実装 */}
-
-      {/* Main Content */}
+      <CommonHeader />
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto flex flex-col">
-        {/* チケット残数表示 (ユーザーが親の場合) */}
+        {/* チケット残数表示 (親/生徒) */}
         {userProfile?.role === 'parent' && (
           <div className="flex justify-end mb-4">
             <div className="flex items-center">
               <div className="mr-1 bg-green-50 p-0.5 rounded-full">
-                {/* <Ticket className="text-green-600 h-3 w-3" /> ← 必要に応じてインポート */}
+                <Ticket className="text-green-600 h-3 w-3" />
               </div>
               <div className="flex flex-wrap gap-1 ml-1">
-                {/* 生徒ごとのチケット残数をここに表示（ロジックは後で追加） */}
                 <div className="flex items-center bg-gray-50 py-0.5 px-1.5 rounded-md whitespace-nowrap text-xs">
                   <span className="font-medium truncate">生徒名:</span>
                   <span className="font-bold ml-1">0枚</span>
@@ -563,60 +577,51 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
-
-        {/* チケット残数表示 (ユーザーが生徒の場合) */}
         {userProfile?.role === 'student' && (
           <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-gray-800">チケット残数</h3>
               <div className="flex items-center bg-green-50 py-1 px-3 rounded-full">
-                {/* <Ticket className="text-green-600 h-4 w-4 mr-1.5" /> */}
+                <Ticket className="text-green-600 h-4 w-4 mr-1.5" />
                 <span className="font-bold text-green-700">0枚</span>
               </div>
             </div>
           </div>
         )}
-
-        {/* カレンダー表示 */}
-        <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
+        {/* カレンダー */}
+        <Card className="p-3 mb-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-base font-bold text-gray-900">予約済み授業</h3>
           </div>
-          {mounted && (
-            // @ts-ignore
-            <CalendarView
-              bookings={dummyBookings}
-              showLegend={!!userProfile && userProfile.role === 'tutor'}
-              interactive={!!userProfile && userProfile.role === 'tutor'}
-            />
-          )}
-        </div>
-
+          <CalendarView bookings={dummyBookings} />
+        </Card>
         {/* 予約一覧（保護者・生徒向け） */}
         {userProfile?.role !== 'tutor' && (
-          <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
+          <Card className="p-3 mb-4">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-base font-bold text-gray-900">予約一覧</h3>
             </div>
             <div className="space-y-2">
-              {/* ここにBookingCardで予約リストを表示 */}
+              {/* BookingCardで予約リストを表示（ダミー） */}
+              {dummyBookings.map(booking => (
+                <BookingCard key={booking.id} booking={booking} onClick={() => {}} />
+              ))}
             </div>
-          </div>
+          </Card>
         )}
-
-        {/* アクションボタン例（チケット購入・授業予約・レポート一覧） */}
+        {/* アクションボタン例 */}
         <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-md py-3 pb-4 mt-4 z-10">
           <div className="max-w-7xl mx-auto px-4">
             <div className="grid grid-cols-3 gap-2 md:gap-3">
-              <button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+              <Button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
                 <span className="text-xs md:text-sm font-medium text-gray-900">チケット購入</span>
-              </button>
-              <button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+              </Button>
+              <Button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
                 <span className="text-xs md:text-sm font-medium text-gray-900">授業予約</span>
-              </button>
-              <button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+              </Button>
+              <Button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
                 <span className="text-xs md:text-sm font-medium text-gray-900">授業レポート</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
