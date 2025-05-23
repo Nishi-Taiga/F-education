@@ -40,9 +40,9 @@ export type ExtendedBooking = Omit<Booking, 'createdAt'> & {
 export interface CalendarViewProps {
   bookings: ExtendedBooking[];
   onSelectDate?: (date: string) => void;
-  onBookingClick?: (booking: ExtendedBooking) => void; // 予約クリック時のコールバック
+  onBookingClick?: (booking: ExtendedBooking) => void;
   interactive?: boolean;
-  showLegend?: boolean; // 凡例を表示するかどうか
+  showLegend?: boolean; // ← これが必須
 }
 
 export function CalendarView({ bookings, onSelectDate, onBookingClick, interactive = false, showLegend = false }: CalendarViewProps) {
