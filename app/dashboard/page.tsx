@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import { Dashboard } from "@/components/dashboard";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { CalendarView, ExtendedBooking } from "@/components/calendar-view";
+import { CalendarView } from "@/components/calendar-view";
 import { BookingCard } from "@/components/booking-card";
 
 // ユーザー情報の型
@@ -65,6 +65,42 @@ export default function DashboardPage() {
   const [parentProfile, setParentProfile] = useState<ParentProfile | null>(null);
   const [availableTickets, setAvailableTickets] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  // SSRエラー回避用: マウント後のみカレンダー描画
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  // ダミーの予約データ（見た目確認用）
+  const dummyBookings = [
+    {
+      id: 1,
+      userId: 1,
+      tutorId: 1,
+      studentId: 1,
+      date: new Date().toISOString().slice(0, 10),
+      timeSlot: "16:00-17:30",
+      subject: "数学",
+      status: "confirmed",
+      reportStatus: null,
+      reportContent: null,
+      createdAt: new Date().toISOString(),
+      studentName: "山田 太郎"
+    },
+    {
+      id: 2,
+      userId: 1,
+      tutorId: 1,
+      studentId: 2,
+      date: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+      timeSlot: "18:00-19:30",
+      subject: "英語",
+      status: "confirmed",
+      reportStatus: null,
+      reportContent: null,
+      createdAt: new Date().toISOString(),
+      studentName: "佐藤 花子"
+    }
+  ];
 
   // 生徒と利用可能チケットを取得する関数（コード重複を減らすため）
   const fetchStudentsAndTickets = async (parentId: number) => {
@@ -546,12 +582,14 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-base font-bold text-gray-900">予約済み授業</h3>
           </div>
-          <CalendarView 
-            bookings={[] as ExtendedBooking[]}
-            showLegend={!!userProfile && userProfile.role === 'tutor'}
-            interactive={!!userProfile && userProfile.role === 'tutor'}
-            // onBookingClick={...} // 詳細表示等のハンドラ
-          />
+          {mounted && (
+            // @ts-ignore
+            <CalendarView
+              bookings={dummyBookings}
+              showLegend={!!userProfile && userProfile.role === 'tutor'}
+              interactive={!!userProfile && userProfile.role === 'tutor'}
+            />
+          )}
         </div>
 
         {/* 予約一覧（保護者・生徒向け） */}
