@@ -130,25 +130,34 @@ export const SimpleCalendar: React.FC<SimpleCalendarProps> = ({ bookings = [] })
                     key={j}
                     className={
                       "align-top py-1 w-10 h-24 sm:w-16 sm:h-24 "+
-                      (isToday
-                        ? " bg-blue-500 text-white rounded-full font-bold"
-                        : isPast
+                      (isPast
                         ? " text-gray-300"
                         : day
                         ? " text-gray-900"
                         : "")
                     }
                   >
-                    <div>{day ? day : ""}</div>
-                    {dayBookings.length > 0 && (
-                      <div className="mt-1 flex flex-col gap-0.5">
-                        {dayBookings.map(b => (
-                          <div key={b.id} className="text-[10px] sm:text-xs bg-blue-100 text-blue-700 rounded px-1 py-0.5 truncate">
-                            {b.subject}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex flex-col items-center">
+                      <span
+                        className={
+                          (isToday
+                            ? "inline-block bg-blue-500 text-white rounded-full font-bold "
+                            : "") +
+                          " w-7 h-7 flex items-center justify-center mx-auto mb-0.5"
+                        }
+                      >
+                        {day ? day : ""}
+                      </span>
+                      {dayBookings.length > 0 && (
+                        <div className="flex flex-col gap-0.5">
+                          {dayBookings.map(b => (
+                            <div key={b.id} className="text-[10px] sm:text-xs bg-blue-100 text-blue-700 rounded px-1 py-0.5 truncate">
+                              {b.subject}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </td>
                 );
               })}
