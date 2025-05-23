@@ -52,7 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // ユーザー情報の取得 - この関数は認証情報のみを確認し、必要時に実行される
   const {
     data: user,
     error,
@@ -64,133 +63,91 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // Supabaseのセッションを確認
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (!session) {
           console.log("No active session found");
           return null;
         }
-        
-        console.log("Session found, user email:", session.user.email);
-        console.log("Session user ID:", session.user.id);
-        
-        // まずはusersテーブルからauth_idをチェック
-        const { data: userData, error: userError } = await supabase
-          .from('users')
+        const userId = session.user.id;
+        const userEmail = session.user.email;
+
+        // 1. 講師プロファイル
+        const { data: tutor, error: tutorError } = await supabase
+          .from('tutor_profile')
           .select('*')
-          .eq('auth_id', session.user.id)
+          .eq('user_id', userId)
           .maybeSingle();
-          
-        if (userError) {
-          console.error("Error fetching user by auth_id:", userError);
+        if (tutorError) {
+          console.error("Error fetching tutor_profile:", tutorError);
         }
-        
-        if (userData) {
-          console.log("Found user by auth_id:", userData);
+        if (tutor) {
           return {
-            id: userData.id,
-            auth_id: session.user.id,
-            displayName: userData.display_name || '',
-            username: userData.username || session.user.email,
-            role: userData.role,
-            email: userData.email || session.user.email,
-            profileCompleted: userData.profile_completed
+            id: tutor.id,
+            auth_id: userId,
+            displayName: `${tutor.last_name} ${tutor.first_name}`,
+            username: tutor.email || userEmail,
+            firstName: tutor.first_name,
+            lastName: tutor.last_name,
+            role: 'tutor',
+            email: tutor.email || userEmail,
+            profileCompleted: tutor.profile_completed
           };
         }
-        
-        // auth_idでマッチするデータがない場合は、メールアドレスで検索
-        const { data: userDataByEmail, error: userErrorByEmail } = await supabase
-          .from('users')
+
+        // 2. 保護者プロファイル
+        const { data: parent, error: parentError } = await supabase
+          .from('parent_profile')
           .select('*')
-          .eq('email', session.user.email)
+          .eq('user_id', userId)
           .maybeSingle();
-          
-        if (userErrorByEmail) {
-          console.error("Error fetching user by email:", userErrorByEmail);
+        if (parentError) {
+          console.error("Error fetching parent_profile:", parentError);
         }
-        
-        if (userDataByEmail) {
-          console.log("Found user by email:", userDataByEmail);
-          
-          // auth_idを更新
-          const { error: updateError } = await supabase
-            .from('users')
-            .update({ auth_id: session.user.id })
-            .eq('id', userDataByEmail.id);
-            
-          if (updateError) {
-            console.error("Error updating auth_id:", updateError);
-          }
-          
+        if (parent) {
           return {
-            id: userDataByEmail.id,
-            auth_id: session.user.id,
-            displayName: userDataByEmail.display_name || '',
-            username: userDataByEmail.username || session.user.email,
-            role: userDataByEmail.role,
-            email: userDataByEmail.email || session.user.email,
-            profileCompleted: userDataByEmail.profile_completed
-          };
-        }
-        
-        // ユーザーが存在しない場合は基本情報のみでユーザーエントリを作成
-        console.log("Creating new user entry for:", session.user.email);
-        const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert([{
-            auth_id: session.user.id,
-            email: session.user.email,
-            username: session.user.email,
-            role: 'parent',  // デフォルトロール
-            profile_completed: false
-          }])
-          .select();
-          
-        if (insertError) {
-          console.error("Error creating new user:", insertError);
-          return {
-            id: 0,
-            auth_id: session.user.id,
-            displayName: '',
-            username: session.user.email,
-            firstName: '',
-            lastName: '',
-            role: 'parent', // デフォルト値
-            email: session.user.email,
-            profileCompleted: false
-          };
-        }
-        
-        if (newUser && newUser.length > 0) {
-          return {
-            id: newUser[0].id,
-            auth_id: session.user.id,
-            displayName: '',
-            username: session.user.email,
+            id: parent.id,
+            auth_id: userId,
+            displayName: parent.name,
+            username: parent.email || userEmail,
+            firstName: undefined,
+            lastName: undefined,
             role: 'parent',
-            email: session.user.email,
-            profileCompleted: false
+            email: parent.email || userEmail,
+            profileCompleted: true // parent_profileにprofile_completedがなければtrue固定
           };
         }
-        
-        // 最終的に何かしらのユーザー情報を返す
-        return {
-          id: 0,
-          auth_id: session.user.id,
-          displayName: '',
-          username: session.user.email,
-          firstName: '',
-          lastName: '',
-          role: 'parent', // デフォルト値
-          email: session.user.email,
-          profileCompleted: false
-        };
+
+        // 3. 生徒プロファイル
+        const { data: student, error: studentError } = await supabase
+          .from('student_profile')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (studentError) {
+          console.error("Error fetching student_profile:", studentError);
+        }
+        if (student) {
+          return {
+            id: student.id,
+            auth_id: userId,
+            displayName: `${student.last_name} ${student.first_name}`,
+            username: student.email || userEmail,
+            firstName: student.first_name,
+            lastName: student.last_name,
+            role: 'student',
+            email: student.email || userEmail,
+            profileCompleted: true // student_profileにprofile_completedがなければtrue固定
+          };
+        }
+
+        // どれにも該当しなければnull
+        return null;
       } catch (error) {
         console.error("Error in user query:", error);
         return null;
       }
     },
-    staleTime: 5 * 60 * 1000, // 5分間キャッシュ
-    enabled: false, // 初回は自動実行しない
+    staleTime: 5 * 60 * 1000,
+    enabled: false,
   });
 
   useEffect(() => {

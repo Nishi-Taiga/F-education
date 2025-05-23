@@ -68,49 +68,39 @@ export function CommonHeader({
 
         <div className="flex items-center space-x-2 md:space-x-4">
           {/* ユーザー名表示 */}
-          <span className="text-sm md:text-base text-gray-700 hidden md:inline-block mr-2">
+          <span className="text-sm md:text-base text-gray-700 mr-2">
             {user?.displayName}
           </span>
-          
-          {/* デスクトップのメニュー */}
-          <div className="hidden md:flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                logoutMutation.mutate();
-              }}
-              className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <LogOut className="h-4 w-4 mr-1" />
-              ログアウト
-            </Button>
-          </div>
-
-          {/* モバイルのドロップダウンメニュー */}
-          <div className="md:hidden">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {/* モバイルでユーザー名表示 */}
-                <div className="px-2 py-1.5 text-sm text-gray-700 font-medium border-b mb-1">
-                  {user?.displayName}
-                </div>
-                <DropdownMenuItem onClick={() => navigate("/")}> 
-                  <Home className="h-4 w-4 mr-2" />
-                  ホーム
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { logoutMutation.mutate(); }}>
-                  <LogOut className="h-4 w-4 mr-2 text-red-600" />
-                  ログアウト
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          {/* ハンバーガーメニュー（常時表示） */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => navigate("/tickets")}> 
+                <Ticket className="h-4 w-4 mr-2 text-green-600" />
+                チケット購入
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/booking")}> 
+                <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+                授業予約
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/reports")}> 
+                <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                授業レポート
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")}> 
+                <Settings className="h-4 w-4 mr-2" />
+                設定
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => logoutMutation.mutate()} className="text-red-600 hover:text-red-700">
+                <LogOut className="h-4 w-4 mr-2 text-red-600" />
+                ログアウト
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>
