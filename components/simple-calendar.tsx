@@ -142,10 +142,11 @@ export const SimpleCalendar: React.FC<SimpleCalendarProps> = ({ bookings = [] })
                       <span
                         className={
                           (isToday
-                            ? "inline-block bg-blue-500 text-white rounded-full font-bold "
+                            ? "bg-blue-500 text-white rounded-full font-bold "
                             : "") +
-                          " w-7 h-7 flex items-center justify-center mx-auto mb-0.5"
+                          " text-sm w-6 h-6 flex items-center justify-center mx-auto mb-0.5"
                         }
+                        style={isToday ? { minWidth: '1.5rem', minHeight: '1.5rem', lineHeight: '1.5rem' } : {}}
                       >
                         {day ? day : ""}
                       </span>
