@@ -7,7 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "../components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { 
   Calendar,
@@ -69,79 +69,11 @@ export function CommonHeader({
         <div className="flex items-center space-x-2 md:space-x-4">
           {/* ユーザー名表示 */}
           <span className="text-sm md:text-base text-gray-700 hidden md:inline-block mr-2">
-            {user?.displayName || user?.username}
+            {user?.displayName}
           </span>
           
           {/* デスクトップのメニュー */}
           <div className="hidden md:flex items-center space-x-2">
-            {user?.role !== "tutor" && (
-              <>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => navigate("/booking")}
-                  className="flex items-center gap-1"
-                >
-                  <Calendar className="h-4 w-4 mr-1" />
-                  予約
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => navigate("/tickets")}
-                  className="flex items-center gap-1"
-                >
-                  <Ticket className="h-4 w-4 mr-1" />
-                  チケット
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => navigate("/reports")}
-                  className="flex items-center gap-1"
-                >
-                  <FileText className="h-4 w-4 mr-1" />
-                  レポート
-                </Button>
-              </>
-            )}
-
-            {user?.role === "tutor" && (
-              <>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => navigate("/tutor/profile")}
-                  className="flex items-center gap-1"
-                >
-                  <User className="h-4 w-4 mr-1" />
-                  プロフィール
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => navigate("/tutor/schedule")}
-                  className="flex items-center gap-1"
-                >
-                  <Clock className="h-4 w-4 mr-1" />
-                  スケジュール
-                </Button>
-              </>
-            )}
-
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate("/settings")}
-              className="flex items-center gap-1"
-            >
-              <Settings className="h-4 w-4 mr-1" />
-              設定
-            </Button>
-
             <Button
               variant="ghost"
               size="sm"
@@ -166,57 +98,14 @@ export function CommonHeader({
               <DropdownMenuContent align="end">
                 {/* モバイルでユーザー名表示 */}
                 <div className="px-2 py-1.5 text-sm text-gray-700 font-medium border-b mb-1">
-                  {user?.displayName || user?.username}
+                  {user?.displayName}
                 </div>
-                
-                <DropdownMenuItem onClick={() => navigate("/")}>
+                <DropdownMenuItem onClick={() => navigate("/")}> 
                   <Home className="h-4 w-4 mr-2" />
                   ホーム
                 </DropdownMenuItem>
-
-                {user?.role !== "tutor" && (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate("/booking")}>
-                      <Calendar className="h-4 w-4 mr-2" />
-                      予約
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem onClick={() => navigate("/tickets")}>
-                      <Ticket className="h-4 w-4 mr-2" />
-                      チケット
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem onClick={() => navigate("/reports")}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      レポート
-                    </DropdownMenuItem>
-                  </>
-                )}
-
-                {user?.role === "tutor" && (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate("/tutor/profile")}>
-                      <User className="h-4 w-4 mr-2" />
-                      プロフィール
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem onClick={() => navigate("/tutor/schedule")}>
-                      <Clock className="h-4 w-4 mr-2" />
-                      スケジュール
-                    </DropdownMenuItem>
-                  </>
-                )}
-
-                <DropdownMenuItem onClick={() => navigate("/settings")}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  設定
-                </DropdownMenuItem>
-
-                <DropdownMenuItem 
-                  onClick={() => logoutMutation.mutate()}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
+                <DropdownMenuItem onClick={() => { logoutMutation.mutate(); }}>
+                  <LogOut className="h-4 w-4 mr-2 text-red-600" />
                   ログアウト
                 </DropdownMenuItem>
               </DropdownMenuContent>

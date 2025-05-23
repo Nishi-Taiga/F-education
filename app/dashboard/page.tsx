@@ -6,7 +6,7 @@ import { BookingCard } from "@/components/booking-card";
 import { CommonHeader } from "@/components/common-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Ticket } from "lucide-react";
+import { Ticket, Calendar, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function DashboardPage() {
@@ -88,13 +88,25 @@ export default function DashboardPage() {
         <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-md py-3 pb-4 mt-4 z-10">
           <div className="max-w-7xl mx-auto px-4">
             <div className="grid grid-cols-3 gap-2 md:gap-3">
-              <Button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+              <Button
+                className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                onClick={() => router.push("/tickets")}
+              >
+                <Ticket className="h-4 w-4 mr-2 text-green-600" />
                 <span className="text-xs md:text-sm font-medium text-gray-900">チケット購入</span>
               </Button>
-              <Button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+              <Button
+                className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                onClick={() => router.push("/booking")}
+              >
+                <Calendar className="h-4 w-4 mr-2 text-blue-600" />
                 <span className="text-xs md:text-sm font-medium text-gray-900">授業予約</span>
               </Button>
-              <Button className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+              <Button
+                className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                onClick={() => router.push("/reports")}
+              >
+                <FileText className="h-4 w-4 mr-2 text-gray-600" />
                 <span className="text-xs md:text-sm font-medium text-gray-900">授業レポート</span>
               </Button>
             </div>
