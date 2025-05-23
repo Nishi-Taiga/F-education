@@ -1,477 +1,134 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useToast } from "@/components/ui/use-toast";
+import { Card } from "@/components/ui/card";
+import { Ticket } from "lucide-react";
+import { CommonHeader } from "@/components/common-header";
+
+// ダミー生徒データ
+const dummyStudents = [
+  { id: 1, lastName: "山田", firstName: "太郎", grade: "小学6年", school: "○○小学校" },
+  { id: 2, lastName: "佐藤", firstName: "花子", grade: "中学2年", school: "△△中学校" },
+];
+
+const ticketPrices = {
+  elementary: {
+    4: { price: 17600, discount: "4回セット" },
+    8: { price: 34200, discount: "8回セット" },
+    12: { price: 48600, discount: "12回セット" }
+  },
+  junior_high: {
+    4: { price: 19600, discount: "4回セット" },
+    8: { price: 38000, discount: "8回セット" },
+    12: { price: 54000, discount: "12回セット" }
+  },
+};
 
 export default function TicketPurchasePage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState<number | null>(null);
-  const [quantity, setQuantity] = useState<number>(5);
-  const [paymentMethod, setPaymentMethod] = useState<string>("credit_card");
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [processingPayment, setProcessingPayment] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(dummyStudents[0]);
+  const [selectedType, setSelectedType] = useState("elementary");
+  const [cartItems, setCartItems] = useState([]);
+  const [showModal, setShowModal] = useState(false);
 
-  // 料金設定
-  const pricePerTicket = 3000; // 1枚あたり3000円
-  const discounts = {
-    5: 0, // 5枚: 割引なし
-    10: 0.05, // 10枚: 5%割引
-    20: 0.1, // 20枚: 10%割引
+  // カート追加ダミー
+  const addToCart = (quantity) => {
+    setCartItems([...cartItems, {
+      id: Date.now(),
+      quantity,
+      price: ticketPrices[selectedType][quantity].price,
+      discount: ticketPrices[selectedType][quantity].discount,
+      studentId: selectedStudent.id,
+      studentName: `${selectedStudent.lastName} ${selectedStudent.firstName}`
+    }]);
   };
-
-  // ユーザー情報の取得
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // セッションの確認
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          // 未ログインの場合はホームに戻す
-          router.push('/');
-          return;
-        }
-        
-        // ユーザー情報の取得
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', session.user.email)
-          .single();
-          
-        if (userError) {
-          console.error("ユーザー情報取得エラー:", userError);
-          toast({
-            title: "エラー",
-            description: "ユーザー情報の取得に失敗しました",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        setUserId(userData.id);
-      } catch (error) {
-        console.error("データ取得エラー:", error);
-        toast({
-          title: "エラー",
-          description: "データの読み込みに失敗しました",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchUserData();
-  }, [router, toast]);
-
-  // 数量変更処理
-  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0) {
-      setQuantity(value);
-    }
+  // カート削除ダミー
+  const removeFromCart = (id) => {
+    setCartItems(cartItems.filter(item => item.id !== id));
   };
-
-  // 定義済み数量選択
-  const handlePresetQuantity = (value: number) => {
-    setQuantity(value);
-  };
-
-  // 支払い方法変更
-  const handlePaymentMethodChange = (value: string) => {
-    setPaymentMethod(value);
-  };
-
-  // 割引率を計算
-  const getDiscountRate = (qty: number): number => {
-    if (qty >= 20) return 0.1;
-    if (qty >= 10) return 0.05;
-    return 0;
-  };
-
-  // 合計金額を計算
-  const calculateTotal = (): number => {
-    const discountRate = getDiscountRate(quantity);
-    const subtotal = quantity * pricePerTicket;
-    const discount = subtotal * discountRate;
-    return subtotal - discount;
-  };
-
-  // 購入処理を開始
-  const handlePurchase = () => {
-    if (!userId) return;
-    setShowPaymentModal(true);
-  };
-
-  // 支払い処理
-  const processPayment = async () => {
-    if (!userId) return;
-    
-    try {
-      setProcessingPayment(true);
-      
-      // ここに実際の決済処理が入る
-      // 実装例のため、3秒後に成功する模擬処理
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // 決済成功後、チケットをデータベースに追加
-      const { error } = await supabase
-        .from('student_tickets')
-        .insert([{
-          studentId: userId,
-          quantity: quantity,
-          description: `${quantity}枚チケット購入`,
-        }]);
-        
-      if (error) {
-        throw error;
-      }
-      
-      // 支払い取引記録を追加
-      const { error: transactionError } = await supabase
-        .from('payment_transactions')
-        .insert([{
-          userId: userId,
-          amount: calculateTotal(),
-          currency: 'JPY',
-          status: 'completed',
-          provider: paymentMethod,
-          providerTransactionId: `mock-${Date.now()}`,
-          ticketsPurchased: quantity,
-        }]);
-        
-      if (transactionError) {
-        console.error("取引記録エラー:", transactionError);
-      }
-      
-      setPaymentSuccess(true);
-      toast({
-        title: "購入完了",
-        description: `${quantity}枚のチケットを購入しました。`,
-      });
-    } catch (error: any) {
-      console.error("購入エラー:", error);
-      toast({
-        title: "購入エラー",
-        description: error.message || "チケットの購入に失敗しました",
-        variant: "destructive",
-      });
-      setShowPaymentModal(false);
-    } finally {
-      setProcessingPayment(false);
-    }
-  };
-
-  // 購入完了後の処理
-  const handlePaymentComplete = () => {
-    setShowPaymentModal(false);
-    setPaymentSuccess(false);
-    router.push('/dashboard');
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="loader">読み込み中...</div>
-      </div>
-    );
-  }
 
   return (
-    <div className="container mx-auto p-4 md:py-8 max-w-3xl">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold">チケット購入</h1>
-        <Button onClick={() => router.push('/dashboard')} variant="outline">戻る</Button>
-      </div>
-      
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>チケット購入</CardTitle>
-          <CardDescription>
-            授業を予約するにはチケットが必要です。チケットをまとめて購入すると割引があります。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <Label htmlFor="quantity" className="text-base">購入枚数</Label>
-            <div className="flex items-center space-x-4 mt-2 mb-4">
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={handleQuantityChange}
-                className="w-24"
-              />
-              <span className="text-gray-500">枚</span>
-            </div>
-            
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={quantity === 5 ? "default" : "outline"}
-                size="sm"
-                onClick={() => handlePresetQuantity(5)}
-              >
-                5枚
-              </Button>
-              <Button
-                variant={quantity === 10 ? "default" : "outline"}
-                size="sm"
-                onClick={() => handlePresetQuantity(10)}
-              >
-                10枚 (5%OFF)
-              </Button>
-              <Button
-                variant={quantity === 20 ? "default" : "outline"}
-                size="sm"
-                onClick={() => handlePresetQuantity(20)}
-              >
-                20枚 (10%OFF)
-              </Button>
-            </div>
-          </div>
-          
-          <div className="border-t pt-4">
-            <Label className="text-base">支払い方法</Label>
-            <RadioGroup 
-              value={paymentMethod} 
-              onValueChange={handlePaymentMethodChange}
-              className="mt-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="credit_card" id="credit_card" />
-                <Label htmlFor="credit_card" className="cursor-pointer">
-                  クレジットカード
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="bank_transfer" id="bank_transfer" />
-                <Label htmlFor="bank_transfer" className="cursor-pointer">
-                  銀行振込
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="convenience_store" id="convenience_store" />
-                <Label htmlFor="convenience_store" className="cursor-pointer">
-                  コンビニ決済
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-        </CardContent>
-        <CardFooter className="flex-col">
-          <div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center border-t pt-4 pb-4">
-            <div>
-              <p className="text-sm text-gray-500">
-                {quantity}枚 × {pricePerTicket.toLocaleString()}円
-                {getDiscountRate(quantity) > 0 && (
-                  <span className="ml-2">
-                    ({(getDiscountRate(quantity) * 100).toFixed(0)}%割引)
-                  </span>
-                )}
-              </p>
-              <p className="text-xl font-bold mt-1">
-                合計: {calculateTotal().toLocaleString()}円
-              </p>
-            </div>
-            <Button 
-              onClick={handlePurchase}
-              className="mt-4 md:mt-0"
-              disabled={quantity <= 0}
-            >
-              購入手続きへ
-            </Button>
-          </div>
-          <div className="text-xs text-gray-500 mt-2">
-            ※ご購入いただいたチケットは、購入後1年間有効です。
-          </div>
-        </CardFooter>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>チケットについて</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium mb-2">チケットの使い方</h3>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>1回の授業につき1枚のチケットが必要です</li>
-              <li>チケットは生徒ごとに管理されます</li>
-              <li>予約時に自動的にチケットが使用されます</li>
-              <li>特別な授業では複数枚必要な場合があります</li>
-            </ul>
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-medium mb-2">キャンセルポリシー</h3>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>授業開始24時間前までのキャンセル: チケット全額返却</li>
-              <li>授業開始24時間以内のキャンセル: チケット返却なし</li>
-              <li>講師側の都合によるキャンセル: チケット全額返却</li>
-            </ul>
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-medium mb-2">有効期限</h3>
-            <p>チケットは購入日から1年間有効です。有効期限が切れたチケットは使用できなくなりますのでご注意ください。</p>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* 支払いモーダル */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            {paymentSuccess ? (
-              <div className="text-center">
-                <div className="mb-4 text-green-600">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-16 w-16 mx-auto" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" 
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">購入完了</h3>
-                <p className="mb-6">
-                  {quantity}枚のチケットを購入しました。授業の予約にご利用ください。
-                </p>
-                <Button 
-                  className="w-full" 
-                  onClick={handlePaymentComplete}
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <CommonHeader showBackButton backTo="/dashboard" title="チケット購入" />
+      <main className="flex-grow max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6">チケット購入</h2>
+        <Card className="p-4 md:p-6 mb-8">
+          {/* 生徒選択 */}
+          <div className="mb-6">
+            <h3 className="text-base md:text-lg font-semibold mb-3">生徒選択</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+              {dummyStudents.map((student) => (
+                <div
+                  key={student.id}
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedStudent.id === student.id ? 'border-primary bg-primary bg-opacity-5' : 'border-gray-200 hover:border-primary hover:bg-gray-50'}`}
+                  onClick={() => setSelectedStudent(student)}
                 >
-                  ダッシュボードに戻る
-                </Button>
-              </div>
-            ) : (
-              <>
-                <h3 className="text-xl font-semibold mb-4">支払い手続き</h3>
-                <div className="space-y-4 mb-6">
-                  <div className="p-4 bg-gray-50 rounded-md">
-                    <p className="font-medium">購入内容</p>
-                    <p>チケット {quantity}枚</p>
-                    <p className="text-lg font-semibold mt-2">
-                      合計: {calculateTotal().toLocaleString()}円
-                    </p>
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm md:text-base font-medium">{student.lastName} {student.firstName}</div>
                   </div>
-                  
-                  {paymentMethod === "credit_card" && (
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="card_number">カード番号</Label>
-                        <Input 
-                          id="card_number" 
-                          placeholder="1234 5678 9012 3456" 
-                          disabled={processingPayment}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="expiry">有効期限</Label>
-                          <Input 
-                            id="expiry" 
-                            placeholder="MM/YY" 
-                            disabled={processingPayment}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cvc">CVC</Label>
-                          <Input 
-                            id="cvc" 
-                            placeholder="123" 
-                            disabled={processingPayment}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="card_name">カード名義</Label>
-                        <Input 
-                          id="card_name" 
-                          placeholder="TARO YAMADA" 
-                          disabled={processingPayment}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  
-                  {paymentMethod === "bank_transfer" && (
-                    <div className="space-y-2">
-                      <p className="font-medium">振込先情報</p>
-                      <p>銀行名: F-教育銀行</p>
-                      <p>支店名: 渋谷支店（123）</p>
-                      <p>口座種別: 普通</p>
-                      <p>口座番号: 1234567</p>
-                      <p>口座名義: エフエデュケーション</p>
-                      <p className="text-sm text-gray-500 mt-2">
-                        ※お振込み後、確認までに1営業日ほどかかる場合があります。
-                      </p>
-                    </div>
-                  )}
-                  
-                  {paymentMethod === "convenience_store" && (
-                    <div className="space-y-2">
-                      <p>コンビニ決済を選択すると、支払い用の番号が発行されます。</p>
-                      <p className="text-sm text-gray-500">
-                        ※お支払い後、確認までに数時間かかる場合があります。
-                      </p>
-                    </div>
-                  )}
+                  <div className="text-xs md:text-sm text-gray-600 mt-1">{student.grade} ({student.school})</div>
                 </div>
-                
-                <div className="flex space-x-3">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setShowPaymentModal(false)}
-                    disabled={processingPayment}
-                  >
-                    キャンセル
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={processPayment}
-                    disabled={processingPayment}
-                  >
-                    {processingPayment ? (
-                      <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        処理中...
-                      </span>
-                    ) : (
-                      "支払いを確定"
-                    )}
-                  </Button>
+              ))}
+            </div>
+          </div>
+          {/* コース選択（ダミー） */}
+          <div className="mb-6">
+            <h3 className="text-base md:text-lg font-semibold mb-3">コース選択</h3>
+            <div className="flex gap-2">
+              <Button variant={selectedType === "elementary" ? "default" : "outline"} onClick={() => setSelectedType("elementary")}>小学生</Button>
+              <Button variant={selectedType === "junior_high" ? "default" : "outline"} onClick={() => setSelectedType("junior_high")}>中学生</Button>
+            </div>
+          </div>
+          {/* チケット選択 */}
+          <div className="mb-6">
+            <h3 className="text-base md:text-lg font-semibold mb-3">チケット選択</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {Object.entries(ticketPrices[selectedType] as Record<string, {price:number, discount:string}>).map(([quantity, details]) => (
+                <div key={quantity} className="border rounded-lg p-4 flex flex-col items-center">
+                  <Ticket className="h-8 w-8 text-green-600 mb-2" />
+                  <div className="text-lg font-bold mb-1">{quantity}枚</div>
+                  <div className="text-gray-700 text-base font-semibold mb-1">{details.price.toLocaleString()}円</div>
+                  <div className="text-xs text-gray-500 mb-2">{details.discount}</div>
+                  <Button size="sm" onClick={() => addToCart(Number(quantity))}>カートに追加</Button>
                 </div>
-              </>
+              ))}
+            </div>
+          </div>
+          {/* カート */}
+          <div className="mb-6">
+            <h3 className="text-base md:text-lg font-semibold mb-3">カート</h3>
+            {cartItems.length === 0 ? (
+              <div className="text-gray-400 text-sm">カートに商品がありません</div>
+            ) : (
+              <div className="space-y-2">
+                {cartItems.map(item => (
+                  <div key={item.id} className="flex items-center justify-between border rounded px-3 py-2">
+                    <div>
+                      <div className="font-semibold">{item.studentName} {item.quantity}枚</div>
+                      <div className="text-xs text-gray-500">{item.price.toLocaleString()}円 ({item.discount})</div>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => removeFromCart(item.id)}>削除</Button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-        </div>
-      )}
+          {/* 決済ボタン（ダミー） */}
+          <div className="flex justify-end">
+            <Button onClick={() => setShowModal(true)} disabled={cartItems.length === 0}>購入手続きへ</Button>
+          </div>
+        </Card>
+        {/* 決済モーダル（ダミー） */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+              <h4 className="text-lg font-bold mb-4">決済（ダミー）</h4>
+              <div className="mb-4">この画面はUIのみです。決済ロジックは後ほど実装します。</div>
+              <Button onClick={() => setShowModal(false)}>閉じる</Button>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
