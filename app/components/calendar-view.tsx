@@ -37,7 +37,7 @@ export type ExtendedBooking = Omit<Booking, 'createdAt'> & {
   studentName?: string;
 };
 
-interface CalendarViewProps {
+export interface CalendarViewProps {
   bookings: ExtendedBooking[];
   onSelectDate?: (date: string) => void;
   onBookingClick?: (booking: ExtendedBooking) => void; // 予約クリック時のコールバック
@@ -67,7 +67,6 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
     }
 
     try {
-      // 前月の最後の日曜日を計算
       const startDay = getDay(monthStart);
       let calendarStart = monthStart;
       if (startDay > 0) {
@@ -81,6 +80,21 @@ export function CalendarView({ bookings, onSelectDate, onBookingClick, interacti
         calendarEnd = addDays(monthEnd, 6 - (endDay % 7));
       }
       // endDay === 6 (土曜日)の場合は何もしない
+
+      // 追加: 値のログと厳密なバリデーション
+      console.log('calendarStart:', calendarStart, 'calendarEnd:', calendarEnd);
+      if (
+        !calendarStart ||
+        !calendarEnd ||
+        isNaN(calendarStart.getTime()) ||
+        isNaN(calendarEnd.getTime()) ||
+        calendarEnd < calendarStart
+      ) {
+        console.error('Invalid calendarStart/calendarEnd:', calendarStart, calendarEnd);
+        setCalendarDays([]);
+        return;
+      }
+
       const daysInCalendar = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
       setCalendarDays(daysInCalendar);
     } catch (e) {
