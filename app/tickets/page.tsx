@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Ticket } from "lucide-react";
 import { CommonHeader } from "@/components/common-header";
 import { supabase } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 // Replit版のticketPricesを流用
 const ticketPrices: Record<string, Record<number, { price: number; discount: string }>> = {
@@ -44,6 +45,8 @@ export default function TicketPurchasePage() {
   const [selectedCourse, setSelectedCourse] = useState("通常コース");
   const [cartItems, setCartItems] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const router = useRouter();
 
   // 生徒・チケット残数をSupabaseから取得
   useEffect(() => {
@@ -225,7 +228,32 @@ export default function TicketPurchasePage() {
               </ul>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowModal(false)}>キャンセル</Button>
-                <Button onClick={() => setShowModal(false)}>購入（ダミー）</Button>
+                <Button 
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  disabled={isPurchasing}
+                  onClick={async () => {
+                    setIsPurchasing(true);
+                    try {
+                      // 複数生徒・複数チケット対応
+                      for (const item of cartItems) {
+                        await supabase.from('student_tickets').insert({
+                          student_id: item.studentId,
+                          quantity: item.quantity,
+                          description: item.course ? item.course : "通常コース",
+                        });
+                      }
+                      setShowModal(false);
+                      setCartItems([]);
+                      router.push("/dashboard");
+                    } catch (e) {
+                      alert("購入処理に失敗しました");
+                    } finally {
+                      setIsPurchasing(false);
+                    }
+                  }}
+                >
+                  {isPurchasing ? "購入中..." : "購入"}
+                </Button>
               </div>
             </div>
           </div>
