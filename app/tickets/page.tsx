@@ -74,7 +74,8 @@ export default function TicketPurchasePage() {
               {dummyStudents.map((student) => (
                 <div
                   key={student.id}
-                  className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedStudent.id === student.id ? 'border-primary bg-primary bg-opacity-5' : 'border-gray-200 hover:border-primary hover:bg-gray-50'}`}
+                  className={`p-3 border rounded-lg cursor-pointer transition-all 
+                    ${selectedStudent.id === student.id ? 'border-blue-500 bg-blue-50 shadow' : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50/50'}`}
                   onClick={() => handleSelectStudent(student)}
                 >
                   <div className="flex justify-between items-center">
@@ -90,8 +91,12 @@ export default function TicketPurchasePage() {
             <div className="mb-6">
               <h3 className="text-base md:text-lg font-semibold mb-3">コース選択</h3>
               <div className="flex gap-2">
-                <Button variant={selectedCourse === "通常コース" ? "default" : "outline"} onClick={() => setSelectedCourse("通常コース")}>通常コース</Button>
-                <Button variant={selectedCourse === "受験コース" ? "default" : "outline"} onClick={() => setSelectedCourse("受験コース")}>受験コース</Button>
+                <Button variant={selectedCourse === "通常コース" ? "default" : "outline"} 
+                  className={selectedCourse === "通常コース" ? "bg-blue-500 text-white border-blue-500" : ""}
+                  onClick={() => setSelectedCourse("通常コース")}>通常コース</Button>
+                <Button variant={selectedCourse === "受験コース" ? "default" : "outline"} 
+                  className={selectedCourse === "受験コース" ? "bg-blue-500 text-white border-blue-500" : ""}
+                  onClick={() => setSelectedCourse("受験コース")}>受験コース</Button>
               </div>
             </div>
           )}
@@ -100,12 +105,19 @@ export default function TicketPurchasePage() {
             <h3 className="text-base md:text-lg font-semibold mb-3">チケット選択</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               {Object.entries(ticketPrices[selectedStudent.type] as Record<string, {price:number, discount:string}>).map(([quantity, details]) => (
-                <div key={quantity} className="border rounded-lg p-4 flex flex-col items-center">
+                <div key={quantity} 
+                  className={`border rounded-lg p-4 flex flex-col items-center transition-all cursor-pointer 
+                    ${cartItems.some(item => item.quantity === Number(quantity) && item.studentId === selectedStudent.id && (item.course === selectedCourse || selectedStudent.type !== 'elementary')) 
+                      ? 'border-blue-500 bg-blue-50 shadow' : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50/50'}`}
+                  onClick={() => addToCart(Number(quantity))}
+                >
                   <Ticket className="h-8 w-8 text-green-600 mb-2" />
                   <div className="text-lg font-bold mb-1">{quantity}枚</div>
                   <div className="text-gray-700 text-base font-semibold mb-1">{details.price.toLocaleString()}円</div>
                   <div className="text-xs text-gray-500 mb-2">{details.discount}</div>
-                  <Button size="sm" onClick={() => addToCart(Number(quantity))}>カートに追加</Button>
+                  <Button size="sm" onClick={e => { e.stopPropagation(); addToCart(Number(quantity)); }}>
+                    カートに追加
+                  </Button>
                 </div>
               ))}
             </div>
