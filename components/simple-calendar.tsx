@@ -52,8 +52,16 @@ export const SimpleCalendar: React.FC = () => {
     }
   };
 
+  // 昨日以前の日付判定
+  const isPastDay = (day: number | null) => {
+    if (!day) return false;
+    const thisDate = new Date(currentYear, currentMonth, day);
+    // 今日未満ならtrue
+    return thisDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  };
+
   return (
-    <div className="w-full max-w-full sm:max-w-lg mx-auto bg-white rounded-lg shadow p-2 sm:p-4">
+    <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto bg-white rounded-lg shadow p-4 mb-6">
       <div className="flex items-center justify-between mb-2">
         <button onClick={handlePrevMonth} className="px-2 py-1 rounded hover:bg-gray-100">←</button>
         <div className="font-bold text-lg">
@@ -61,7 +69,7 @@ export const SimpleCalendar: React.FC = () => {
         </div>
         <button onClick={handleNextMonth} className="px-2 py-1 rounded hover:bg-gray-100">→</button>
       </div>
-      <table className="w-full text-center select-none table-fixed">
+      <table className="w-full text-center select-none table-fixed" style={{ minHeight: '340px' }}>
         <thead>
           <tr>
             {WEEKDAYS.map((wd, idx) => (
@@ -90,13 +98,16 @@ export const SimpleCalendar: React.FC = () => {
                   currentYear === today.getFullYear() &&
                   currentMonth === today.getMonth() &&
                   day === today.getDate();
+                const isPast = day && isPastDay(day);
                 return (
                   <td
                     key={j}
                     className={
-                      "py-1 w-8 h-8 sm:w-12 sm:h-12 " +
+                      "py-1 w-10 h-12 sm:w-16 sm:h-16 "+
                       (isToday
                         ? " bg-blue-500 text-white rounded-full font-bold"
+                        : isPast
+                        ? " text-gray-300"
                         : day
                         ? " text-gray-900"
                         : "")
