@@ -53,7 +53,7 @@ export const SimpleCalendar: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white rounded-lg shadow p-4">
+    <div className="w-full max-w-full sm:max-w-lg mx-auto bg-white rounded-lg shadow p-2 sm:p-4">
       <div className="flex items-center justify-between mb-2">
         <button onClick={handlePrevMonth} className="px-2 py-1 rounded hover:bg-gray-100">←</button>
         <div className="font-bold text-lg">
@@ -61,11 +61,23 @@ export const SimpleCalendar: React.FC = () => {
         </div>
         <button onClick={handleNextMonth} className="px-2 py-1 rounded hover:bg-gray-100">→</button>
       </div>
-      <table className="w-full text-center select-none">
+      <table className="w-full text-center select-none table-fixed">
         <thead>
           <tr>
-            {WEEKDAYS.map((wd) => (
-              <th key={wd} className="py-1 text-xs text-gray-500 font-semibold">{wd}</th>
+            {WEEKDAYS.map((wd, idx) => (
+              <th
+                key={wd}
+                className={
+                  "py-1 text-xs font-semibold " +
+                  (idx === 0
+                    ? "text-red-500"
+                    : idx === 6
+                    ? "text-blue-500"
+                    : "text-gray-500")
+                }
+              >
+                {wd}
+              </th>
             ))}
           </tr>
         </thead>
@@ -82,7 +94,7 @@ export const SimpleCalendar: React.FC = () => {
                   <td
                     key={j}
                     className={
-                      "py-1 w-8 h-8" +
+                      "py-1 w-8 h-8 sm:w-12 sm:h-12 " +
                       (isToday
                         ? " bg-blue-500 text-white rounded-full font-bold"
                         : day
