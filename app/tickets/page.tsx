@@ -244,6 +244,11 @@ export default function TicketPurchasePage() {
                           quantity: item.quantity,
                           description: item.course ? item.course : "通常コース",
                         });
+                        // student_profileのticket_countを加算
+                        await supabase.rpc('increment_ticket_count', {
+                          student_id_input: item.studentId,
+                          add_count: item.quantity,
+                        });
                       }
                       setShowModal(false);
                       setCartItems([]);
