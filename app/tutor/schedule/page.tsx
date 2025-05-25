@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -76,6 +76,10 @@ export default function TutorSchedulePage() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
   const [reservations, setReservations] = useState<any[]>([]);
+  
+  // レポートの状態管理
+  const [reportContent, setReportContent] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   
   // 講師プロフィール情報を取得
   useEffect(() => {
@@ -430,26 +434,53 @@ const saveAllPendingShifts = async () => {
     if (!selectedReservation) {
       toast({
         title: 'エラー',
-        description: '予約を選択してください。',
+        description: '予約を選択してください',
         variant: 'destructive',
       });
       return;
     }
 
-    try {
-      // レポート作成処理をここに追加
-      toast({
-        title: 'レポートを作成しました',
-        description: 'レポートが正常に作成されました。',
-      });
-      closeReportModal();
-    } catch (error) {
-      console.error('Error submitting report:', error);
+    if (!reportContent.trim()) {
       toast({
         title: 'エラー',
-        description: 'レポートの作成中にエラーが発生しました。',
+        description: 'レポート内容を入力してください',
         variant: 'destructive',
       });
+      return;
+    }
+
+    setIsSubmittingReport(true);
+
+    try {
+      const { error } = await supabase
+        .from('reports')
+        .insert([{
+          tutor_id: tutorProfile.id,
+          reservation_id: selectedReservation.id,
+          content: reportContent,
+          created_at: new Date().toISOString(),
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: '成功',
+        description: 'レポートを作成しました',
+      });
+      
+      // フォームをリセット
+      setReportContent('');
+      setSelectedReservation(null);
+      closeReportModal();
+    } catch (error) {
+      console.error('レポート作成エラー:', error);
+      toast({
+        title: 'エラー',
+        description: 'レポートの作成に失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingReport(false);
     }
   };
   
@@ -517,16 +548,22 @@ const saveAllPendingShifts = async () => {
       
       {/* 新規レポート作成モーダル */}
       <Dialog open={isReportModalOpen} onOpenChange={closeReportModal}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>新規レポート作成</DialogTitle>
+            <DialogTitle className="text-lg">レポート作成</DialogTitle>
+            <DialogDescription>
+              予約された授業のレポートを作成します
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>予約を選択</Label>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reservation">予約選択</Label>
               <select
+                id="reservation"
                 className="w-full p-2 border rounded"
                 onChange={(e) => setSelectedReservation(JSON.parse(e.target.value))}
+                disabled={isSubmittingReport}
               >
                 <option value="">選択してください</option>
                 {reservations.map((reservation) => (
@@ -536,15 +573,35 @@ const saveAllPendingShifts = async () => {
                 ))}
               </select>
             </div>
-            <div>
-              <Label>レポート内容</Label>
-              <Input type="text" placeholder="レポート内容を入力" />
+            
+            <div className="space-y-2">
+              <Label htmlFor="report-content">レポート内容</Label>
+              <textarea
+                id="report-content"
+                className="w-full p-2 border rounded min-h-[120px]"
+                placeholder="授業内容や生徒の様子などを記入"
+                value={reportContent}
+                onChange={(e) => setReportContent(e.target.value)}
+                disabled={isSubmittingReport}
+              />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={closeReportModal}>
+            
+            <div className="flex justify-end gap-2 pt-2">
+              <Button 
+                variant="outline" 
+                onClick={closeReportModal}
+                disabled={isSubmittingReport}
+              >
                 キャンセル
               </Button>
-              <Button onClick={submitReport}>送信</Button>
+              <Button 
+                onClick={submitReport}
+                disabled={isSubmittingReport || !selectedReservation || !reportContent.trim()}
+              >
+                {isSubmittingReport ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : '送信'}
+              </Button>
             </div>
           </div>
         </DialogContent>
