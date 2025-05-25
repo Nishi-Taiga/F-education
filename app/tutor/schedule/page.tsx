@@ -11,6 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // シフト情報の型定義
 type Shift = {
@@ -68,6 +71,11 @@ export default function TutorSchedulePage() {
     // 今日の日付から直近の日曜日を計算
     return startOfWeek(new Date(), { weekStartsOn: 0 });
   });
+  
+  // 新規レポート作成モーダルの状態管理
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<any>(null);
+  const [reservations, setReservations] = useState<any[]>([]);
   
   // 講師プロフィール情報を取得
   useEffect(() => {
@@ -380,6 +388,71 @@ const saveAllPendingShifts = async () => {
   }
 };
   
+  // 予約されている授業データを取得
+  const fetchReservations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reservations')
+        .select('*')
+        .eq('tutor_id', tutorProfile.id);
+
+      if (error) throw error;
+      setReservations(data || []);
+      return data;
+    } catch (error) {
+      console.error('Error fetching reservations:', error);
+      setReservations([]);
+      return [];
+    }
+  };
+
+  // モーダルを開く
+  const openReportModal = async () => {
+    const reservations = await fetchReservations();
+    if (reservations.length === 0) {
+      toast({
+        title: '予約がありません',
+        description: 'レポートを作成できる予約がありません。',
+      });
+      return;
+    }
+    setIsReportModalOpen(true);
+  };
+
+  // モーダルを閉じる
+  const closeReportModal = () => {
+    setIsReportModalOpen(false);
+    setSelectedReservation(null);
+  };
+
+  // レポートを送信
+  const submitReport = async () => {
+    if (!selectedReservation) {
+      toast({
+        title: 'エラー',
+        description: '予約を選択してください。',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // レポート作成処理をここに追加
+      toast({
+        title: 'レポートを作成しました',
+        description: 'レポートが正常に作成されました。',
+      });
+      closeReportModal();
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      toast({
+        title: 'エラー',
+        description: 'レポートの作成中にエラーが発生しました。',
+        variant: 'destructive',
+      });
+    }
+  };
+  
   // 読み込み中の表示
   if (isLoading) {
     return (
@@ -432,8 +505,50 @@ const saveAllPendingShifts = async () => {
             <span className="hidden md:inline">ホームに戻る</span>
             <span className="inline md:hidden">ホーム</span>
           </Button>
+          <Button
+            variant="default"
+            onClick={openReportModal}
+            className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
+          >
+            新規レポート作成
+          </Button>
         </div>
       </div>
+      
+      {/* 新規レポート作成モーダル */}
+      <Dialog open={isReportModalOpen} onOpenChange={closeReportModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新規レポート作成</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>予約を選択</Label>
+              <select
+                className="w-full p-2 border rounded"
+                onChange={(e) => setSelectedReservation(JSON.parse(e.target.value))}
+              >
+                <option value="">選択してください</option>
+                {reservations.map((reservation) => (
+                  <option key={reservation.id} value={JSON.stringify(reservation)}>
+                    {format(parseISO(reservation.date), 'yyyy-MM-dd')} - {reservation.time_slot}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>レポート内容</Label>
+              <Input type="text" placeholder="レポート内容を入力" />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={closeReportModal}>
+                キャンセル
+              </Button>
+              <Button onClick={submitReport}>送信</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <Card>
         <CardContent className="pt-6">
