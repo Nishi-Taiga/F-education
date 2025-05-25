@@ -155,7 +155,7 @@ export default function DashboardPage() {
                 <>
                   <Button
                     className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
-                    onClick={() => router.push("/tutor/shifts")}
+                    onClick={() => router.push("/tutor/schedule")}
                   >
                     <Calendar className="h-4 w-4 mr-2 text-blue-600" />
                     <span className="text-xs md:text-sm font-medium text-gray-900">シフト管理</span>
