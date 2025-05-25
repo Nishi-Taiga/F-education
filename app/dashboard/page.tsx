@@ -9,11 +9,36 @@ import { Button } from "@/components/ui/button";
 import { Ticket, Calendar, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { SimpleCalendar } from "@/components/simple-calendar";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [students, setStudents] = useState([]);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (user?.role !== 'parent') return;
+      // parent_profileからid取得
+      const { data: parent, error: parentError } = await supabase
+        .from('parent_profile')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      if (parentError || !parent) return;
+      // 生徒一覧取得
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('student_profile')
+        .select('id, last_name, first_name, ticket_count')
+        .eq('parent_id', parent.id);
+      if (!studentsError && studentsData) {
+        setStudents(studentsData);
+      }
+    };
+    fetchStudents();
+  }, [user]);
 
   // --- BookingCardの型に合わせたダミー予約データ ---
   const dummyBookings = [
@@ -49,17 +74,19 @@ export default function DashboardPage() {
         <SimpleCalendar bookings={dummyBookings} />
         {/* チケット残数表示 (親/生徒) */}
         {user?.role === 'parent' && (
-          <div className="flex justify-end mb-4">
-            <div className="flex items-center">
-              <div className="mr-1 bg-green-50 p-0.5 rounded-full">
-                <Ticket className="text-green-600 h-3 w-3" />
-              </div>
-              <div className="flex flex-wrap gap-1 ml-1">
-                <div className="flex items-center bg-gray-50 py-0.5 px-1.5 rounded-md whitespace-nowrap text-xs">
-                  <span className="font-medium truncate">生徒名:</span>
-                  <span className="font-bold ml-1">0枚</span>
-                </div>
-              </div>
+          <div className="flex flex-col items-end mb-4">
+            <div className="flex flex-col gap-1">
+              {students.length === 0 ? (
+                <div className="text-gray-400 text-xs">生徒情報がありません</div>
+              ) : (
+                students.map(student => (
+                  <div key={student.id} className="flex items-center bg-gray-50 py-0.5 px-2 rounded-md whitespace-nowrap text-xs border border-gray-200 mb-1">
+                    <span className="font-medium truncate mr-2">{student.last_name} {student.first_name}</span>
+                    <Ticket className="text-green-600 h-3 w-3 mr-1" />
+                    <span className="font-bold text-green-700">{student.ticket_count}枚</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
