@@ -21,11 +21,15 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchStudents = async () => {
       if (user?.role !== 'parent') return;
-      // parent_profileからid取得
+      // 認証ユーザーのauth UIDを取得
+      const { data: { session } } = await supabase.auth.getSession();
+      const authUid = session?.user?.id;
+      if (!authUid) return;
+      // parent_profileからid取得（user_idはuuid型）
       const { data: parent, error: parentError } = await supabase
         .from('parent_profile')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', authUid)
         .single();
       if (parentError || !parent) return;
       // 生徒一覧取得
