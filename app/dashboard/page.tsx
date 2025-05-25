@@ -94,6 +94,35 @@ export default function DashboardPage() {
         )}
         {/* カレンダー表示 */}
         <SimpleCalendar bookings={dummyBookings} />
+
+        {/* 講師用：本日の授業予定エリア */}
+        {user?.role === 'tutor' && (
+          <Card className="p-3 mb-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-base font-bold text-gray-900">本日の授業予定</h3>
+            </div>
+            <div className="space-y-2">
+              {/* 本来は本日の授業のみ抽出。ここではダミーデータから今日の日付分のみ表示 */}
+              {dummyBookings.filter(b => {
+                const today = new Date();
+                return b.date.getFullYear() === today.getFullYear() &&
+                  b.date.getMonth() === today.getMonth() &&
+                  b.date.getDate() === today.getDate();
+              }).length === 0 ? (
+                <div className="text-gray-400 text-xs">本日の授業予定はありません</div>
+              ) : (
+                dummyBookings.filter(b => {
+                  const today = new Date();
+                  return b.date.getFullYear() === today.getFullYear() &&
+                    b.date.getMonth() === today.getMonth() &&
+                    b.date.getDate() === today.getDate();
+                }).map(booking => (
+                  <BookingCard key={booking.id} booking={booking} onClick={() => {}} />
+                ))
+              )}
+            </div>
+          </Card>
+        )}
         {user?.role === 'student' && (
           <div className="bg-white shadow-sm rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between">
@@ -122,27 +151,55 @@ export default function DashboardPage() {
         <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-md py-3 pb-4 mt-4 z-10">
           <div className="max-w-7xl mx-auto px-4">
             <div className="grid grid-cols-3 gap-2 md:gap-3">
-              <Button
-                className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
-                onClick={() => router.push("/tickets")}
-              >
-                <Ticket className="h-4 w-4 mr-2 text-green-600" />
-                <span className="text-xs md:text-sm font-medium text-gray-900">チケット購入</span>
-              </Button>
-              <Button
-                className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
-                onClick={() => router.push("/booking")}
-              >
-                <Calendar className="h-4 w-4 mr-2 text-blue-600" />
-                <span className="text-xs md:text-sm font-medium text-gray-900">授業予約</span>
-              </Button>
-              <Button
-                className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
-                onClick={() => router.push("/reports")}
-              >
-                <FileText className="h-4 w-4 mr-2 text-gray-600" />
-                <span className="text-xs md:text-sm font-medium text-gray-900">授業レポート</span>
-              </Button>
+              {user?.role === 'tutor' ? (
+                <>
+                  <Button
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                    onClick={() => router.push("/tutor/shifts")}
+                  >
+                    <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+                    <span className="text-xs md:text-sm font-medium text-gray-900">シフト管理</span>
+                  </Button>
+                  <Button
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                    onClick={() => router.push("/reports/new")}
+                  >
+                    <FileText className="h-4 w-4 mr-2 text-green-600" />
+                    <span className="text-xs md:text-sm font-medium text-gray-900">新規レポート</span>
+                  </Button>
+                  <Button
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                    onClick={() => router.push("/reports")}
+                  >
+                    <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                    <span className="text-xs md:text-sm font-medium text-gray-900">過去レポート</span>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                    onClick={() => router.push("/tickets")}
+                  >
+                    <Ticket className="h-4 w-4 mr-2 text-green-600" />
+                    <span className="text-xs md:text-sm font-medium text-gray-900">チケット購入</span>
+                  </Button>
+                  <Button
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                    onClick={() => router.push("/booking")}
+                  >
+                    <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+                    <span className="text-xs md:text-sm font-medium text-gray-900">授業予約</span>
+                  </Button>
+                  <Button
+                    className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                    onClick={() => router.push("/reports")}
+                  >
+                    <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                    <span className="text-xs md:text-sm font-medium text-gray-900">授業レポート</span>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
