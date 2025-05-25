@@ -238,23 +238,33 @@ export default function TicketPurchasePage() {
                     try {
                       // 複数生徒・複数チケット対応
                       for (const item of cartItems) {
-                        await supabase.from('student_tickets').insert({
+                        const { error: insertError } = await supabase.from('student_tickets').insert({
                           student_id: item.studentId,
                           parent_id: parentId,
                           quantity: item.quantity,
                           description: item.course ? item.course : "通常コース",
                         });
+                        if (insertError) throw insertError;
                         // student_profileのticket_countを加算
-                        await supabase.rpc('increment_ticket_count', {
+                        const { error: rpcError } = await supabase.rpc('increment_ticket_count', {
                           student_id_input: item.studentId,
                           add_count: item.quantity,
                         });
+                        if (rpcError) throw rpcError;
                       }
                       setShowModal(false);
                       setCartItems([]);
                       router.push("/dashboard");
                     } catch (e) {
-                      alert("購入処理に失敗しました");
+                      // エラー詳細をコンソールとアラートに出力
+                      console.error("購入処理エラー:", e);
+                      if (e && e.message) {
+                        alert("購入処理に失敗しました: " + e.message);
+                      } else if (e && e.error) {
+                        alert("購入処理に失敗しました: " + JSON.stringify(e.error));
+                      } else {
+                        alert("購入処理に失敗しました: " + JSON.stringify(e));
+                      }
                     } finally {
                       setIsPurchasing(false);
                     }
