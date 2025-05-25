@@ -242,7 +242,6 @@ export default function TicketPurchasePage() {
                           student_id: item.studentId,
                           parent_id: parentId,
                           quantity: item.quantity,
-                          description: item.course ? item.course : "通常コース",
                         });
                         if (insertError) throw insertError;
                         // student_profileのticket_countを加算
