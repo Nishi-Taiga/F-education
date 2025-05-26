@@ -535,7 +535,7 @@ export default function BookingPage() {
         // シフトを予約済みに更新
         const { error: shiftError } = await supabase
           .from('tutor_shifts')
-          .update({ isBooked: true })
+          .update({ is_available: false }) // isBooked: true から is_available: false に修正
           .eq('id', booking.tutorShiftId);
 
         if (shiftError) {
