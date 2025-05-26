@@ -523,6 +523,7 @@ export default function BookingPage() {
               subject: booking.subject,
               tutor_id: booking.tutorId, // 'tutorId' から 'tutor_id' に修正済み
               parent_id: bookingParentId, // parent_id を追加
+              tutor_shift_id: booking.tutorShiftId, // tutor_shift_id を追加
               status: 'confirmed'
             }
           ]);
@@ -680,7 +681,8 @@ export default function BookingPage() {
                     </div>
                   )}
                 </div>
-              )}\n
+              )}
+
               {/* 科目選択 */}
               <div className="mb-6">
                 <div className="flex items-center space-x-2 mb-2">
