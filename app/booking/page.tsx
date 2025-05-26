@@ -481,57 +481,7 @@ export default function BookingPage() {
   };
 
   // 講師選択した時の処理
-  const handleTutorSelection = (tutorId?: number, shiftId?: number) => {
-    if (!selectedStudentId || !selectedSubject || !selectedDate || !selectedTimeSlot || !tutorId || !shiftId) {
-      toast({
-        title: "予約情報が不足しています",
-        description: "生徒、科目、日時、講師をすべて選択してください",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // 選択済みの講師情報を取得
-    const tutor = availableTutors?.find((t: any) => t.tutorId === tutorId && t.shiftId === shiftId);
-    if (!tutor) {
-      toast({
-        title: "講師情報が見つかりません",
-        description: "別の講師を選択してください",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // 生徒情報を取得
-    let studentName: string | undefined = undefined;
-    if (selectedStudentId && students) {
-      const student = students.find((s: Student) => s.id === selectedStudentId);
-      if (student) {
-        studentName = `${student.last_name} ${student.first_name}`;
-      }
-    }
-
-    const dateObj = parse(selectedDate, "yyyy-MM-dd", new Date());
-    const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
-
-    // 予約を追加
-    setSelectedBookings([...selectedBookings, {
-      date: selectedDate,
-      formattedDate,
-      timeSlot: selectedTimeSlot,
-      student_id: selectedStudentId,
-      studentName,
-      subject: selectedSubject,
-      tutorId,
-      tutorShiftId: shiftId,
-      tutorName: tutor.name
-    }]);
-
-    // 選択をリセット
-    setSelectedTutorId(null);
-    setSelectedShiftId(null);
-    setSelectedTimeSlot(null);
-  };
+  // const handleTutorSelection = (tutorId?: number, shiftId?: number) => { ... }; // 関数を削除
 
   const completeBooking = async () => {
     if (selectedBookings.length === 0) return;
@@ -918,8 +868,36 @@ export default function BookingPage() {
                                   ? 'bg-primary/10 border-primary'
                                   : 'bg-white hover:bg-gray-50'}`}
                               onClick={() => {
-                                setSelectedTutorId(tutor.tutorId);
-                                setSelectedShiftId(tutor.shiftId);
+                                // 講師カードがクリックされたら即座に予約を追加
+                                if (!selectedStudentId || !selectedSubject || !selectedDate || !selectedTimeSlot) {
+                                  toast({
+                                    title: "予約情報が不足しています",
+                                    description: "生徒、科目、日時をすべて選択してください",
+                                    variant: "destructive"
+                                  });
+                                  return;
+                                }
+
+                                const dateObj = parse(selectedDate, "yyyy-MM-dd", new Date());
+                                const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
+
+                                // 予約を追加
+                                setSelectedBookings([...selectedBookings, {
+                                  date: selectedDate,
+                                  formattedDate,
+                                  timeSlot: selectedTimeSlot,
+                                  student_id: selectedStudentId,
+                                  studentName: students?.find(s => s.id === selectedStudentId)?.last_name + ' ' + students?.find(s => s.id === selectedStudentId)?.first_name, // 生徒名をここで取得
+                                  subject: selectedSubject,
+                                  tutorId: tutor.tutorId,
+                                  tutorShiftId: tutor.shiftId,
+                                  tutorName: tutor.name,
+                                }]);
+
+                                // 選択をリセット
+                                setSelectedTutorId(null); // これらはもう不要だが、後のために残すか検討
+                                setSelectedShiftId(null); // これらはもう不要だが、後のために残すか検討
+                                setSelectedTimeSlot(null);
                               }}
                             >
                               <div className="font-medium text-gray-900">{tutor.name}</div>
@@ -938,13 +916,7 @@ export default function BookingPage() {
                             </div>
                           ))}
 
-                          <Button
-                            className="w-full mt-3"
-                            disabled={!selectedTutorId || !selectedShiftId}
-                            onClick={handleTutorSelection}
-                          >
-                            この講師で予約する
-                          </Button>
+
                         </div>
                       ) : (
                         <div className="p-4 border rounded-md bg-yellow-50 text-yellow-700 text-sm">
