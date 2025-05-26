@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import { bookings, tutors, students, users } from "@/shared/schema";
@@ -17,7 +17,7 @@ const createBookingSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient();
+    const supabase = createClient();
     
     // Get session from Supabase Auth
     const { data: { session } } = await supabase.auth.getSession();
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
     
-    // Get user's bookings (different logic based on role)
+    // Get user's bookings (different logic based on role)サ
     let userBookings;
     
     if (userDetails.role === 'student' && userDetails.studentId) {
@@ -49,11 +49,11 @@ export async function GET(request: NextRequest) {
           endTime: bookings.endTime,
           status: bookings.status,
           tutorId: bookings.tutorId,
-          studentId: bookings.studentId,
+          studentId: bookings.student_id,
           notes: bookings.notes,
         })
         .from(bookings)
-        .where(eq(bookings.studentId, userDetails.studentId));
+        .where(eq(bookings.student_id, userDetails.studentId));
     } else if (userDetails.role === 'tutor') {
       // Tutor account - get bookings for this tutor
       const [tutorDetails] = await db
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
           endTime: bookings.endTime,
           status: bookings.status,
           tutorId: bookings.tutorId,
-          studentId: bookings.studentId,
+          studentId: bookings.student_id,
           notes: bookings.notes,
         })
         .from(bookings)
@@ -102,11 +102,11 @@ export async function GET(request: NextRequest) {
           endTime: bookings.endTime,
           status: bookings.status,
           tutorId: bookings.tutorId,
-          studentId: bookings.studentId,
+          studentId: bookings.student_id,
           notes: bookings.notes,
         })
         .from(bookings)
-        .where(eq(bookings.studentId, studentIds[0])); // Simplified for now
+        .where(eq(bookings.student_id, studentIds[0])); // Simplified for now
     }
     
     // Enhance bookings with tutor and student names
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient();
+    const supabase = createClient();
     
     // Get session from Supabase Auth
     const { data: { session } } = await supabase.auth.getSession();
@@ -197,14 +197,13 @@ export async function POST(request: NextRequest) {
     const [newBooking] = await db
       .insert(bookings)
       .values({
-        studentId: studentId || 0,
-        tutorId,
+        student_id: studentId || 0,
+        tutor_id: tutorId,
         date,
-        startTime,
-        endTime,
-        status: "confirmed",
+        time_slot: startTime,
         notes: notes || null,
-        ticketsUsed: 1
+        subject: "未定",
+        tutor_shift_id: 0
       })
       .returning();
     
