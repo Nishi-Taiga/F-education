@@ -496,10 +496,10 @@ export default function BookingPage() {
           .insert([
             {
               date: booking.date,
-              timeSlot: booking.timeSlot,
+              time_slot: booking.timeSlot, // 'timeSlot' から 'time_slot' に修正
               student_id: booking.student_id,
               subject: booking.subject,
-              tutorId: booking.tutorId,
+              tutor_id: booking.tutorId, // 'tutorId' から 'tutor_id' に修正
               status: 'confirmed'
             }
           ]);
@@ -556,11 +556,7 @@ export default function BookingPage() {
     }
 
     // 生徒が選択されていない場合は、すべての予約をチェック（古い動作と互換性を保つ）
-    const bookedSlotsForDate = existingBookings.filter(b => b.date === date);
-    return {
-      hasAvailable: bookedSlotsForDate.length < timeSlots.length,
-      isFullyBooked: bookedSlotsForDate.length === timeSlots.length
-    };
+    return existingBookings.some(b => b.date === date && b.timeSlot === timeSlot);
   };
 
   // Check if a specific time slot on a date is already booked for the selected student
@@ -712,9 +708,7 @@ export default function BookingPage() {
                 ) : (
                   // 親アカウントの場合は生徒選択必須
                   !selectedStudentId ? (
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
-                      先に生徒を選択してください
-                    </div>
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">先に生徒を選択してください</div>
                   ) : studentSchoolLevel ? (
                     <Select
                       value={selectedSubject || ""}
