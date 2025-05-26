@@ -543,6 +543,47 @@ export default function BookingPage() {
         }
       }
 
+      // --- チケット消費処理の追加 --- START
+      if (selectedBookings.length > 0 && selectedBookings[0].student_id) {
+        const studentId = selectedBookings[0].student_id;
+
+        // 現在のチケット数を取得
+        const { data: currentTicketsData, error: fetchTicketsError } = await supabase
+          .from('student_tickets')
+          .select('quantity')
+          .eq('student_id', studentId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        let currentTicketCount = 0;
+        if (!fetchTicketsError && currentTicketsData && currentTicketsData.length > 0) {
+          currentTicketCount = currentTicketsData[0].quantity;
+        }
+
+        // 新しいチケット数を計算
+        const lessonsBookedCount = selectedBookings.length;
+        const newTicketCount = Math.max(0, currentTicketCount - lessonsBookedCount);
+
+        // student_tickets テーブルに新しいレコードを挿入
+        const { error: insertTicketError } = await supabase
+          .from('student_tickets')
+          .insert([
+            {
+              student_id: studentId,
+              quantity: newTicketCount
+              // created_at はDB側で自動生成されることを期待
+            }
+          ]);
+
+        if (insertTicketError) {
+          console.error("チケット消費レコード挿入エラー:", insertTicketError);
+          // チケット消費に失敗した場合でも予約自体は完了しているため、
+          // ユーザーには予約完了を通知しつつ、内部的にエラーをログに残す。
+          // 必要に応じてエラーハンドリングやロールバックのロジックを追加検討。
+        }
+      }
+      // --- チケット消費処理の追加 --- END
+
       toast({
         title: "予約完了",
         description: "授業の予約が完了しました",
