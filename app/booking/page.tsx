@@ -491,15 +491,38 @@ export default function BookingPage() {
 
       // Create an array of booking data to send to the mutation
       for (const booking of selectedBookings) {
+        // 予約に使用する parent_id を取得
+        let bookingParentId = null;
+        if (user?.role !== 'student' && parentProfile) {
+          // 保護者の場合
+          bookingParentId = parentProfile.id;
+        } else if (user?.role === 'student' && students.length > 0) {
+          // 生徒の場合、自身の parent_id を取得 (生徒プロフィールに parent_id がある想定)
+          // 注意: 現在の students 型定義に parent_id はありませんが、
+          // データベーススキーマには student_profile に parent_id があるため、
+          // 実際には生徒プロフィールから取得可能と仮定します。
+          const student = students.find(s => s.id === booking.student_id);
+          if (student && 'parent_id' in student) {
+            bookingParentId = (student as any).parent_id;
+          }
+        }
+
+        if (bookingParentId === null) {
+          console.error("親IDが取得できませんでした。");
+          // エラーをユーザーに通知するか、ここで処理を中断することも考慮
+          throw new Error("予約に必要な親情報が不足しています。");
+        }
+
         const { error: bookingError } = await supabase
           .from('bookings')
           .insert([
             {
               date: booking.date,
-              time_slot: booking.timeSlot, // 'timeSlot' から 'time_slot' に修正
+              time_slot: booking.timeSlot, // 'timeSlot' から 'time_slot' に修正済み
               student_id: booking.student_id,
               subject: booking.subject,
-              tutor_id: booking.tutorId, // 'tutorId' から 'tutor_id' に修正
+              tutor_id: booking.tutorId, // 'tutorId' から 'tutor_id' に修正済み
+              parent_id: bookingParentId, // parent_id を追加
               status: 'confirmed'
             }
           ]);
@@ -657,8 +680,7 @@ export default function BookingPage() {
                     </div>
                   )}
                 </div>
-              )}
-
+              )}\n
               {/* 科目選択 */}
               <div className="mb-6">
                 <div className="flex items-center space-x-2 mb-2">
