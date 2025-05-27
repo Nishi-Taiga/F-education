@@ -294,10 +294,17 @@ export default function DashboardPage() {
                   // 予約日付が今日以降であるかを判定
                   return bookingDate >= today;
                 }).map(booking => (
-                  <BookingCard key={booking.id} booking={booking} onCancelClick={() => {
-                    setBookingToCancel(booking);
-                    setShowCancelModal(true);
-                  }} />
+                  <BookingCard
+                    key={booking.id}
+                    booking={{
+                      ...booking,
+                      onCancelClick: () => {
+                        setBookingToCancel(booking);
+                        setShowCancelModal(true);
+                      },
+                    }}
+                    onClick={() => { /* 予約カードクリック時の挙動が必要であればここに実装 */ }}
+                  />
                 ))
               )}
             </div>
