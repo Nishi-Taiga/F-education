@@ -23,6 +23,101 @@ export default function DashboardPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<any>(null);
 
+  // 予約情報を取得する関数
+  const fetchBookings = async (parentId) => {
+    setIsLoadingBookings(true);
+    const { data: bookingsData, error: bookingsError } = await supabase
+      .from('bookings')
+      .select(`
+        *,\n
+        student_profile (last_name, first_name),\n
+        tutor_profile (last_name, first_name)\n
+      `)
+      .eq('parent_id', parentId)
+      .order('date', { ascending: true })
+      .order('time_slot', { ascending: true });
+
+    if (!bookingsError && bookingsData) {
+      // BookingCardの型に合うようにデータを整形
+      const formattedBookings = bookingsData.map(booking => ({
+        id: booking.id.toString(),
+        date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'), // Adjust time_slot to be parseable
+        startTime: booking.time_slot.split(' - ')[0],
+        endTime: booking.time_slot.split(' - ')[1],
+        status: booking.status,
+        subject: booking.subject,
+        studentId: booking.student_id?.toString(),
+        tutorId: booking.tutor_id?.toString(),
+        studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
+        tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
+      }));
+      setBookings(formattedBookings);
+    }
+    setIsLoadingBookings(false);
+  };
+
+  const handleCancelBooking = async (bookingId: string, studentId: string) => {
+    // 確認モーダルを閉じる
+    setShowCancelModal(false);
+    setBookingToCancel(null);
+
+    // 予約ステータスをキャンセルに更新
+    const { error: updateError } = await supabase
+      .from('bookings')
+      .update({ status: 'cancelled' })
+      .eq('id', bookingId);
+
+    if (updateError) {
+      toast({
+        title: 'キャンセルの失敗',
+        description: `予約のキャンセルに失敗しました: ${updateError.message}`,
+        variant: 'destructive',
+      });
+      console.error('Booking cancellation failed:', updateError);
+      return;
+    }
+
+    // student_ticketsにチケット返却（quantity +1）レコードを挿入
+    const { error: ticketInsertError } = await supabase
+      .from('student_tickets')
+      .insert({
+        student_id: studentId,
+        quantity: 1,
+        reason: '予約キャンセル',
+      });
+
+    if (ticketInsertError) {
+      toast({
+        title: 'チケット返却の失敗',
+        description: `チケットの返却に失敗しました: ${ticketInsertError.message}`,
+        variant: 'destructive',
+      });
+      console.error('Ticket return failed:', ticketInsertError);
+      // Note: Booking status was already updated. Consider a compensating action if ticket insert fails critically.
+    }
+
+    // 成功トースト表示
+    toast({
+      title: 'キャンセル完了',
+      description: '予約がキャンセルされ、チケットが返却されました。',
+    });
+
+    // 予約リストを再取得してUIを更新
+    if (user?.role === 'parent') {
+       const { data: { session } } = await supabase.auth.getSession();
+       const authUid = session?.user?.id;
+       if (!authUid) return;
+        const { data: parent, error: parentError } = await supabase
+          .from('parent_profile')
+          .select('id')
+          .eq('user_id', authUid)
+          .single();
+        if (!parentError && parent) {
+            fetchBookings(parent.id);
+        }
+    }
+  };
+
   useEffect(() => {
     const fetchStudents = async () => {
       if (user?.role !== 'parent') return;
@@ -39,100 +134,6 @@ export default function DashboardPage() {
       if (parentError || !parent) return;
 
       // 予約情報を取得
-      const fetchBookings = async (parentId) => {
-        setIsLoadingBookings(true);
-        const { data: bookingsData, error: bookingsError } = await supabase
-          .from('bookings')
-          .select(`
-            *,\n
-            student_profile (last_name, first_name),\n
-            tutor_profile (last_name, first_name)\n
-          `)
-          .eq('parent_id', parentId)
-          .order('date', { ascending: true })
-          .order('time_slot', { ascending: true });
-
-        if (!bookingsError && bookingsData) {
-          // BookingCardの型に合うようにデータを整形
-          const formattedBookings = bookingsData.map(booking => ({
-            id: booking.id.toString(),
-            date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'), // Adjust time_slot to be parseable
-            startTime: booking.time_slot.split(' - ')[0],
-            endTime: booking.time_slot.split(' - ')[1],
-            status: booking.status,
-            subject: booking.subject,
-            studentId: booking.student_id?.toString(),
-            tutorId: booking.tutor_id?.toString(),
-            studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
-            tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
-          }));
-          setBookings(formattedBookings);
-        }
-        setIsLoadingBookings(false);
-      };
-
-      const handleCancelBooking = async (bookingId: string, studentId: string) => {
-        // 確認モーダルを閉じる
-        setShowCancelModal(false);
-        setBookingToCancel(null);
-
-        // 予約ステータスをキャンセルに更新
-        const { error: updateError } = await supabase
-          .from('bookings')
-          .update({ status: 'cancelled' })
-          .eq('id', bookingId);
-
-        if (updateError) {
-          toast({
-            title: 'キャンセルの失敗',
-            description: `予約のキャンセルに失敗しました: ${updateError.message}`,
-            variant: 'destructive',
-          });
-          console.error('Booking cancellation failed:', updateError);
-          return;
-        }
-
-        // student_ticketsにチケット返却（quantity +1）レコードを挿入
-        const { error: ticketInsertError } = await supabase
-          .from('student_tickets')
-          .insert({
-            student_id: studentId,
-            quantity: 1,
-            reason: '予約キャンセル',
-          });
-
-        if (ticketInsertError) {
-          toast({
-            title: 'チケット返却の失敗',
-            description: `チケットの返却に失敗しました: ${ticketInsertError.message}`,
-            variant: 'destructive',
-          });
-          console.error('Ticket return failed:', ticketInsertError);
-          // Note: Booking status was already updated. Consider a compensating action if ticket insert fails critically.
-        }
-
-        // 成功トースト表示
-        toast({
-          title: 'キャンセル完了',
-          description: '予約がキャンセルされ、チケットが返却されました。',
-        });
-
-        // 予約リストを再取得してUIを更新
-        if (user?.role === 'parent') {
-           const { data: { session } } = await supabase.auth.getSession();
-           const authUid = session?.user?.id;
-           if (!authUid) return;
-            const { data: parent, error: parentError } = await supabase
-              .from('parent_profile')
-              .select('id')
-              .eq('user_id', authUid)
-              .single();
-            if (!parentError && parent) {
-                fetchBookings(parent.id);
-            }
-        }
-      };
-
       fetchBookings(parent.id);
 
       // 生徒一覧取得 (ticket_countはここでは取得しない)
