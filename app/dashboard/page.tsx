@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<any>(null);
+  const [currentParentId, setCurrentParentId] = useState<number | null>(null);
 
   // 予約情報を取得する関数
   const fetchBookings = async (parentId) => {
@@ -69,7 +70,7 @@ export default function DashboardPage() {
     setIsLoadingBookings(false);
   };
 
-  const handleCancelBooking = async (bookingId: string, studentId: string) => {
+  const handleCancelBooking = async (bookingId: string, studentId: string, parentId: number) => {
     // 確認モーダルを閉じる
     setShowCancelModal(false);
     setBookingToCancel(null);
@@ -96,6 +97,7 @@ export default function DashboardPage() {
       .insert({
         student_id: studentId,
         quantity: 1,
+        parent_id: parentId,
       });
 
     if (ticketInsertError) {
@@ -126,6 +128,7 @@ export default function DashboardPage() {
           .single();
         if (!parentError && parent) {
             fetchBookings(parent.id);
+            setCurrentParentId(parent.id);
         }
     }
   };
@@ -221,8 +224,15 @@ export default function DashboardPage() {
               <Button variant="outline" onClick={() => setShowCancelModal(false)}>キャンセル</Button>
               <Button
                 onClick={() => {
-                  if (bookingToCancel) {
-                    handleCancelBooking(bookingToCancel.id, bookingToCancel.studentId);
+                  if (bookingToCancel && currentParentId !== null) {
+                    handleCancelBooking(bookingToCancel.id, bookingToCancel.studentId, currentParentId);
+                  } else if (currentParentId === null) {
+                    console.error('Parent ID is not available.');
+                    toast({
+                      title: 'エラー',
+                      description: 'ユーザー情報の取得に失敗しました。ページを再読み込みしてください。',
+                      variant: 'destructive',
+                    });
                   }
                 }}
               >
