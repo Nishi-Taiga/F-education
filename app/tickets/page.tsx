@@ -70,16 +70,14 @@ export default function TicketPurchasePage() {
       if (studentsError || !studentsData) return;
       // 各生徒のチケット残数取得
       const studentsWithTickets = await Promise.all(studentsData.map(async student => {
-        const { data: ticketsData } = await supabase
+        const { data: ticketsData, error: ticketsError } = await supabase
           .from('student_tickets')
           .select('quantity')
-          .eq('student_id', student.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
+          .eq('student_id', student.id);
         return {
           ...student,
           type: getStudentType(student.grade),
-          ticketCount: ticketsData && ticketsData.length > 0 ? ticketsData[0].quantity : 0
+          ticketCount: ticketsError || !ticketsData ? 0 : ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0)
         };
       }));
       setStudents(studentsWithTickets);
@@ -244,13 +242,8 @@ export default function TicketPurchasePage() {
                           quantity: item.quantity,
                         });
                         if (insertError) throw insertError;
-                        // student_profileのticket_countを加算
-                        const { error: rpcError } = await supabase.rpc('increment_ticket_count', {
-                          student_id_input: item.studentId,
-                          add_count: item.quantity,
-                        });
-                        if (rpcError) throw rpcError;
                       }
+
                       setShowModal(false);
                       setCartItems([]);
                       router.push("/dashboard");
