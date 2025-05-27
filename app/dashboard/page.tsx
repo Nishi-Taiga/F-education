@@ -17,6 +17,8 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [students, setStudents] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(true);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -32,6 +34,41 @@ export default function DashboardPage() {
         .eq('user_id', authUid)
         .single();
       if (parentError || !parent) return;
+
+      // 予約情報を取得
+      const fetchBookings = async (parentId) => {
+        setIsLoadingBookings(true);
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select(`
+            *,\n
+            student_profile (last_name, first_name),\n
+            tutor_profile (last_name, first_name)\n
+          `)
+          .eq('parent_id', parentId)
+          .order('date', { ascending: true })
+          .order('time_slot', { ascending: true });
+
+        if (!bookingsError && bookingsData) {
+          // BookingCardの型に合うようにデータを整形
+          const formattedBookings = bookingsData.map(booking => ({
+            id: booking.id.toString(),
+            date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'), // Adjust time_slot to be parseable
+            startTime: booking.time_slot.split(' - ')[0],
+            endTime: booking.time_slot.split(' - ')[1],
+            status: booking.status,
+            subject: booking.subject,
+            studentId: booking.student_id?.toString(),
+            tutorId: booking.tutor_id?.toString(),
+            studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
+            tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
+          }));
+          setBookings(formattedBookings);
+        }
+        setIsLoadingBookings(false);
+      };
+
+      fetchBookings(parent.id);
 
       // 生徒一覧取得 (ticket_countはここでは取得しない)
       const { data: studentsData, error: studentsError } = await supabase
@@ -60,32 +97,6 @@ export default function DashboardPage() {
     fetchStudents();
   }, [user]);
 
-  // --- BookingCardの型に合わせたダミー予約データ ---
-  const dummyBookings = [
-    {
-      id: "1",
-      date: new Date(),
-      startTime: "16:00",
-      endTime: "17:30",
-      status: "confirmed",
-      subject: "数学",
-      studentId: "1",
-      tutorId: "1",
-      studentName: "山田 太郎"
-    },
-    {
-      id: "2",
-      date: new Date(Date.now() + 86400000),
-      startTime: "18:00",
-      endTime: "19:30",
-      status: "confirmed",
-      subject: "英語",
-      studentId: "2",
-      tutorId: "1",
-      studentName: "佐藤 花子"
-    }
-  ];
-
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
       <CommonHeader />
@@ -109,7 +120,7 @@ export default function DashboardPage() {
           </div>
         )}
         {/* カレンダー表示 */}
-        <SimpleCalendar bookings={dummyBookings} />
+        <SimpleCalendar bookings={bookings} />
 
         {/* 講師用：本日の授業予定エリア */}
         {user?.role === 'tutor' && (
@@ -119,7 +130,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-2">
               {/* 本来は本日の授業のみ抽出。ここではダミーデータから今日の日付分のみ表示 */}
-              {dummyBookings.filter(b => {
+              {bookings.filter(b => {
                 const today = new Date();
                 return b.date.getFullYear() === today.getFullYear() &&
                   b.date.getMonth() === today.getMonth() &&
@@ -127,7 +138,7 @@ export default function DashboardPage() {
               }).length === 0 ? (
                 <div className="text-gray-400 text-xs">本日の授業予定はありません</div>
               ) : (
-                dummyBookings.filter(b => {
+                bookings.filter(b => {
                   const today = new Date();
                   return b.date.getFullYear() === today.getFullYear() &&
                     b.date.getMonth() === today.getMonth() &&
@@ -157,9 +168,15 @@ export default function DashboardPage() {
               <h3 className="text-base font-bold text-gray-900">予約一覧</h3>
             </div>
             <div className="space-y-2">
-              {dummyBookings.map(booking => (
-                <BookingCard key={booking.id} booking={booking} onClick={() => {}} />
-              ))}
+              {isLoadingBookings ? (
+                <div className="text-gray-400 text-sm">予約情報を読み込み中...</div>
+              ) : bookings.length === 0 ? (
+                <div className="text-gray-400 text-sm">予約はありません</div>
+              ) : (
+                bookings.map(booking => (
+                  <BookingCard key={booking.id} booking={booking} onClick={() => {}} />
+                ))
+              )}
             </div>
           </Card>
         )}
