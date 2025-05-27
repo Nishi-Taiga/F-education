@@ -481,7 +481,57 @@ export default function BookingPage() {
   };
 
   // 講師選択した時の処理
-  // const handleTutorSelection = (tutorId?: number, shiftId?: number) => { ... }; // 関数を削除
+  const handleTutorSelection = (tutorId?: number, shiftId?: number) => {
+    if (!selectedStudentId || !selectedSubject || !selectedDate || !selectedTimeSlot || !tutorId || !shiftId) {
+      toast({
+        title: "予約情報が不足しています",
+        description: "生徒、科目、日時、講師をすべて選択してください",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // 選択済みの講師情報を取得
+    const tutor = availableTutors?.find((t: any) => t.tutorId === tutorId && t.shiftId === shiftId);
+    if (!tutor) {
+      toast({
+        title: "講師情報が見つかりません",
+        description: "別の講師を選択してください",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // 生徒情報を取得
+    let studentName: string | undefined = undefined;
+    if (selectedStudentId && students) {
+      const student = students.find((s: Student) => s.id === selectedStudentId);
+      if (student) {
+        studentName = `${student.last_name} ${student.first_name}`;
+      }
+    }
+
+    const dateObj = parse(selectedDate, "yyyy-MM-dd", new Date());
+    const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
+
+    // 予約を追加
+    setSelectedBookings([...selectedBookings, {
+      date: selectedDate,
+      formattedDate,
+      timeSlot: selectedTimeSlot,
+      student_id: selectedStudentId,
+      studentName,
+      subject: selectedSubject,
+      tutorId,
+      tutorShiftId: shiftId,
+      tutorName: tutor.name
+    }]);
+
+    // 選択をリセット
+    setSelectedTutorId(null);
+    setSelectedShiftId(null);
+    setSelectedTimeSlot(null);
+  };
 
   const completeBooking = async () => {
     if (selectedBookings.length === 0) return;
@@ -543,7 +593,7 @@ export default function BookingPage() {
         }
       }
 
-      // --- チケット消費処理の追加 --- START
+      // --- チケット消費処理 --- START
       if (selectedBookings.length > 0 && selectedBookings[0].student_id) {
         const studentId = selectedBookings[0].student_id;
 
@@ -564,22 +614,41 @@ export default function BookingPage() {
         const lessonsBookedCount = selectedBookings.length;
         const newTicketCount = Math.max(0, currentTicketCount - lessonsBookedCount);
 
-        // student_tickets テーブルに新しいレコードを挿入
-        const { error: insertTicketError } = await supabase
-          .from('student_tickets')
-          .insert([
-            {
-              student_id: studentId,
-              quantity: newTicketCount
-              // created_at はDB側で自動生成されることを期待
-            }
-          ]);
+        // チケット消費を行う生徒の parent_id を取得
+        let studentParentId = null;
+        if (user?.role !== 'student' && parentProfile) {
+           // 保護者の場合
+           studentParentId = parentProfile.id;
+        } else if (user?.role === 'student' && students.length > 0) {
+           // 生徒の場合、自身の parent_id を取得
+           const student = students.find(s => s.id === studentId);
+           if (student && 'parent_id' in student) {
+             studentParentId = (student as any).parent_id;
+           }
+        }
 
-        if (insertTicketError) {
-          console.error("チケット消費レコード挿入エラー:", insertTicketError);
-          // チケット消費に失敗した場合でも予約自体は完了しているため、
-          // ユーザーには予約完了を通知しつつ、内部的にエラーをログに残す。
-          // 必要に応じてエラーハンドリングやロールバックのロジックを追加検討。
+        // student_tickets テーブルに新しいレコードを挿入
+        if (studentParentId !== null) {
+          const { error: insertTicketError } = await supabase
+            .from('student_tickets')
+            .insert([
+              {
+                student_id: studentId,
+                quantity: newTicketCount,
+                parent_id: studentParentId // parent_id を追加
+                // created_at はDB側で自動生成されることを期待
+              }
+            ]);
+
+          if (insertTicketError) {
+            console.error("チケット消費レコード挿入エラー:", insertTicketError);
+            // チケット消費に失敗した場合でも予約自体は完了しているため、
+            // ユーザーには予約完了を通知しつつ、内部的にエラーをログに残す。
+            // 必要に応じてエラーハンドリングやロールバックのロジックを追加検討。
+          }
+        } else {
+           console.error("チケット消費に必要な親IDが取得できませんでした。");
+           // 親IDがない場合のエラーハンドリング
         }
       }
       // --- チケット消費処理の追加 --- END
@@ -621,7 +690,11 @@ export default function BookingPage() {
     }
 
     // 生徒が選択されていない場合は、すべての予約をチェック（古い動作と互換性を保つ）
-    return existingBookings.some(b => b.date === date && b.timeSlot === timeSlot);
+    const bookedSlotsForDate = existingBookings.filter(b => b.date === date);
+    return {
+      hasAvailable: bookedSlotsForDate.length < timeSlots.length,
+      isFullyBooked: bookedSlotsForDate.length === timeSlots.length
+    };
   };
 
   // Check if a specific time slot on a date is already booked for the selected student
@@ -1125,3 +1198,4 @@ export default function BookingPage() {
     </div>
   );
 }
+
