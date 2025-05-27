@@ -96,7 +96,6 @@ export default function DashboardPage() {
       .insert({
         student_id: studentId,
         quantity: 1,
-        reason: '予約キャンセル',
       });
 
     if (ticketInsertError) {
