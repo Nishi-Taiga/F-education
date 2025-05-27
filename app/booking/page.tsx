@@ -345,11 +345,9 @@ export default function BookingPage() {
               .from('student_tickets')
               .select('quantity')
               .eq('student_id', student.id)
-              .order('created_at', { ascending: false })
-              .limit(1);
             return {
               ...student,
-              ticketCount: ticketsData && ticketsData.length > 0 ? ticketsData[0].quantity : 0
+              ticketCount: ticketsData ? ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0
             };
           }));
           setStudents(studentsWithTickets);
@@ -634,7 +632,7 @@ export default function BookingPage() {
             .insert([
               {
                 student_id: studentId,
-                quantity: newTicketCount,
+                quantity: -lessonsBookedCount, // 消費したチケット数（負の値）を挿入
                 parent_id: studentParentId // parent_id を追加
                 // created_at はDB側で自動生成されることを期待
               }
