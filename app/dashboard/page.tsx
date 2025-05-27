@@ -307,10 +307,12 @@ export default function DashboardPage() {
                     key={booking.id}
                     booking={{
                       ...booking,
-                      onCancelClick: () => {
-                        setBookingToCancel(booking);
-                        setShowCancelModal(true);
-                      },
+                      ...(currentParentId !== null && { // currentParentIdがnullでない場合にのみonCancelClickを追加
+                        onCancelClick: () => {
+                          setBookingToCancel(booking);
+                          setShowCancelModal(true);
+                        },
+                      }),
                     }}
                     onClick={() => { /* 予約カードクリック時の挙動が必要であればここに実装 */ }}
                   />
