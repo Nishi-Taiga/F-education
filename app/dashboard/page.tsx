@@ -50,6 +50,19 @@ export default function DashboardPage() {
         tutorId: booking.tutor_id?.toString(),
         studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
         tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
+        onCancelClick: () => {
+          setBookingToCancel({
+            id: booking.id.toString(),
+            date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'),
+            startTime: booking.time_slot.split(' - ')[0],
+            endTime: booking.time_slot.split(' - ')[1],
+            subject: booking.subject,
+            studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
+            tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
+            studentId: booking.student_id?.toString(),
+          });
+          setShowCancelModal(true);
+        },
       }));
       setBookings(formattedBookings);
     }
