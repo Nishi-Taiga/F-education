@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { SimpleCalendar } from "@/components/simple-calendar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -19,6 +20,8 @@ export default function DashboardPage() {
   const [students, setStudents] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<any>(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -66,6 +69,68 @@ export default function DashboardPage() {
           setBookings(formattedBookings);
         }
         setIsLoadingBookings(false);
+      };
+
+      const handleCancelBooking = async (bookingId: string, studentId: string) => {
+        // 確認モーダルを閉じる
+        setShowCancelModal(false);
+        setBookingToCancel(null);
+
+        // 予約ステータスをキャンセルに更新
+        const { error: updateError } = await supabase
+          .from('bookings')
+          .update({ status: 'cancelled' })
+          .eq('id', bookingId);
+
+        if (updateError) {
+          toast({
+            title: 'キャンセルの失敗',
+            description: `予約のキャンセルに失敗しました: ${updateError.message}`,
+            variant: 'destructive',
+          });
+          console.error('Booking cancellation failed:', updateError);
+          return;
+        }
+
+        // student_ticketsにチケット返却（quantity +1）レコードを挿入
+        const { error: ticketInsertError } = await supabase
+          .from('student_tickets')
+          .insert({
+            student_id: studentId,
+            quantity: 1,
+            reason: '予約キャンセル',
+          });
+
+        if (ticketInsertError) {
+          toast({
+            title: 'チケット返却の失敗',
+            description: `チケットの返却に失敗しました: ${ticketInsertError.message}`,
+            variant: 'destructive',
+          });
+          console.error('Ticket return failed:', ticketInsertError);
+          // Note: Booking status was already updated. Consider a compensating action if ticket insert fails critically.
+        }
+
+        // 成功トースト表示
+        toast({
+          title: 'キャンセル完了',
+          description: '予約がキャンセルされ、チケットが返却されました。',
+        });
+
+        // 予約リストを再取得してUIを更新
+        if (user?.role === 'parent') {
+           const { data: { session } } = await supabase.auth.getSession();
+           const authUid = session?.user?.id;
+           if (!authUid) return;
+            const { data: parent, error: parentError } = await supabase
+              .from('parent_profile')
+              .select('id')
+              .eq('user_id', authUid)
+              .single();
+            if (!parentError && parent) {
+                fetchBookings(parent.id);
+            }
+        }
       };
 
       fetchBookings(parent.id);
@@ -122,6 +187,38 @@ export default function DashboardPage() {
         {/* カレンダー表示 */}
         <SimpleCalendar bookings={bookings} />
 
+        {/* キャンセル確認モーダル */}
+        <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>予約をキャンセルしますか？</DialogTitle>
+              <DialogDescription>
+                この操作は元に戻せません。予約をキャンセルし、チケット1枚を返却します。
+              </DialogDescription>
+            </DialogHeader>
+            {bookingToCancel && (
+              <div className="mt-4 p-3 bg-gray-100 rounded-md text-sm">
+                <p><span className="font-semibold">生徒:</span> {bookingToCancel.studentName}</p>
+                <p><span className="font-semibold">講師:</span> {bookingToCancel.tutorName}</p>
+                <p><span className="font-semibold">日時:</span> {new Date(bookingToCancel.date).toLocaleDateString()} {bookingToCancel.startTime} - {bookingToCancel.endTime}</p>
+                <p><span className="font-semibold">科目:</span> {bookingToCancel.subject}</p>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCancelModal(false)}>キャンセル</Button>
+              <Button
+                onClick={() => {
+                  if (bookingToCancel) {
+                    handleCancelBooking(bookingToCancel.id, bookingToCancel.studentId);
+                  }
+                }}
+              >
+                キャンセルを確定
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* 講師用：本日の授業予定エリア */}
         {user?.role === 'tutor' && (
           <Card className="p-3 mb-4">
@@ -173,8 +270,20 @@ export default function DashboardPage() {
               ) : bookings.length === 0 ? (
                 <div className="text-gray-400 text-sm">予約はありません</div>
               ) : (
-                bookings.map(booking => (
-                  <BookingCard key={booking.id} booking={booking} onClick={() => {}} />
+                bookings.filter(booking => {
+                  // 今日の日付を取得 (時間をゼロに設定)
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  // 予約の日付を取得 (時間をゼロに設定)
+                  const bookingDate = new Date(booking.date);
+                  bookingDate.setHours(0, 0, 0, 0);
+                  // 予約日付が今日以降であるかを判定
+                  return bookingDate >= today;
+                }).map(booking => (
+                  <BookingCard key={booking.id} booking={booking} onCancelClick={() => {
+                    setBookingToCancel(booking);
+                    setShowCancelModal(true);
+                  }} />
                 ))
               )}
             </div>

@@ -21,6 +21,7 @@ interface BookingCardProps {
     reportId?: string | null;
     reportStatus?: string | null;
     reportContent?: string | null;
+    onCancelClick?: () => void;
   };
   onClick: () => void;
   onViewReport?: () => void;
@@ -29,6 +30,7 @@ interface BookingCardProps {
 export function BookingCard({ booking, onClick, onViewReport }: BookingCardProps) {
   // 日付のフォーマット
   const formattedDate = format(booking.date, "M月d日 (EEE)", { locale: ja });
+  const { onCancelClick } = booking;
 
   // 現在の日時
   const now = new Date();
@@ -163,6 +165,24 @@ export function BookingCard({ booking, onClick, onViewReport }: BookingCardProps
           >
             <ClipboardCheck className="h-4 w-4 mr-2" />
             レポートを表示
+          </Button>
+        </div>
+      )}
+
+      {/* キャンセルボタンを追加 */}
+      {onCancelClick && !isCancelled && !isInPast && (
+        <div className="mt-3 pt-3 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+            onClick={(e) => {
+              e.stopPropagation(); // 親要素のクリックイベントが発火するのを防ぐ
+              onCancelClick();
+            }}
+          >
+            <X className="h-4 w-4 mr-2" />
+            予約をキャンセル
           </Button>
         </div>
       )}
