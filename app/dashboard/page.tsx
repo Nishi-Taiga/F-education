@@ -28,17 +28,33 @@ export default function DashboardPage() {
       // parent_profileからid取得（user_idはuuid型）
       const { data: parent, error: parentError } = await supabase
         .from('parent_profile')
-        .select('*')
+        .select('id') // Only need parent ID
         .eq('user_id', authUid)
         .single();
       if (parentError || !parent) return;
-      // 生徒一覧取得
+
+      // 生徒一覧取得 (ticket_countはここでは取得しない)
       const { data: studentsData, error: studentsError } = await supabase
         .from('student_profile')
-        .select('id, last_name, first_name, ticket_count')
+        .select('id, last_name, first_name') // Select only profile info
         .eq('parent_id', parent.id);
+
       if (!studentsError && studentsData) {
-        setStudents(studentsData);
+        // 各生徒のチケット残数を student_tickets テーブルから計算
+        const studentsWithTickets = await Promise.all(studentsData.map(async student => {
+          const { data: ticketsData, error: ticketsError } = await supabase
+            .from('student_tickets')
+            .select('quantity')
+            .eq('student_id', student.id);
+
+          const ticketCount = ticketsError || !ticketsData ? 0 : ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0);
+
+          return {
+            ...student,
+            ticketCount: ticketCount // Add calculated ticket count
+          };
+        }));
+        setStudents(studentsWithTickets); // Update state with processed data
       }
     };
     fetchStudents();
@@ -85,7 +101,7 @@ export default function DashboardPage() {
                   <div key={student.id} className="flex items-center bg-gray-50 py-0.5 px-2 rounded-md whitespace-nowrap text-xs border border-gray-200 mb-1">
                     <span className="font-medium truncate mr-2">{student.last_name} {student.first_name}</span>
                     <Ticket className="text-green-600 h-3 w-3 mr-1" />
-                    <span className="font-bold text-green-700">{student.ticket_count}枚</span>
+                    <span className="font-bold text-green-700">{student.ticketCount}枚</span>
                   </div>
                 ))
               )}
