@@ -307,7 +307,6 @@ export default function DashboardPage() {
                       ...booking,
                     }}
                     onClick={() => { /* 予約カードクリック時の挙動が必要であればここに実装 */ }}
-                    isCancellingLoading={isLoadingParentId} // 親IDのロード状態を渡す
                   />
                 ))
               )}
