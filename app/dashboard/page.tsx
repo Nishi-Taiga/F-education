@@ -111,17 +111,15 @@ export default function DashboardPage() {
       // Note: Booking status was already updated. Consider a compensating action if ticket insert fails critically.
     }
 
-    // 成功トースト表示
+    // 全ての処理が成功したらトースト表示とページ再読み込み
+    // 注意：チケット返却が失敗してもここでは成功とみなして次に進みます
     toast({
       title: 'キャンセル完了',
-      description: '予約がキャンセルされ、チケットが返却されました。',
+      description: '予約が正常にキャンセルされました。チケットの返却に問題があった場合はお問い合わせください。'
     });
 
-    // 予約リストを再取得してUIを更新
-    if (user?.role === 'parent') {
-      // handleCancelBookingに渡されたparentIdを使用して予約リストを再取得
-      fetchBookings(parentId);
-    }
+    // ページ全体を再読み込み
+    window.location.reload();
   };
 
   useEffect(() => {
