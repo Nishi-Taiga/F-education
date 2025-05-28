@@ -136,63 +136,61 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // userオブジェクトが存在し、かつ認証ユーザーのUIDが取得できるまで待機
-      if (!user) return;
-
-      setIsLoadingParentId(true); // 親ID取得開始
-      // 認証ユーザーのauth UIDを取得
-      const { data: { session } } = await supabase.auth.getSession();
+      // Supabaseのセッション情報からauthユーザーを取得
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       const authUid = session?.user?.id;
-
-      if (!authUid) {
-        setIsLoadingParentId(false); // エラーでもローディング終了
-        setIsLoadingBookings(false); // 親プロフィール取得失敗時も予約ローディング終了
+  
+      if (!authUid || sessionError) {
+        setIsLoadingParentId(false);
+        setIsLoadingBookings(false);
         return;
       }
-
-      // parent_profileからid取得（user_idはuuid型）
+  
+      // parent_profileからid取得
       const { data: parent, error: parentError } = await supabase
         .from('parent_profile')
-        .select('id') // Only need parent ID
+        .select('id')
         .eq('user_id', authUid)
         .single();
-      if (parentError || !parent) {
-        setIsLoadingParentId(false); // エラーでもローディング終了
-        setIsLoadingBookings(false); // 親プロフィール取得失敗時も予約ローディング終了
+  
+      if (!parent || parentError) {
+        setIsLoadingParentId(false);
+        setIsLoadingBookings(false);
         return;
       }
-
-      // 予約情報を取得
-      fetchBookings(parent.id);
+  
       setCurrentParentId(parent.id);
-      setIsLoadingParentId(false); // 正常終了
-
-      // 生徒一覧取得 (ticket_countはここでは取得しない)
+      setIsLoadingParentId(false);
+  
+      // 予約情報の取得
+      fetchBookings(parent.id);
+  
+      // 生徒情報とチケット数の取得
       const { data: studentsData, error: studentsError } = await supabase
         .from('student_profile')
-        .select('id, last_name, first_name') // Select only profile info
+        .select('id, last_name, first_name')
         .eq('parent_id', parent.id);
-
+  
       if (!studentsError && studentsData) {
-        // 各生徒のチケット残数を student_tickets テーブルから計算
         const studentsWithTickets = await Promise.all(studentsData.map(async student => {
           const { data: ticketsData, error: ticketsError } = await supabase
             .from('student_tickets')
             .select('quantity')
             .eq('student_id', student.id);
-
+  
           const ticketCount = ticketsError || !ticketsData ? 0 : ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0);
-
+  
           return {
             ...student,
-            ticketCount: ticketCount // Add calculated ticket count
+            ticketCount: ticketCount,
           };
         }));
-        setStudents(studentsWithTickets); // Update state with processed data
+        setStudents(studentsWithTickets);
       }
     };
+  
     fetchData();
-  }, [user]);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
