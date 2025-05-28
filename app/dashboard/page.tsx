@@ -53,15 +53,6 @@ export default function DashboardPage() {
         studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
         tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
         onCancelClick: user?.role === 'parent' ? () => { // 保護者の場合のみonCancelClick関数を定義
-          if (currentParentId === null) { // parentIdが取得できていない場合はエラーを表示して中断
-            console.error('Parent ID is not available when trying to open modal.');
-            toast({
-              title: 'エラー',
-              description: 'ユーザー情報の取得に問題が発生しました。ページを再読み込みしてください。',
-              variant: 'destructive',
-            });
-            return; // 処理を中断
-          }
           setBookingToCancel({
             id: booking.id.toString(),
             date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'),
