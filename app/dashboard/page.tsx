@@ -135,13 +135,21 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    const fetchStudents = async () => {
-      if (user?.role !== 'parent') return;
+    const fetchData = async () => {
+      // userオブジェクトが存在し、かつ認証ユーザーのUIDが取得できるまで待機
+      if (!user) return;
+
       setIsLoadingParentId(true); // 親ID取得開始
       // 認証ユーザーのauth UIDを取得
       const { data: { session } } = await supabase.auth.getSession();
       const authUid = session?.user?.id;
-      if (!authUid) return;
+
+      if (!authUid) {
+        setIsLoadingParentId(false); // エラーでもローディング終了
+        setIsLoadingBookings(false); // 親プロフィール取得失敗時も予約ローディング終了
+        return;
+      }
+
       // parent_profileからid取得（user_idはuuid型）
       const { data: parent, error: parentError } = await supabase
         .from('parent_profile')
@@ -183,7 +191,7 @@ export default function DashboardPage() {
         setStudents(studentsWithTickets); // Update state with processed data
       }
     };
-    fetchStudents();
+    fetchData();
   }, [user]);
 
   return (
