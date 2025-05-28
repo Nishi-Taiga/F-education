@@ -119,18 +119,8 @@ export default function DashboardPage() {
 
     // 予約リストを再取得してUIを更新
     if (user?.role === 'parent') {
-       const { data: { session } } = await supabase.auth.getSession();
-       const authUid = session?.user?.id;
-       if (!authUid) return;
-        const { data: parent, error: parentError } = await supabase
-          .from('parent_profile')
-          .select('id')
-          .eq('user_id', authUid)
-          .single();
-        if (!parentError && parent) {
-            fetchBookings(parent.id);
-            setCurrentParentId(parent.id);
-        }
+      // handleCancelBookingに渡されたparentIdを使用して予約リストを再取得
+      fetchBookings(parentId);
     }
   };
 
@@ -150,6 +140,7 @@ export default function DashboardPage() {
         .single();
       if (parentError || !parent) {
         setIsLoadingParentId(false); // エラーでもローディング終了
+        setIsLoadingBookings(false); // 親プロフィール取得失敗時も予約ローディング終了
         return;
       }
 
