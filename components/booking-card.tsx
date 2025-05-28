@@ -22,6 +22,7 @@ interface BookingCardProps {
     reportStatus?: string | null;
     reportContent?: string | null;
     onCancelClick?: () => void;
+    isCancellingLoading?: boolean;
   };
   onClick: () => void;
   onViewReport?: () => void;
@@ -30,7 +31,7 @@ interface BookingCardProps {
 export function BookingCard({ booking, onClick, onViewReport }: BookingCardProps) {
   // 日付のフォーマット
   const formattedDate = format(booking.date, "M月d日 (EEE)", { locale: ja });
-  const { onCancelClick } = booking;
+  const { onCancelClick, isCancellingLoading } = booking;
 
   // 現在の日時
   const now = new Date();
@@ -180,6 +181,7 @@ export function BookingCard({ booking, onClick, onViewReport }: BookingCardProps
               e.stopPropagation(); // 親要素のクリックイベントが発火するのを防ぐ
               onCancelClick();
             }}
+            disabled={isCancellingLoading}
           >
             <X className="h-4 w-4 mr-2" />
             予約をキャンセル

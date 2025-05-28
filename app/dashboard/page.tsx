@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<any>(null);
   const [currentParentId, setCurrentParentId] = useState<number | null>(null);
+  const [isLoadingParentId, setIsLoadingParentId] = useState(true);
 
   // 予約情報を取得する関数
   const fetchBookings = async (parentId) => {
@@ -145,6 +146,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchStudents = async () => {
       if (user?.role !== 'parent') return;
+      setIsLoadingParentId(true); // 親ID取得開始
       // 認証ユーザーのauth UIDを取得
       const { data: { session } } = await supabase.auth.getSession();
       const authUid = session?.user?.id;
@@ -155,10 +157,15 @@ export default function DashboardPage() {
         .select('id') // Only need parent ID
         .eq('user_id', authUid)
         .single();
-      if (parentError || !parent) return;
+      if (parentError || !parent) {
+        setIsLoadingParentId(false); // エラーでもローディング終了
+        return;
+      }
 
       // 予約情報を取得
       fetchBookings(parent.id);
+      setCurrentParentId(parent.id);
+      setIsLoadingParentId(false); // 正常終了
 
       // 生徒一覧取得 (ticket_countはここでは取得しない)
       const { data: studentsData, error: studentsError } = await supabase
@@ -314,8 +321,11 @@ export default function DashboardPage() {
                 }).map(booking => (
                   <BookingCard
                     key={booking.id}
-                    booking={booking} // fetchBookingsでonCancelClickが設定されているためそのまま渡す
+                    booking={{
+                      ...booking,
+                    }}
                     onClick={() => { /* 予約カードクリック時の挙動が必要であればここに実装 */ }}
+                    isCancellingLoading={isLoadingParentId} // 親IDのロード状態を渡す
                   />
                 ))
               )}
