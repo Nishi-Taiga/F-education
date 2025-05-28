@@ -76,19 +76,19 @@ export default function DashboardPage() {
     setShowCancelModal(false);
     setBookingToCancel(null);
 
-    // 予約ステータスをキャンセルに更新
-    const { error: updateError } = await supabase
+    // bookingsテーブルから予約を削除
+    const { error: deleteError } = await supabase
       .from('bookings')
-      .update({ status: 'cancelled' })
+      .delete()
       .eq('id', bookingId);
 
-    if (updateError) {
+    if (deleteError) {
       toast({
         title: 'キャンセルの失敗',
-        description: `予約のキャンセルに失敗しました: ${updateError.message}`,
+        description: `予約の削除に失敗しました: ${deleteError.message}`,
         variant: 'destructive',
       });
-      console.error('Booking cancellation failed:', updateError);
+      console.error('Booking deletion failed:', deleteError);
       return;
     }
 
