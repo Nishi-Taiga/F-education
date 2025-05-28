@@ -68,7 +68,19 @@ export default function DashboardPage() {
       }));
       setBookings(formattedBookings);
     }
-    setIsLoadingBookings(false);
+
+    // エラーが発生した場合もローディングを終了
+    if (bookingsError) {
+      console.error('Error fetching bookings:', bookingsError);
+      // 必要であればユーザーにエラーを通知するトーストなどを表示
+      toast({
+        title: '予約情報の取得に失敗しました',
+        description: `データの読み込み中に問題が発生しました: ${bookingsError.message}`,
+        variant: 'destructive',
+      });
+    }
+
+    setIsLoadingBookings(false); // ここでfalseになる
   };
 
   const handleCancelBooking = async (bookingId: string, studentId: string, parentId: number) => {
