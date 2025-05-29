@@ -47,6 +47,15 @@ export function DatePicker({
             onSelect={setDate}
             locale={ja}
           />
+          <div className="p-2">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setDate(undefined)}
+            >
+              クリア
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
     </div>

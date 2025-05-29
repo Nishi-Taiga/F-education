@@ -329,12 +329,7 @@ return (
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="table" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="table">テーブル表示</TabsTrigger>
-            <TabsTrigger value="cards">カード表示</TabsTrigger>
-          </TabsList>
-          
+        <Tabs defaultValue="table" className="w-full">          
           <TabsContent value="table">
             {filteredReports.length > 0 ? (
               <div className="overflow-x-auto">
