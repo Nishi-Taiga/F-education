@@ -139,10 +139,13 @@ export default function DashboardPage() {
       // Supabaseのセッション情報からauthユーザーを取得
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       const authUid = session?.user?.id;
-  
+
+      console.log('Fetching data. authUid:', authUid); // デバッグログを追加
+
       if (!authUid || sessionError) {
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
+        console.error('No auth UID or session error:', sessionError); // デバッグログを追加
         return;
       }
   
