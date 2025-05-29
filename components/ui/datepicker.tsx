@@ -41,7 +41,7 @@ export function DatePicker({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 bg-white opacity-100" align="start">
           <Calendar
             initialFocus
             mode="single"
@@ -52,7 +52,7 @@ export function DatePicker({
             }}
             locale={ja}
           />
-          <div className="p-2 bg-white opacity-100">
+          <div className="p-2">
             <Button
               variant="outline"
               className="w-full"
