@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [bookingToCancel, setBookingToCancel] = useState<any>(null);
   const [currentParentId, setCurrentParentId] = useState<number | null>(null);
   const [isLoadingParentId, setIsLoadingParentId] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // 予約情報を取得する関数
   const fetchBookings = async (parentId) => {
@@ -148,7 +149,8 @@ export default function DashboardPage() {
       if (!authUid || sessionError) {
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
-        console.error('No auth UID or session error:', sessionError); // デバッグログを追加
+        console.error('No auth UID or session error:', sessionError);
+        setIsAuthLoading(false);
         return;
       }
   
@@ -164,6 +166,7 @@ export default function DashboardPage() {
       if (!parent || parentError) {
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
+        setIsAuthLoading(false);
         return;
       }
   
@@ -200,10 +203,25 @@ export default function DashboardPage() {
         setStudents(studentsWithTickets);
         console.log('Students state updated:', studentsWithTickets); // デバッグログ追加
       }
+
+      setIsAuthLoading(false);
     };
   
-    fetchData();
+    if (user?.id && user?.role) {
+      fetchData();
+    } else if (user === null) {
+      setIsAuthLoading(false);
+    }
   }, [user]);
+
+  if (isAuthLoading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
