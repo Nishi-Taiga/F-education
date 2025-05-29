@@ -79,26 +79,71 @@ export function CommonHeader({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => navigate("/tickets")}> 
-                <Ticket className="h-4 w-4 mr-2 text-green-600" />
-                チケット購入
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/booking")}> 
-                <Calendar className="h-4 w-4 mr-2 text-blue-600" />
-                授業予約
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/reports")}> 
-                <FileText className="h-4 w-4 mr-2 text-gray-600" />
-                授業レポート
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/settings")}> 
-                <Settings className="h-4 w-4 mr-2" />
-                設定
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => logoutMutation.mutate()} className="text-red-600 hover:text-red-700">
-                <LogOut className="h-4 w-4 mr-2 text-red-600" />
-                ログアウト
-              </DropdownMenuItem>
+              {/* ロールに応じてメニュー項目を出し分け */}
+              {user?.role === 'tutor' ? (
+                  <>
+                      <DropdownMenuItem onClick={() => navigate("/dashboard")}> 
+                          <Home className="h-4 w-4 mr-2" />
+                          ダッシュボード
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/tutor/schedule")}> 
+                          <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+                          シフト管理
+                      </DropdownMenuItem>
+                       <DropdownMenuItem onClick={() => navigate("/reports/new")}> 
+                          <FileText className="h-4 w-4 mr-2 text-green-600" />
+                          新規レポート
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/reports")}> 
+                          <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                          過去レポート
+                      </DropdownMenuItem>
+                       {/* 講師用の設定ページがあれば追加 */}
+                      <DropdownMenuItem onClick={() => navigate("/settings")}> 
+                        <Settings className="h-4 w-4 mr-2" />
+                        設定
+                      </DropdownMenuItem>
+                  </>
+              ) : user?.role === 'parent' ? (
+                  <>
+                       <DropdownMenuItem onClick={() => navigate("/dashboard")}> 
+                          <Home className="h-4 w-4 mr-2" />
+                          ダッシュボード
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/tickets")}> 
+                          <Ticket className="h-4 w-4 mr-2 text-green-600" />
+                          チケット購入
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/search-tutors")}> 
+                          <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+                          授業予約
+                      </DropdownMenuItem>
+                       <DropdownMenuItem onClick={() => navigate("/reports")}> 
+                          <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                          授業レポート
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/settings")}> 
+                          <Settings className="h-4 w-4 mr-2" />
+                          設定
+                      </DropdownMenuItem>
+                  </>
+              ) : (
+                  // ロールが不明または未認証の場合のメニュー（例: ホーム、ログインなど）
+                   <>
+                      <DropdownMenuItem onClick={() => navigate("/")}> 
+                          <Home className="h-4 w-4 mr-2" />
+                          ホーム
+                      </DropdownMenuItem>
+                       {/* ログイン/登録ページへのリンクなど */}
+                   </>
+              )}
+              {/* ログアウトは全ての認証済みユーザーに表示 */}
+              {user && (
+                   <DropdownMenuItem onClick={() => logoutMutation.mutate()} className="text-red-600 hover:text-red-700">
+                      <LogOut className="h-4 w-4 mr-2 text-red-600" />
+                      ログアウト
+                  </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
