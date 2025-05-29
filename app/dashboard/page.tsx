@@ -137,58 +137,64 @@ export default function DashboardPage() {
 
   // データフェッチのロジックを分離した関数
   const loadUserData = async (authUid: string) => {
+    console.log("loadUserData 開始:", authUid);
     setIsLoadingParentId(true);
     setIsLoadingBookings(true);
     setIsDataLoaded(false);
-
+  
     const { data: parent, error: parentError } = await supabase
       .from('parent_profile')
       .select('id')
       .eq('user_id', authUid)
       .single();
-
+  
+    console.log("親データ取得結果", parent, parentError);
+  
     if (!parent || parentError) {
+      console.error('親プロフィール取得エラー', parentError);
       setIsLoadingParentId(false);
       setIsLoadingBookings(false);
       setIsDataLoaded(true);
-      console.error('Error fetching parent profile:', parentError);
       return;
     }
-
+  
+    console.log("親IDが取得できました:", parent.id);
     setCurrentParentId(parent.id);
     setIsLoadingParentId(false);
-
+  
     await fetchBookings(parent.id);
-
+    console.log("fetchBookings 終了");
+  
     const { data: studentsData, error: studentsError } = await supabase
       .from('student_profile')
       .select('id, last_name, first_name')
       .eq('parent_id', parent.id);
-
+  
+    console.log("生徒データ取得結果", studentsData, studentsError);
+  
     if (!studentsError && studentsData) {
       const studentsWithTickets = await Promise.all(studentsData.map(async student => {
         const { data: ticketsData, error: ticketsError } = await supabase
           .from('student_tickets')
           .select('quantity')
           .eq('student_id', student.id);
-
+  
         const ticketCount = ticketsError || !ticketsData ? 0 : ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0);
-
+  
         return {
           ...student,
           ticketCount: ticketCount,
         };
       }));
+  
+      console.log("生徒情報＋チケット数", studentsWithTickets);
       setStudents(studentsWithTickets);
-    } else if (studentsError) {
-      toast({
-        title: '生徒情報の取得に失敗しました',
-        description: `データの読み込み中に問題が発生しました: ${studentsError.message}`,
-        variant: 'destructive',
-      });
+    } else {
+      console.error("生徒情報取得エラー", studentsError);
     }
-
+  
     setIsDataLoaded(true);
+    console.log("loadUserData 完了: isDataLoaded = true");
   };
 
   // 認証後のuserが確定したらデータを読み込む
