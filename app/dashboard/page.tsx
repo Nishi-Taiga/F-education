@@ -234,8 +234,8 @@ export default function DashboardPage() {
     // コンポーネントのアンマウント時にリスナーを解除
     return () => {
       console.log('Cleaning up auth state change listener.');
-      // dataオブジェクトのunsubscribe関数を呼び出す
-      data?.unsubscribe();
+      // data.subscription.unsubscribe関数を呼び出す
+      data?.subscription?.unsubscribe();
     };
   }, []); // 依存配列は空で、マウント時に一度だけ設定
 
