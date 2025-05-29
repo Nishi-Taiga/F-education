@@ -52,7 +52,7 @@ export function DatePicker({
             }}
             locale={ja}
           />
-          <div className="p-2 bg-white">
+          <div className="p-2 bg-white opacity-100">
             <Button
               variant="outline"
               className="w-full"
