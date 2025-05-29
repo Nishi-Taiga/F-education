@@ -80,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("Error fetching tutor_profile:", tutorError);
         }
         if (tutor) {
+          console.log("Tutor profile found:", tutor);
           return {
             id: tutor.id,
             auth_id: userId,
@@ -103,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("Error fetching parent_profile:", parentError);
         }
         if (parent) {
+          console.log("Parent profile found:", parent);
           return {
             id: parent.id,
             auth_id: userId,
@@ -126,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("Error fetching student_profile:", studentError);
         }
         if (student) {
+          console.log("Student profile found:", student);
           return {
             id: student.id,
             auth_id: userId,
@@ -140,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // どれにも該当しなければnull
+        console.log("No profile found for user ID:", userId);
         return null;
       } catch (error) {
         console.error("Error in user query:", error);
