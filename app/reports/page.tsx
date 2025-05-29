@@ -575,6 +575,10 @@ return (
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
+              <p className="text-sm font-medium text-gray-500">生徒</p>
+              <p>{selectedReport.student_profile ? `${selectedReport.student_profile.last_name} ${selectedReport.student_profile.first_name}` : "不明"}</p>
+            </div>
+            <div>
               <p className="text-sm font-medium text-gray-500">日付</p>
               <p>
                 {selectedReport.date && 
@@ -582,28 +586,8 @@ return (
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">時間</p>
-              <p>{selectedReport.time_slot ? selectedReport.time_slot : "-"}</p>
-            </div>
-            <div>
               <p className="text-sm font-medium text-gray-500">科目</p>
               <p>{selectedReport.subject || "-"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">生徒</p>
-              <p>{selectedReport.student_profile ? `${selectedReport.student_profile.last_name} ${selectedReport.student_profile.first_name}` : "不明"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">講師</p>
-              <p>{selectedReport.tutor_profile ? `${selectedReport.tutor_profile.last_name} ${selectedReport.tutor_profile.first_name}` : "不明"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">ステータス</p>
-              <p>
-                <span className={`px-2 py-1 rounded text-xs ${getStatusColor(selectedReport.report_status || 'none')}`}>
-                  {getStatusJapanese(selectedReport.report_status || 'none')}
-                </span>
-              </p>
             </div>
           </div>
           
