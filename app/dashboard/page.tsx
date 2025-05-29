@@ -28,6 +28,7 @@ export default function DashboardPage() {
   // 予約情報を取得する関数
   const fetchBookings = async (parentId) => {
     setIsLoadingBookings(true);
+    console.log('Inside fetchBookings for parentId:', parentId); // デバッグログ追加
     const { data: bookingsData, error: bookingsError } = await supabase
       .from('bookings')
       .select(`
@@ -41,6 +42,7 @@ export default function DashboardPage() {
 
     if (!bookingsError && bookingsData) {
       // BookingCardの型に合うようにデータを整形
+      console.log('Fetched bookingsData:', bookingsData.length, 'bookings:', bookingsData); // デバッグログ追加
       const formattedBookings = bookingsData.map(booking => ({
         id: booking.id.toString(),
         date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'), // Adjust time_slot to be parseable
@@ -67,6 +69,7 @@ export default function DashboardPage() {
         } : undefined, // 保護者でない場合はundefined
       }));
       setBookings(formattedBookings);
+      console.log('Bookings state updated:', formattedBookings); // デバッグログ追加
     }
 
     // エラーが発生した場合もローディングを終了
@@ -156,6 +159,8 @@ export default function DashboardPage() {
         .eq('user_id', authUid)
         .single();
   
+      console.log('Fetched parent_profile:', parent, 'Error:', parentError); // デバッグログ追加
+
       if (!parent || parentError) {
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
@@ -166,14 +171,18 @@ export default function DashboardPage() {
       setIsLoadingParentId(false);
   
       // 予約情報の取得
+      console.log('Fetching bookings for parentId:', parent.id); // デバッグログ追加
       fetchBookings(parent.id);
   
       // 生徒情報とチケット数の取得
+      console.log('Fetching students for parentId:', parent.id); // デバッグログ追加
       const { data: studentsData, error: studentsError } = await supabase
         .from('student_profile')
         .select('id, last_name, first_name')
         .eq('parent_id', parent.id);
   
+      console.log('Fetched student_profile:', studentsData, 'Error:', studentsError); // デバッグログ追加
+
       if (!studentsError && studentsData) {
         const studentsWithTickets = await Promise.all(studentsData.map(async student => {
           const { data: ticketsData, error: ticketsError } = await supabase
@@ -189,6 +198,7 @@ export default function DashboardPage() {
           };
         }));
         setStudents(studentsWithTickets);
+        console.log('Students state updated:', studentsWithTickets); // デバッグログ追加
       }
     };
   
