@@ -150,7 +150,6 @@ export default function DashboardPage() {
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
         console.error('No auth UID or session error:', sessionError);
-        setIsAuthLoading(false);
         return;
       }
   
@@ -166,7 +165,6 @@ export default function DashboardPage() {
       if (!parent || parentError) {
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
-        setIsAuthLoading(false);
         return;
       }
   
@@ -203,22 +201,26 @@ export default function DashboardPage() {
         setStudents(studentsWithTickets);
         console.log('Students state updated:', studentsWithTickets); // デバッグログ追加
       }
-
-      setIsAuthLoading(false);
     };
   
-    if (user?.id && user?.role) {
+    if (user?.id) {
       fetchData();
-    } else if (user === null) {
-      setIsAuthLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!user || isLoadingParentId || isLoadingBookings) {
+      setIsAuthLoading(true);
+    } else {
+      setIsAuthLoading(false);
+    }
+  }, [user, isLoadingParentId, isLoadingBookings]);
 
   if (isAuthLoading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
-  if (!user) {
+  if (!user && !isAuthLoading) {
     router.push('/login');
     return null;
   }
