@@ -73,7 +73,7 @@ export const ReportCreationModal: React.FC<ReportCreationModalProps> = ({
           .eq('tutor_id', tutorId) // 講師でフィルタ
           .eq('status', 'completed') // 完了済みの授業のみ
           .lt('date', today) // 本日以前の授業
-          .is('report_id', null) // レポートがまだ作成されていない授業
+          .eq('report_status', 'pending') // report_statusが'pending'の授業のみ（レポート未作成相当）
           .order('date', { ascending: false }); // 新しい順にソート
 
         if (error) {
@@ -181,11 +181,11 @@ export const ReportCreationModal: React.FC<ReportCreationModalProps> = ({
     // 2. bookings テーブルの該当レコードを更新 (report_id と report_status)
     const { error: bookingUpdateError } = await supabase
       .from('bookings')
-      .update({ report_id: newReportId, report_status: 'completed' })
+      .update({ report_status: 'completed' }) // report_status のみ更新
       .eq('id', selectedBookingId);
 
     if (bookingUpdateError) {
-      console.error('Error updating booking with report_id:', bookingUpdateError);
+      console.error('Error updating booking with report_status:', bookingUpdateError);
       toast({
         title: '予約更新エラー',
         description: `レポートは保存されましたが、予約情報の更新に失敗しました: ${bookingUpdateError.message}`,
