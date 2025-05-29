@@ -190,7 +190,7 @@ export default function DashboardPage() {
     };
   
     fetchData();
-  }, []);
+  }, [user]);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
