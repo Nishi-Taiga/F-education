@@ -6,6 +6,9 @@ import { BookOpen, User, X, AlertCircle, ClipboardCheck, Calendar, Clock, Gradua
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+// ユーザータイプの定義を再利用またはここで定義
+type UserRole = 'parent' | 'tutor' | 'student'; // use-auth.tsx からインポートすることを推奨
+
 interface BookingCardProps {
   booking: {
     id: string;
@@ -21,17 +24,24 @@ interface BookingCardProps {
     reportId?: string | null;
     reportStatus?: string | null;
     reportContent?: string | null;
-    onCancelClick?: () => void;
-    isCancellingLoading?: boolean;
+    // BookingCardProps 自体には onCancelClick を持たせず、
+    // 親コンポーネント（ダッシュボード）でロールに応じて渡すかを制御するのが良い設計
+    // onCancelClick?: () => void;
+    isCancellingLoading?: boolean; // キャンセル処理中のローディング状態
   };
-  onClick: () => void;
+  userRole?: UserRole; // userRole プロパティを追加
+  // onClick は汎用的なカードクリックイベントとして残すか、ロールに応じて調整
+  // onClick: () => void;
+  // レポート表示は講師と保護者の両方で必要になる可能性があるため残す
   onViewReport?: () => void;
+  // 保護者のみにキャンセル機能を許可するため、関数ごと渡す
+  onParentCancelClick?: () => void;
 }
 
-export function BookingCard({ booking, onClick, onViewReport }: BookingCardProps) {
+export function BookingCard({ booking, userRole, onViewReport, onParentCancelClick }: BookingCardProps) {
   // 日付のフォーマット
   const formattedDate = format(booking.date, "M月d日 (EEE)", { locale: ja });
-  const { onCancelClick, isCancellingLoading } = booking;
+  const { isCancellingLoading } = booking;
 
   // 現在の日時
   const now = new Date();
@@ -56,7 +66,6 @@ export function BookingCard({ booking, onClick, onViewReport }: BookingCardProps
         isCancelled && "bg-gradient-to-r from-gray-50 to-white border-gray-200 hover:border-gray-300",
         hasReport && "bg-gradient-to-r from-teal-50 to-white border-teal-200 hover:border-teal-300"
       )} 
-      onClick={onClick}
     >
       <div className="flex items-start">
         {/* 左側のアイコン */}
@@ -171,7 +180,7 @@ export function BookingCard({ booking, onClick, onViewReport }: BookingCardProps
       )}
 
       {/* キャンセルボタンを追加 */}
-      {onCancelClick && !isCancelled && !isInPast && (
+      {onParentCancelClick && !isCancelled && !isInPast && (
         <div className="mt-3 pt-3 border-t">
           <Button
             variant="outline"
@@ -179,7 +188,7 @@ export function BookingCard({ booking, onClick, onViewReport }: BookingCardProps
             className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
             onClick={(e) => {
               e.stopPropagation(); // 親要素のクリックイベントが発火するのを防ぐ
-              onCancelClick();
+              onParentCancelClick();
             }}
             disabled={isCancellingLoading}
           >

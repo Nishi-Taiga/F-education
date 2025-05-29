@@ -12,6 +12,9 @@ function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
+// ユーザータイプの定義を再利用またはここで定義
+type UserRole = 'parent' | 'tutor' | 'student'; // use-auth.tsx からインポートすることを推奨
+
 // 予約データ型
 export type CalendarBooking = {
   id: string;
@@ -24,9 +27,10 @@ export type CalendarBooking = {
 
 interface SimpleCalendarProps {
   bookings?: CalendarBooking[];
+  userRole?: UserRole; // userRole プロパティを追加
 }
 
-export const SimpleCalendar: React.FC<SimpleCalendarProps> = ({ bookings = [] }) => {
+export const SimpleCalendar: React.FC<SimpleCalendarProps> = ({ bookings = [], userRole }) => {
   // todayを毎回レンダリング時に取得
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
