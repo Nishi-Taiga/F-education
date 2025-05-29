@@ -139,7 +139,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchData = async (authUid: string) => {
-      console.log('Fetching data for authUid:', authUid); // デバッグログを追加
+      console.log('Fetching data for authUid:', authUid, 'Type:', typeof authUid); // デバッグログ追加
+      console.log('user object in useEffect:', user); // useAuthからのuserオブジェクトも確認
       
       // parent_profileからid取得
       const { data: parent, error: parentError } = await supabase
@@ -210,6 +211,7 @@ export default function DashboardPage() {
       // isAuthLoadingFromHook が false になった後でここに来るはず
       setIsLoadingParentId(false);
       setIsLoadingBookings(false);
+      console.log('User is null, resetting loading states.'); // デバッグログ追加
     }
 
   }, [user]); // userを依存配列に含める
@@ -223,7 +225,7 @@ export default function DashboardPage() {
   // 認証されていない場合はログインページへリダイレクト
   // isAuthLoadingFromHook が false になり、かつ user が null の場合に実行される
   if (!user) {
-    router.push('/auth/login');
+    router.push('/auth');
     return null;
   }
 
