@@ -148,6 +148,7 @@ export const ReportCreationModal: React.FC<ReportCreationModalProps> = ({
           goal_content: homework.trim(),
           date: selectedBooking.date,
           time_slot: selectedBooking.time_slot,
+          subject: selectedBooking.subject,
         },
       ])
       .select(); // 挿入されたレポートのIDを取得するためにselect()を使用
