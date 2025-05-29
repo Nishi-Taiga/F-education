@@ -12,8 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { DatePickerWithRange } from "@/components/ui/datepicker";
-import { DateRange } from "react-day-picker";
+import { DatePicker } from "@/components/ui/datepicker";
 
 // レポートの型
 type Report = {
@@ -22,7 +21,6 @@ type Report = {
   date: string; // YYYY-MM-DD
   time_slot: string; // HH:MM - HH:MM
   subject: string; // 科目
-  status: string; // Booking Status (e.g., 'completed', 'pending')
   report_status: string; // Report Status (e.g., 'completed', 'pending')
   student_id: number | null;
   tutor_id: number | null;
@@ -52,7 +50,7 @@ export default function ReportsPage() {
   const [filteredReports, setFilteredReports] = useState<Report[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<number | "all">("all");
   const [selectedSubject, setSelectedSubject] = useState<string | "all">("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [studentsList, setStudentsList] = useState<{ id: number; name: string }[]>([]);
   const [subjectsList, setSubjectsList] = useState<string[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
@@ -168,15 +166,8 @@ export default function ReportsPage() {
 
       console.log("Fetched report data:", reportData);
 
-      // 取得したデータ（bookingsとネストされたlesson_reports）をそのままreports stateにセット
-      // フィルタリングは別途useEffectで行う
-      // ただし、Report型に合うように整形が必要かもしれないが、一旦そのまま保持してみる
-      // Report型を結合結果の型に近づけるか、ここで整形するか検討
-      // 今回は取得したデータをそのまま保持し、フィルタリング・表示時に整形する
-
       // fetched data matches Report type structure better now after type definition update
       setReports(reportData as Report[]);
-      // setFilteredReports(reportData as Report[]); // 初期表示は全て -> フィルタリングuseEffectで処理
 
       // 生徒リストと科目リストを生成
       const uniqueStudents = new Map<number, { id: number; name: string }>();
@@ -239,25 +230,18 @@ useEffect(() => {
       );
     }
 
-    // 日付範囲でフィルタリング
-    if (dateRange?.from) {
+    // 日付でフィルタリング
+    if (selectedDate) {
       filtered = filtered.filter(report => {
         if (!report.date) return false;
         const reportDate = new Date(report.date);
         reportDate.setHours(0, 0, 0, 0); // 時刻情報をクリア
 
-        const fromDate = new Date(dateRange.from);
-        fromDate.setHours(0, 0, 0, 0);
+        const filterDate = new Date(selectedDate);
+        filterDate.setHours(0, 0, 0, 0);
 
-        if (dateRange.to) {
-          const toDate = new Date(dateRange.to);
-          toDate.setHours(0, 0, 0, 0);
-          // 範囲内の判定 (開始日 <= 授業日 <= 終了日)
-          return reportDate >= fromDate && reportDate <= toDate;}
-         else {
-          // 開始日のみの場合はその日以降
-          return reportDate >= fromDate;
-        }
+        // 指定された日付と一致するレポートのみ表示
+        return reportDate.getTime() === filterDate.getTime();
       });
     }
 
@@ -266,7 +250,7 @@ useEffect(() => {
 
   filterReports();
   // 依存配列に reports, selectedStudentId, selectedSubject, dateRange を追加
-}, [reports, selectedStudentId, selectedSubject, dateRange]);
+}, [reports, selectedStudentId, selectedSubject, selectedDate]);
 
 // レポート詳細を表示
 const handleViewReport = (report: Report) => {
@@ -278,34 +262,6 @@ const handleViewReport = (report: Report) => {
 const handleCloseReportModal = () => {
   setShowReportModal(false);
   setSelectedReport(null);
-};
-
-// ステータスに応じたバッジ色を取得 (report_statusを使用)
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "completed":
-      return "bg-green-100 text-green-800";
-    case "draft": // draft status is not currently used in this flow, but kept for completeness
-      return "bg-yellow-100 text-yellow-800";
-    case "pending": // pending status means report is not completed yet, maybe shown as '未作成'
-      return "bg-blue-100 text-blue-800"; // Or a different color for '未作成'
-    default: // covers null, undefined, or other unexpected values
-      return "bg-gray-100 text-gray-800"; // Representing '未作成'
-  }
-};
-
-// ステータスの日本語表示 (report_statusを使用)
-const getStatusJapanese = (status: string) => {
-  switch (status) {
-    case "completed":
-      return "完了"; // レポート作成済み
-    case "draft":
-      return "下書き";
-    case "pending":
-      return "作成中"; // このフローではレポートが紐づいていないものはリストアップされない想定だが、念のため
-    default:
-      return "未作成"; // report_statusがnullなどの場合
-  }
 };
 
 if (isLoading) {
@@ -357,7 +313,7 @@ return (
             </Select>
           </div>
           <div>
-            <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+            <DatePicker date={selectedDate} setDate={setSelectedDate} />
           </div>
         </div>
       </CardContent>
@@ -389,7 +345,6 @@ return (
                       <TableHead>時間</TableHead>
                       <TableHead>科目</TableHead>
                       <TableHead>{userRole === 'tutor' ? '生徒' : '講師'}</TableHead>
-                      <TableHead>ステータス</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -408,11 +363,6 @@ return (
                            (report.student_profile ? `${report.student_profile.last_name} ${report.student_profile.first_name}` : "不明") 
                            : 
                            (report.tutor_profile ? `${report.tutor_profile.last_name} ${report.tutor_profile.first_name}` : "不明")}
-                        </TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs ${getStatusColor(report.report_status || 'none')}`}>
-                            {getStatusJapanese(report.report_status || 'none')}
-                          </span>
                         </TableCell>
                         <TableCell>
                           <Button
@@ -451,9 +401,6 @@ return (
                             {report.time_slot ? report.time_slot : "-"}
                           </CardDescription>
                         </div>
-                        <span className={`px-2 py-1 rounded text-xs ${getStatusColor(report.report_status || 'none')}`}>
-                          {getStatusJapanese(report.report_status || 'none')}
-                        </span>
                       </div>
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
