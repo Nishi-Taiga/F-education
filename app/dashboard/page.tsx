@@ -195,7 +195,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user && !isDataLoaded) {
       console.log("useAuthから得たuser:", user);
-      loadUserData(user.id);
+      loadUserData(String(user.id));
     }
   }, [user]);
 
