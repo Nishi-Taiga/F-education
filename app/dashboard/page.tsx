@@ -199,26 +199,14 @@ export default function DashboardPage() {
 
   // 認証後のuserが確定したらデータを読み込む
   useEffect(() => {
+    // useAuthから得られるuserオブジェクトは、プロフィール情報とAuthユーザーID (auth_id) を含む
+    // データロードは、useAuthのuserが確定し、かつデータがまだロードされていない場合に実行する
     if (user && !isDataLoaded) {
-      console.log("useAuthから得たuser:", user);
-      loadUserData(String(user.id));
+      console.log("useAuthから得たuser (データロードトリガー):", user);
+      // loadUserDataにはSupabase Authのuser ID (UUID) を渡す必要がある
+      loadUserData(user.auth_id);
     }
-  }, [user]);
-
-  // fallbackとしてSupabaseのauth状態変更リスナーを設置（不要であれば削除してもよい）
-  useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
-        if (session?.user && !isDataLoaded) {
-          console.log("onAuthStateChangeでuser検出:", session.user);
-          // user.idをstringとして渡す（安全策）
-          await loadUserData(String(session.user.id));
-        }
-      }
-    );
-    return () => data?.subscription?.unsubscribe();
-  }, []);
-  
+  }, [user, isDataLoaded]); // userとisDataLoadedを依存配列に追加
 
   if (isAuthLoadingFromHook || isLoadingParentId || isLoadingBookings || !isDataLoaded) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;

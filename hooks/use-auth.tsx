@@ -12,14 +12,14 @@ type UserRole = 'parent' | 'tutor' | 'student';
 // ユーザー情報の型
 type User = {
   id: number; 
-  auth_id?: string;  // Supabaseの認証IDを格納
+  auth_id: string;  // Supabaseの認証IDを格納
   displayName?: string;
   username?: string;
   firstName?: string;
   lastName?: string;
-  role?: UserRole;
+  role: UserRole;
   email: string;
-  profileCompleted?: boolean;
+  profileCompleted: boolean;
 };
 
 type AuthContextType = {
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // 1. 講師プロファイル
         const { data: tutor, error: tutorError } = await supabase
           .from('tutor_profile')
-          .select('*')
+          .select('id, first_name, last_name, email, profile_completed')
           .eq('user_id', userId)
           .maybeSingle();
         if (tutorError) {
@@ -84,19 +84,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: tutor.id,
             auth_id: userId,
             displayName: `${tutor.last_name} ${tutor.first_name}`,
-            username: tutor.email || userEmail,
+            username: tutor.email || userEmail || '',
             firstName: tutor.first_name,
             lastName: tutor.last_name,
             role: 'tutor',
-            email: tutor.email || userEmail,
-            profileCompleted: tutor.profile_completed
-          };
+            email: tutor.email || userEmail || '',
+            profileCompleted: tutor.profile_completed ?? false
+          } as User;
         }
 
         // 2. 保護者プロファイル
         const { data: parent, error: parentError } = await supabase
           .from('parent_profile')
-          .select('*')
+          .select('id, name, email')
           .eq('user_id', userId)
           .maybeSingle();
         if (parentError) {
@@ -107,19 +107,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: parent.id,
             auth_id: userId,
             displayName: parent.name,
-            username: parent.email || userEmail,
+            username: parent.email || userEmail || '',
             firstName: undefined,
             lastName: undefined,
             role: 'parent',
-            email: parent.email || userEmail,
-            profileCompleted: true // parent_profileにprofile_completedがなければtrue固定
-          };
+            email: parent.email || userEmail || '',
+            profileCompleted: true
+          } as User;
         }
 
         // 3. 生徒プロファイル
         const { data: student, error: studentError } = await supabase
           .from('student_profile')
-          .select('*')
+          .select('id, first_name, last_name, email')
           .eq('user_id', userId)
           .maybeSingle();
         if (studentError) {
@@ -130,24 +130,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: student.id,
             auth_id: userId,
             displayName: `${student.last_name} ${student.first_name}`,
-            username: student.email || userEmail,
+            username: student.email || userEmail || '',
             firstName: student.first_name,
             lastName: student.last_name,
             role: 'student',
-            email: student.email || userEmail,
-            profileCompleted: true // student_profileにprofile_completedがなければtrue固定
-          };
+            email: student.email || userEmail || '',
+            profileCompleted: true
+          } as User;
         }
 
         // どれにも該当しなければnull
         return null;
       } catch (error) {
         console.error("Error in user query:", error);
-        return null;
+        throw error;
       }
     },
     staleTime: 5 * 60 * 1000,
-    enabled: false,
   });
 
   useEffect(() => {
@@ -236,44 +235,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("認証は成功しましたが、ユーザー情報が取得できませんでした");
       }
       
-      // usersテーブルに基本情報を登録
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .insert([{
-          auth_id: authData.user.id,
-          email: data.email,
-          username: data.email,
-          role: 'parent',  // デフォルトロール
-          profile_completed: false
-        }])
-        .select();
-        
-      if (userError) {
-        console.error("Error creating user record:", userError);
-        // 登録は成功しているのでエラーはスローしない
-      } else {
-        console.log("Created user record:", userData);
+      // ユーザーのロールに応じてプロフィールテーブルに基本情報を登録
+      let profileData;
+      let profileError;
+
+      if (data.role === 'tutor') {
+        // 講師の場合
+        ({ data: profileData, error: profileError } = await supabase
+          .from('tutor_profile')
+          .insert([{
+            user_id: authData.user.id,
+            email: data.email,
+            // 講師プロファイルに必要な他の初期データがあればここに追加
+            last_name: data.lastName || '',
+            first_name: data.firstName || '',
+            profile_completed: false,
+          }])
+          .select());
+      } else { // デフォルトは保護者
+        // 保護者の場合
+        ({ data: profileData, error: profileError } = await supabase
+          .from('parent_profile')
+          .insert([{
+            user_id: authData.user.id,
+            email: data.email,
+            name: `${data.lastName || ''} ${data.firstName || ''}`.trim(),
+            role: data.role || 'parent', // ここでロールを設定
+            // 保護者プロファイルに必要な他の初期データがあればここに追加
+          }])
+          .select());
+      }
+
+      if (profileError) {
+        console.error("Profile insertion error:", profileError);
+        // ここで認証ユーザーを削除するなどのロールバック処理を検討しても良い
+        // 一旦エラーを投げて登録失敗とする
+        throw new Error(`プロフィールの作成に失敗しました: ${profileError.message}`);
       }
       
-      // 認証が成功した場合、メールアドレスのみを返す
-      return {
-        email: data.email,
-      };
+      console.log("Profile created successfully:", profileData);
+
+      // 成功したら認証情報を再取得してContextを更新
+      await refetch();
+
+      return { email: data.email };
     },
     onSuccess: ({ email }) => {
       toast({
-        title: "アカウント作成完了",
-        description: "メールアドレスの確認メールをお送りしました。メール内のリンクをクリックして認証を完了してください。",
+        title: "登録成功",
+        description: `ユーザー登録が完了しました。`,
       });
-      // メール確認を待つので、ここではページ遷移しない
+      
+      // 登録後、必要に応じてプロフィール設定ページなどに遷移
+      router.push('/dashboard'); // 例：ダッシュボードへ遷移
     },
     onError: (error: Error) => {
-      console.error("Registration mutation error:", error);
       toast({
-        title: "アカウント作成に失敗しました",
-        description: error.message || "このメールアドレスは既に使用されています",
-        variant: "destructive",
-      });
+        title: "登録に失敗しました",
+        description: error.message || "ユーザー登録中にエラーが発生しました",
+      })
     },
   });
 
