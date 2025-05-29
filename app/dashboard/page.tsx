@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { ReportCreationModal } from "@/components/report-creation-modal";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -27,6 +28,8 @@ export default function DashboardPage() {
   const [isLoadingParentId, setIsLoadingParentId] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [currentTutorId, setCurrentTutorId] = useState<number | null>(null);
 
   // 予約情報を取得する関数 (保護者用)
   const fetchBookingsForParent = async (parentId: number) => {
@@ -131,6 +134,21 @@ export default function DashboardPage() {
     }
 
     setIsLoadingBookings(false);
+  };
+
+  // 予約リストを再取得する関数 (レポート作成後に使用)
+  const refetchBookings = async () => {
+      console.log("refetchBookings 開始");
+      // 現在のユーザーロールとIDに基づいて予約を再取得
+      if (user?.role === 'parent' && currentParentId !== null) {
+          await fetchBookingsForParent(currentParentId);
+      } else if (user?.role === 'tutor' && currentTutorId !== null) {
+          await fetchBookingsForTutor(currentTutorId);
+      } else {
+           console.warn("refetchBookings: 予約再取得に必要な情報が不足しています。");
+           setIsLoadingBookings(false);
+      }
+      console.log("refetchBookings 完了");
   };
 
   const handleCancelBooking = async (bookingId: string, studentId: string, parentId: number) => {
@@ -267,6 +285,7 @@ export default function DashboardPage() {
       }
 
       console.log("講師IDが取得できました:", tutor.id);
+      setCurrentTutorId(tutor.id);
       setIsLoadingParentId(false);
 
       await fetchBookingsForTutor(tutor.id);
@@ -363,6 +382,7 @@ export default function DashboardPage() {
                     key={booking.id}
                     booking={booking}
                     userRole="tutor"
+                    onViewReport={() => router.push(`/reports/${booking.reportId}`)}
                   />
                 ))}
               </div>
@@ -382,17 +402,26 @@ export default function DashboardPage() {
                     key={booking.id}
                     booking={booking}
                     userRole="parent"
+                    onParentCancelClick={() => {
+                      setBookingToCancel({
+                         id: booking.id.toString(),
+                         date: booking.date,
+                         startTime: booking.startTime,
+                         endTime: booking.endTime,
+                         subject: booking.subject,
+                         studentName: booking.studentName,
+                         tutorName: booking.tutorName,
+                         studentId: booking.studentId
+                      });
+                      setShowCancelModal(true);
+                    }}
+                    onViewReport={() => router.push(`/reports/${booking.reportId}`)}
                   />
                 ))}
               </div>
             ) : (
               <p>現在予約はありません。</p>
             )}
-             <div className="mt-6">
-               <Button onClick={() => router.push('/search-tutors')}>
-                 <Calendar className="mr-2 h-4 w-4" /> 新しい予約を入れる
-               </Button>
-             </div>
           </div>
          )}
 
@@ -423,7 +452,7 @@ export default function DashboardPage() {
                               </Button>
                               <Button
                                   className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
-                                  onClick={() => router.push("/reports/new")}
+                                  onClick={() => setIsReportModalOpen(true)}
                               >
                                   <FileText className="h-4 w-4 mr-2 text-green-600" />
                                   <span className="text-xs md:text-sm font-medium text-gray-900">新規レポート</span>
@@ -467,6 +496,16 @@ export default function DashboardPage() {
                   </div>
               </div>
           </div>
+      )}
+
+      {/* レポート作成モーダル */}
+      {user?.role === 'tutor' && (
+          <ReportCreationModal
+              isOpen={isReportModalOpen}
+              onClose={() => setIsReportModalOpen(false)}
+              tutorId={currentTutorId}
+              onReportCreated={refetchBookings}
+          />
       )}
     </div>
   );
