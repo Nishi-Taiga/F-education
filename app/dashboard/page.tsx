@@ -126,8 +126,6 @@ export default function DashboardPage() {
       // Note: Booking status was already updated. Consider a compensating action if ticket insert fails critically.
     }
 
-    // 全ての処理が成功したらトースト表示とページ再読み込み
-    // 注意：チケット返却が失敗してもここでは成功とみなして次に進みます
     toast({
       title: 'キャンセル完了',
       description: '予約が正常にキャンセルされました。チケットの返却に問題があった場合はお問い合わせください。'
@@ -142,41 +140,30 @@ export default function DashboardPage() {
     setIsLoadingParentId(true);
     setIsLoadingBookings(true);
     setIsDataLoaded(false);
-    console.log('Loading user data for authUid:', authUid);
 
-    // parent_profileからid取得
     const { data: parent, error: parentError } = await supabase
       .from('parent_profile')
       .select('id')
-      .eq('user_id', authUid) // UUIDカラムに対して正しいUUIDを渡す
+      .eq('user_id', authUid)
       .single();
-
-    console.log('Fetched parent_profile:', parent, 'Error:', parentError);
 
     if (!parent || parentError) {
       setIsLoadingParentId(false);
       setIsLoadingBookings(false);
       setIsDataLoaded(true);
       console.error('Error fetching parent profile:', parentError);
-      // toastなどでユーザーに通知することも検討
       return;
     }
 
     setCurrentParentId(parent.id);
     setIsLoadingParentId(false);
 
-    // 予約情報の取得
-    console.log('Fetching bookings for parentId:', parent.id);
-    await fetchBookings(parent.id); // fetchBookings内でisLoadingBookingsが設定・解除される
+    await fetchBookings(parent.id);
 
-    // 生徒情報とチケット数の取得
-    console.log('Fetching students for parentId:', parent.id);
     const { data: studentsData, error: studentsError } = await supabase
       .from('student_profile')
       .select('id, last_name, first_name')
-      .eq('parent_id', parent.id); // parent_idはnumber型のはず
-
-    console.log('Fetched student_profile:', studentsData, 'Error:', studentsError);
+      .eq('parent_id', parent.id);
 
     if (!studentsError && studentsData) {
       const studentsWithTickets = await Promise.all(studentsData.map(async student => {
@@ -193,76 +180,42 @@ export default function DashboardPage() {
         };
       }));
       setStudents(studentsWithTickets);
-      console.log('Students state updated:', studentsWithTickets);
     } else if (studentsError) {
-      console.error('Error fetching students:', studentsError);
       toast({
         title: '生徒情報の取得に失敗しました',
         description: `データの読み込み中に問題が発生しました: ${studentsError.message}`,
         variant: 'destructive',
       });
     }
-    // すべてのデータフェッチが完了したことを示すログとステート更新
-    console.log('User data loading complete.');
+
     setIsDataLoaded(true);
   };
 
-  // Supabaseの認証状態変更をリッスンするEffect
+  // 認証後のuserが確定したらデータを読み込む
   useEffect(() => {
-    console.log('Setting up auth state change listener.');
+    if (user && !isDataLoaded) {
+      console.log("useAuthから得たuser:", user);
+      loadUserData(user.id);
+    }
+  }, [user]);
+
+  // fallbackとしてSupabaseのauth状態変更リスナーを設置（不要であれば削除してもよい）
+  useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        console.log('Auth state changed:', event, 'Session:', session);
-        if (session?.user) {
-          // 認証された場合
-          setIsAuthenticated(true); // 認証状態をtrueに設定
-          // onAuthStateChangeでユーザーが取得できたらすぐにロード開始
-          // isAuthLoadingFromHookがまだtrueでもロードを開始してよい
-          loadUserData(session.user.id); // セッションから取得した正しいuser.idでデータフェッチ
-        } else {
-          // 認証解除またはセッションがない場合
-          setIsAuthenticated(false); // 認証状態をfalseに設定
-          setStudents([]);
-          setBookings([]);
-          setCurrentParentId(null);
-          setIsLoadingParentId(false);
-          setIsLoadingBookings(false);
-          setIsDataLoaded(false); // 認証状態がなくなったらデータもクリアしロード状態をリセット
-          console.log('User is not authenticated.');
+        if (session?.user && !isDataLoaded) {
+          console.log("onAuthStateChangeでuser検出:", session.user);
+          await loadUserData(session.user.id);
         }
       }
     );
-
-    return () => {
-      console.log('Cleaning up auth state change listener.');
-      data?.subscription?.unsubscribe();
-    };
+    return () => data?.subscription?.unsubscribe();
   }, []);
 
-  // ページの初期ロード時（isAuthLoadingFromHookがtrueの間）や、データフェッチ中はローディングを表示
-  // isAuthLoadingFromHook はuseAuthフックがuserオブジェクトの解決を試みている間true
-  // isAuthenticated がfalseの場合も認証が確定するまでLoading
-  // isDataLoaded がfalseの場合もデータが揃うまでLoading
-  if (isAuthLoadingFromHook || !isAuthenticated || isLoadingParentId || isLoadingBookings || !isDataLoaded) {
-     // isAuthLoadingFromHook が終わっても、データロードが終わるまでLoadingを表示
-     // onAuthStateChange で isAuthenticated が true になっても、データがロードされるまでLoading
+  if (isAuthLoadingFromHook || isLoadingParentId || isLoadingBookings || !isDataLoaded) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
-  // ローディングが全て完了し、認証済みかつデータがロードされた状態
-  // useAuthフックのuserオブジェクトがnullの場合（これはuseAuthの実装に依存）
-  // onAuthStateChangeでは認証済みと判断されているが、useAuthのuserが取れない場合にリダイレクト
-  // このブロックは削除し、isAuthenticatedステートで表示を制御する
-  /*
-  if (!user) {
-    console.error("Authenticated according to onAuthStateChange, but useAuth user is null. Redirecting to login.");
-    router.push('/auth/login');
-    return null;
-  }
-  */
-
-  // 全てのロードが完了し、isAuthenticatedがtrue、データもロードされた状態
-  // ここに到達すれば、useAuthのuserオブジェクトの状態に関わらずコンテンツを表示する
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
       <CommonHeader />
