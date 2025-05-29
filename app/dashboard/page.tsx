@@ -209,7 +209,8 @@ export default function DashboardPage() {
   // Supabaseの認証状態変更をリッスンするEffect
   useEffect(() => {
     console.log('Setting up auth state change listener.');
-    const { data: authListener } = supabase.auth.onAuthStateChange(
+    // onAuthStateChangeの戻り値からdataプロパティを抽出
+    const { data } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         console.log('Auth state changed:', event, 'Session:', session);
         if (session?.user) {
@@ -233,7 +234,8 @@ export default function DashboardPage() {
     // コンポーネントのアンマウント時にリスナーを解除
     return () => {
       console.log('Cleaning up auth state change listener.');
-      authListener?.unsubscribe();
+      // dataオブジェクトのunsubscribe関数を呼び出す
+      data?.unsubscribe();
     };
   }, []); // 依存配列は空で、マウント時に一度だけ設定
 
