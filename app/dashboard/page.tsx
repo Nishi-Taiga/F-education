@@ -172,12 +172,12 @@ export default function DashboardPage() {
       setIsLoadingParentId(false);
   
       // 予約情報の取得
-      console.log('Fetching bookings for parentId:', parent.id); // デバッグログ追加
-      fetchBookings(parent.id);
+      console.log('Fetching bookings for parentId:', parent.id);
+      await fetchBookings(parent.id); // fetchBookingsの完了を待つ
   
       // 生徒情報とチケット数の取得
-      console.log('Fetching students for parentId:', parent.id); // デバッグログ追加
-      const { data: studentsData, error: studentsError } = await supabase
+      console.log('Fetching students for parentId:', parent.id);
+      const { data: studentsData, error: studentsError } = await supabase // 生徒情報取得の完了を待つ
         .from('student_profile')
         .select('id, last_name, first_name')
         .eq('parent_id', parent.id);
@@ -201,20 +201,17 @@ export default function DashboardPage() {
         setStudents(studentsWithTickets);
         console.log('Students state updated:', studentsWithTickets); // デバッグログ追加
       }
+
+       // 全てのデータ取得が完了したら認証ロード終了
+       setIsAuthLoading(false);
     };
-  
+
+    // userオブジェクトが存在すればfetchDataを実行
     if (user?.id) {
       fetchData();
     }
-  }, [user]);
 
-  useEffect(() => {
-    if (!user || isLoadingParentId || isLoadingBookings) {
-      setIsAuthLoading(true);
-    } else {
-      setIsAuthLoading(false);
-    }
-  }, [user, isLoadingParentId, isLoadingBookings]);
+  }, [user]); // userを依存配列に含める
 
   if (isAuthLoading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
