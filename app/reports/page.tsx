@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { DatePickerWithRange } from "@/components/ui/datepicker";
+import { DateRange } from "react-day-picker";
 
 // レポートの型
 type Report = {
@@ -48,9 +50,11 @@ export default function ReportsPage() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [filteredReports, setFilteredReports] = useState<Report[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [selectedPeriod, setSelectedPeriod] = useState("all");
+  const [selectedStudentId, setSelectedStudentId] = useState<number | "all">("all");
+  const [selectedSubject, setSelectedSubject] = useState<string | "all">("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [studentsList, setStudentsList] = useState<{ id: number; name: string }[]>([]);
+  const [subjectsList, setSubjectsList] = useState<string[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
 
@@ -172,7 +176,29 @@ export default function ReportsPage() {
 
       // fetched data matches Report type structure better now after type definition update
       setReports(reportData as Report[]);
-      setFilteredReports(reportData as Report[]); // 初期表示は全て
+      // setFilteredReports(reportData as Report[]); // 初期表示は全て -> フィルタリングuseEffectで処理
+
+      // 生徒リストと科目リストを生成
+      const uniqueStudents = new Map<number, { id: number; name: string }>();
+      const uniqueSubjects = new Set<string>();
+
+      reportData.forEach(report => {
+          if (report.student_profile && report.student_profile.id && !uniqueStudents.has(report.student_profile.id)) {
+              uniqueStudents.set(report.student_profile.id, {
+                  id: report.student_profile.id,
+                  name: `${report.student_profile.last_name} ${report.student_profile.first_name}`
+              });
+          } else if (report.student_id && report.student_profile === null) {
+               // Handle cases where student_profile is null but student_id exists if necessary
+               // For now, only add if student_profile is available
+          }
+          if (report.subject) {
+              uniqueSubjects.add(report.subject);
+          }
+      });
+
+      setStudentsList(Array.from(uniqueStudents.values()).sort((a, b) => a.name.localeCompare(b.name)));
+      setSubjectsList(Array.from(uniqueSubjects).sort());
 
     } catch (error) {
       console.error("データ取得エラー:", error);
@@ -191,129 +217,56 @@ export default function ReportsPage() {
   fetchData();
 }, [router, toast]); // 依存配列にtoastとrouterを追加
 
-// フィルタリング処理
+// フィルタリング処理 (既存のuseEffectを修正または置き換え)
 useEffect(() => {
   const filterReports = () => {
     let filtered = [...reports];
 
-    // 検索ワードでフィルタリング (生徒名、講師名、科目、レポート内容、日付)
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
+    // レポートが紐づいている予約のみを初期フィルタリング対象とする
+    filtered = filtered.filter(report => report.lesson_reports && report.lesson_reports.length > 0);
+
+    // 生徒名でフィルタリング
+    if (selectedStudentId !== "all") {
       filtered = filtered.filter(report =>
-          (report.student_profile?.last_name?.toLowerCase().includes(search) || report.student_profile?.first_name?.toLowerCase().includes(search) || 
-           report.tutor_profile?.last_name?.toLowerCase().includes(search) || report.tutor_profile?.first_name?.toLowerCase().includes(search) ||
-           report.subject?.toLowerCase().includes(search) ||
-           // lesson_reportsが配列なので、各レポートの内容を検索
-           report.lesson_reports?.some(lr => 
-               lr.unit_content?.toLowerCase().includes(search) ||
-               lr.message_content?.toLowerCase().includes(search) ||
-               lr.goal_content?.toLowerCase().includes(search)
-           ) ||
-           // 日付検索 (YYYY/MM/DD 形式を想定)
-           (report.date && format(new Date(report.date), 'yyyy/MM/dd').includes(search))
-          )
+        report.student_profile?.id === selectedStudentId
       );
     }
 
-    // ステータスでフィルタリング (booking status と report status の両方考慮が必要か？)
-    // ここではbookingsテーブルのreport_statusでフィルタリング
-    if (selectedStatus !== "all") {
+    // 科目でフィルタリング
+    if (selectedSubject !== "all") {
       filtered = filtered.filter(report =>
-          report.lesson_reports && report.lesson_reports.length > 0 && getStatusJapanese(report.report_status || 'none') === getStatusJapanese(selectedStatus) // lesson_reportsが存在するもののみ対象とし、日本語ステータスで比較
+        report.subject === selectedSubject
       );
-    } else {
-       // 'all' の場合、レポートが紐づいていない（未作成）ものも表示
-       // ただし、フィルタリングで「レポートあり」に絞る場合はこのelseは不要
-       // 今回の要件は「保護者idに紐づく生徒のレポートをすべて表示」なので、レポートがない予約は対象外とする
-       // initial fetch already filters by parent_id or tutor_id
-       // フィルタリングの段階ではレポートが紐づいているもののみを扱う方針
-       filtered = filtered.filter(report => report.lesson_reports && report.lesson_reports.length > 0); // 明示的にレポートがあるもののみに絞る
     }
 
-    // 期間でフィルタリング (レポート作成日または授業日か？ 授業日dateを使用)
-    if (selectedPeriod !== "all") {
-      const now = new Date();
-      let startDate = new Date();
-
-      // 日付計算
-      if (selectedPeriod === "week") {
-        startDate.setDate(now.getDate() - 7);
-      } else if (selectedPeriod === "month") {
-        startDate.setMonth(now.getMonth() - 1);
-      } else if (selectedPeriod === "quarter") {
-        startDate.setMonth(now.getMonth() - 3);
-      }
-       // 時刻情報をクリアして日付のみで比較
-      startDate.setHours(0, 0, 0, 0);
-
+    // 日付範囲でフィルタリング
+    if (dateRange?.from) {
       filtered = filtered.filter(report => {
-        if (!report.date) return false; // dateがないデータは除外
-        const reportDate = new Date(report.date); // 授業日を基準とする
+        if (!report.date) return false;
+        const reportDate = new Date(report.date);
         reportDate.setHours(0, 0, 0, 0); // 時刻情報をクリア
-        return reportDate >= startDate;
+
+        const fromDate = new Date(dateRange.from);
+        fromDate.setHours(0, 0, 0, 0);
+
+        if (dateRange.to) {
+          const toDate = new Date(dateRange.to);
+          toDate.setHours(0, 0, 0, 0);
+          // 範囲内の判定 (開始日 <= 授業日 <= 終了日)
+          return reportDate >= fromDate && reportDate <= toDate;}
+         else {
+          // 開始日のみの場合はその日以降
+          return reportDate >= fromDate;
+        }
       });
-    } else {
-         // 期間フィルタが'all'の場合も、レポートが紐づいているもののみを表示する方針を維持
-         filtered = filtered.filter(report => report.lesson_reports && report.lesson_reports.length > 0);
     }
 
-    // 検索とステータス、期間フィルタリングを組み合わせるため、ここまでのfilteredを元に最終フィルタリング
-    // 上記のフィルタリングロジックを統合・整理
-    let finalFiltered = [...reports];
-
-    // レポートが紐づいている予約のみを初期フィルタリング対象とする（「すべてのレポート」の定義）
-    finalFiltered = finalFiltered.filter(report => report.lesson_reports && report.lesson_reports.length > 0);
-
-    // 検索ワードでフィルタリング
-    if (searchTerm) {
-        const search = searchTerm.toLowerCase();
-        finalFiltered = finalFiltered.filter(report =>
-             (report.student_profile?.last_name?.toLowerCase().includes(search) || report.student_profile?.first_name?.toLowerCase().includes(search) || 
-              report.tutor_profile?.last_name?.toLowerCase().includes(search) || report.tutor_profile?.first_name?.toLowerCase().includes(search) ||
-              report.subject?.toLowerCase().includes(search) ||
-              report.lesson_reports?.some(lr => 
-                  lr.unit_content?.toLowerCase().includes(search) ||
-                  lr.message_content?.toLowerCase().includes(search) ||
-                  lr.goal_content?.toLowerCase().includes(search)
-              ) ||
-              (report.date && format(new Date(report.date), 'yyyy/MM/dd').includes(search))
-             )
-        );
-    }
-
-    // ステータスでフィルタリング
-    if (selectedStatus !== "all") {
-         finalFiltered = finalFiltered.filter(report => getStatusJapanese(report.report_status || 'none') === getStatusJapanese(selectedStatus));
-    }
-
-    // 期間でフィルタリング
-    if (selectedPeriod !== "all") {
-         const now = new Date();
-         let startDate = new Date();
-
-         if (selectedPeriod === "week") {
-           startDate.setDate(now.getDate() - 7);
-         } else if (selectedPeriod === "month") {
-           startDate.setMonth(now.getMonth() - 1);
-         } else if (selectedPeriod === "quarter") {
-           startDate.setMonth(now.getMonth() - 3);
-         }
-          startDate.setHours(0, 0, 0, 0);
-
-         finalFiltered = finalFiltered.filter(report => {
-           if (!report.date) return false;
-           const reportDate = new Date(report.date);
-           reportDate.setHours(0, 0, 0, 0);
-           return reportDate >= startDate;
-         });
-    }
-
-    setFilteredReports(finalFiltered);
+    setFilteredReports(filtered);
   };
 
   filterReports();
-  // reports, searchTerm, selectedStatus, selectedPeriod, userRole を依存配列に追加
-}, [reports, searchTerm, selectedStatus, selectedPeriod, userRole]);
+  // 依存配列に reports, selectedStudentId, selectedSubject, dateRange を追加
+}, [reports, selectedStudentId, selectedSubject, dateRange]);
 
 // レポート詳細を表示
 const handleViewReport = (report: Report) => {
@@ -378,38 +331,33 @@ return (
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <Input
-              placeholder="レポート内容、名前で検索"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <Select value={selectedStudentId.toString()} onValueChange={(value) => setSelectedStudentId(value === "all" ? "all" : parseInt(value))}>
               <SelectTrigger>
-                <SelectValue placeholder="ステータスで絞り込み" />
+                <SelectValue placeholder="生徒名で絞り込み" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">すべてのステータス</SelectItem>
-                <SelectItem value="completed">完了</SelectItem>
-                <SelectItem value="draft">下書き</SelectItem>
-                <SelectItem value="pending">作成中</SelectItem>
-                <SelectItem value="none">未作成</SelectItem>
+                <SelectItem value="all">すべての生徒</SelectItem>
+                {studentsList.map(student => (
+                  <SelectItem key={student.id} value={student.id.toString()}>{student.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
               <SelectTrigger>
-                <SelectValue placeholder="期間で絞り込み" />
+                <SelectValue placeholder="科目で絞り込み" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">すべての期間</SelectItem>
-                <SelectItem value="week">過去1週間</SelectItem>
-                <SelectItem value="month">過去1ヶ月</SelectItem>
-                <SelectItem value="quarter">過去3ヶ月</SelectItem>
+                <SelectItem value="all">すべての科目</SelectItem>
+                {subjectsList.map(subject => (
+                  <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <DatePickerWithRange date={dateRange} setDate={setDateRange} />
           </div>
         </div>
       </CardContent>
