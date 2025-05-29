@@ -71,7 +71,6 @@ export const ReportCreationModal: React.FC<ReportCreationModalProps> = ({
             student_profile (id, last_name, first_name)
           `)
           .eq('tutor_id', tutorId) // 講師でフィルタ
-          .eq('status', 'completed') // 完了済みの授業のみ
           .lt('date', today) // 本日以前の授業
           .eq('report_status', 'pending') // report_statusが'pending'の授業のみ（レポート未作成相当）
           .order('date', { ascending: false }); // 新しい順にソート
