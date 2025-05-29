@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { ReportCreationModal } from "@/components/report-creation-modal";
+import { ReportEditModal } from "@/components/report-edit-modal";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [currentTutorId, setCurrentTutorId] = useState<number | null>(null);
+  const [isReportEditModalOpen, setIsReportEditModalOpen] = useState(false);
 
   // 予約情報を取得する関数 (保護者用)
   const fetchBookingsForParent = async (parentId: number) => {
@@ -459,7 +461,7 @@ export default function DashboardPage() {
                               </Button>
                               <Button
                                   className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
-                                  onClick={() => router.push("/reports")}
+                                  onClick={() => setIsReportEditModalOpen(true)}
                               >
                                   <FileText className="h-4 w-4 mr-2 text-gray-600" />
                                   <span className="text-xs md:text-sm font-medium text-gray-900">過去レポート</span>
@@ -505,6 +507,16 @@ export default function DashboardPage() {
               onClose={() => setIsReportModalOpen(false)}
               tutorId={currentTutorId}
               onReportCreated={refetchBookings}
+          />
+      )}
+
+      {/* レポート編集モーダル */}
+      {user?.role === 'tutor' && (
+          <ReportEditModal
+              isOpen={isReportEditModalOpen}
+              onClose={() => setIsReportEditModalOpen(false)}
+              tutorId={currentTutorId}
+              onReportUpdated={refetchBookings}
           />
       )}
     </div>
