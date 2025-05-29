@@ -248,10 +248,10 @@ export default function DashboardPage() {
   }
 
   // useAuthフックで認証済みユーザーが確認できない場合、ログインページへリダイレクト
-  // onAuthStateChangeで認証済みと判断されていても、useAuthのuserがnullの場合はリダイレクト
-  // これはuseAuthの実装に依存するが、安全のためuseAuthの判定も使用
-  if (!user) {
-     router.push('/auth/login'); // 前回の修正を維持
+  // isAuthLoadingFromHook が false になった後で、かつisAuthenticatedもfalseの場合にリダイレクト
+  // userがnullの場合でも、isAuthenticatedがtrueなら認証済みとみなす可能性があるためisAuthenticatedも確認
+  if (!user && !isAuthenticated) { // リダイレクト条件にisAuthenticatedを追加
+     router.push('/auth/login');
      return null;
   }
 
