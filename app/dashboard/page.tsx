@@ -211,12 +211,14 @@ export default function DashboardPage() {
       async (event: AuthChangeEvent, session: Session | null) => {
         if (session?.user && !isDataLoaded) {
           console.log("onAuthStateChangeでuser検出:", session.user);
-          await loadUserData(session.user.id);
+          // user.idをstringとして渡す（安全策）
+          await loadUserData(String(session.user.id));
         }
       }
     );
     return () => data?.subscription?.unsubscribe();
   }, []);
+  
 
   if (isAuthLoadingFromHook || isLoadingParentId || isLoadingBookings || !isDataLoaded) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
