@@ -19,9 +19,11 @@ export function DatePicker({
   date,
   setDate,
 }: DatePickerProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
   return (
     <div className={cn("grid gap-2", className)}>
-      <Popover>
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button
             id="date"
@@ -44,14 +46,20 @@ export function DatePicker({
             initialFocus
             mode="single"
             selected={date}
-            onSelect={setDate}
+            onSelect={(selectedDate) => {
+              setDate(selectedDate);
+              setIsOpen(false);
+            }}
             locale={ja}
           />
-          <div className="p-2">
+          <div className="p-2 bg-white">
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => setDate(undefined)}
+              onClick={() => {
+                setDate(undefined);
+                setIsOpen(false);
+              }}
             >
               クリア
             </Button>
