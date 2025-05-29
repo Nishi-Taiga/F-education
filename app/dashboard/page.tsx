@@ -252,13 +252,17 @@ export default function DashboardPage() {
   // ローディングが全て完了し、認証済みかつデータがロードされた状態
   // useAuthフックのuserオブジェクトがnullの場合（これはuseAuthの実装に依存）
   // onAuthStateChangeでは認証済みと判断されているが、useAuthのuserが取れない場合にリダイレクト
+  // このブロックは削除し、isAuthenticatedステートで表示を制御する
+  /*
   if (!user) {
-    // ここに来るのは稀なケースだが、もしuserオブジェクトがnullで解決されたらログアウトまたはエラーハンドリング
     console.error("Authenticated according to onAuthStateChange, but useAuth user is null. Redirecting to login.");
     router.push('/auth/login');
     return null;
   }
+  */
 
+  // 全てのロードが完了し、isAuthenticatedがtrue、データもロードされた状態
+  // ここに到達すれば、useAuthのuserオブジェクトの状態に関わらずコンテンツを表示する
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
       <CommonHeader />
