@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,10 +33,10 @@ const juniorHighSubjects = [
   "国語", "数学", "理科", "社会", "英語"
 ];
 
-export default function TutorProfileSetup() {
+export default function TutorProfileEdit() {
   const router = useRouter();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // 初期ロード中はローディング
   
   const [formData, setFormData] = useState({
     lastName: "",
@@ -47,6 +47,64 @@ export default function TutorProfileSetup() {
     birthDate: "",
     selectedSubjects: [] as string[],
   });
+
+  useEffect(() => {
+    const fetchTutorProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+ 
+        if (user) {
+          const { data: existingTutor, error } = await supabase
+            .from('tutor_profile')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+ 
+          if (error) {
+            console.error("Error fetching tutor profile:", error);
+            toast({
+              title: "講師プロフィール取得エラー",
+              description: `プロフィールの読み込みに失敗しました: ${error.message}`,
+              variant: "destructive",
+            });
+          }
+ 
+          if (existingTutor) {
+            setFormData({
+              lastName: existingTutor.last_name || "",
+              firstName: existingTutor.first_name || "",
+              lastNameFurigana: existingTutor.last_name_furigana || "",
+              firstNameFurigana: existingTutor.first_name_furigana || "",
+              university: existingTutor.university || "",
+              birthDate: existingTutor.birth_date || "",
+              selectedSubjects: existingTutor.subjects ? existingTutor.subjects.split(',') : [],
+            });
+          } else {
+            // プロフィールが存在しない場合はエラーまたは新規登録を促す（編集画面なので通常は存在する想定）
+            console.warn("Tutor profile not found for user:", user.id);
+            toast({
+              title: "プロフィールが見つかりません",
+              description: "講師プロフィール情報が見つかりませんでした。新規登録してください。", // またはエラーメッセージ
+              variant: "destructive",
+            });
+             // 必要に応じてリダイレクトなど
+             // router.push('/profile-setup/tutor');
+          }
+        }
+      } catch (error) {
+        console.error("Unexpected error fetching tutor profile:", error);
+        toast({
+          title: "エラー",
+          description: `プロフィールの読み込み中に予期せぬエラーが発生しました: ${(error as Error).message}`,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+ 
+    fetchTutorProfile();
+  }, []); // 空の依存配列でマウント時に一度だけ実行
 
   const handleSubjectChange = (subject: string, category?: string) => {
     let fullSubjectName = subject;
@@ -103,14 +161,12 @@ export default function TutorProfileSetup() {
       // 科目の配列をカンマ区切りの文字列に変換
       const subjects = formData.selectedSubjects.join(",");
       
-      // 直接データベースに挿入
-      try {
-        console.log("直接データベースに挿入を試みます...");
-        
-        // データを準備 - idフィールドを含めず、自動采番に任せる
-        const profileData = {
-          // 認証ユーザーIDをuser_idフィールドに設定
-          user_id: user.id,
+      // tutor_profile テーブルを更新
+      console.log("Updating tutor profile...");
+
+      const { data, error } = await supabase
+        .from('tutor_profile')
+        .update({
           first_name: formData.firstName,
           last_name: formData.lastName,
           last_name_furigana: formData.lastNameFurigana,
@@ -118,109 +174,50 @@ export default function TutorProfileSetup() {
           university: formData.university,
           birth_date: formData.birthDate,
           subjects: subjects,
-          email: user.email,  // Emailを明示的に保存
-          profile_completed: true,
-          is_active: true
-        };
-        
-        // 挿入操作の実行
-        const { data: insertData, error: insertError } = await supabase
-          .from('tutor_profile')
-          .insert(profileData)
-          .select();
-          
-        if (insertError) {
-          console.error("挿入エラー:", insertError);
-          
-          // 既に登録されている場合は更新を試みる
-          if (insertError.code === '23505') { // 重複キーエラー
-            console.log("既存レコードが存在するため更新を試みます");
-            
-            const { data: updateData, error: updateError } = await supabase
-              .from('tutor_profile')
-              .update({
-                first_name: formData.firstName,
-                last_name: formData.lastName,
-                last_name_furigana: formData.lastNameFurigana,
-                first_name_furigana: formData.firstNameFurigana,
-                university: formData.university,
-                birth_date: formData.birthDate,
-                subjects: subjects,
-                email: user.email,  // 更新時もEmailを明示的に含める
-                profile_completed: true,
-                is_active: true
-              })
-              .eq('user_id', user.id)
-              .select();
-              
-            if (updateError) {
-              console.error("更新エラー:", updateError);
-              throw new Error(`更新中にエラーが発生しました: ${updateError.message}`);
-            }
-            
-            console.log("更新成功:", updateData);
-            toast({
-              title: "プロフィール更新完了",
-              description: "講師プロフィールが正常に更新されました",
-            });
-            
-            router.push('/dashboard');
-            return;
-          }
-          
-          // テーブルが存在しない場合
-          if (insertError.code === '42P01') { // relation "テーブル名" does not exist
-            throw new Error("テーブルが存在しません。\n\n管理者に連絡してください。");
-          }
-          
-          throw new Error(`プロフィールの保存中にエラーが発生しました: ${insertError.message}`);
+          // profile_completed: true, // プロフィール編集画面なので不要
+          // is_active: true // アクティブ状態の変更はここで行わない
+        })
+        .eq('user_id', user.id) // ユーザーIDをキーに更新
+        .select();
+
+      if (error) {
+        console.error("Error updating tutor profile:", error);
+        // テーブルが存在しない場合のエラーハンドリングを残す
+        if (error.code === '42P01') { // relation "テーブル名" does not exist
+          throw new Error("テーブルが存在しません。\n\n管理者に連絡してください。");
         }
-        
-        console.log("挿入成功:", insertData);
-        
-        // 成功後に検証クエリを実行
-        console.log("プロフィール保存を検証しています...");
-        const { data: verifyProfile, error: verifyError } = await supabase
-          .from('tutor_profile')
-          .select('*')
-          .eq('email', user.email)
-          .maybeSingle();
-          
-        if (verifyError || !verifyProfile) {
-          console.error("プロフィール保存の検証に失敗:", verifyError);
-          // エラーはスローせず、プロフィールが見つからなくても続行
-          console.log("代替手段: user_idでプロフィールを検索します");
-          
-          const { data: verifyByIdProfile, error: verifyByIdError } = await supabase
-            .from('tutor_profile')
-            .select('*')
-            .eq('user_id', user.id)
-            .maybeSingle();
-            
-          if (verifyByIdProfile) {
-            console.log("user_idによるプロフィール検証成功:", verifyByIdProfile);
-          } else {
-            console.error("user_idによるプロフィール検証失敗:", verifyByIdError);
-          }
-        } else {
-          console.log("プロフィール保存の検証成功:", verifyProfile);
-        }
-        
-        toast({
-          title: "プロフィール設定完了",
-          description: "講師プロフィールが正常に設定されました",
-        });
-        
-        router.push('/dashboard');
-      } catch (dbError: any) {
-        console.error("直接データベース操作失敗:", dbError);
-        throw dbError;
+        throw new Error(`プロフィールの保存中にエラーが発生しました: ${error.message}`);
       }
-    } catch (error: any) {
-      console.error("プロフィール設定エラー:", error);
+
+      console.log("Tutor profile updated:", data);
+
+      // usersテーブルのprofile_completedフラグ更新は不要なので削除
+      // try {
+      //   const { error: userUpdateError } = await supabase
+      //     .from('users')
+      //     .update({ profile_completed: true })
+      //     .eq('auth_user_id', user.id);
+ 
+      //   if (userUpdateError) {
+      //     console.warn("Warning: Could not update user profile_completed flag:", userUpdateError);
+      //   }
+      // } catch (userUpdateError) {
+      //   console.warn("Warning: Error accessing users table:", userUpdateError);
+      // }
+
       toast({
-        title: "エラー",
-        description: error.message || "プロフィールの設定中にエラーが発生しました",
+        title: "保存完了", // メッセージを更新完了に変更
+        description: "講師プロフィールが正常に保存されました",
+      });
+
+      // 保存完了後、ダッシュボードにリダイレクト
+      router.push("/dashboard");
+
+    } catch (error: any) {
+      console.error("Save failed:", error); // メッセージを保存失敗に変更
+      toast({
+        title: "保存失敗", // メッセージを保存失敗に変更
+        description: error.message || "プロフィールの保存中にエラーが発生しました",
         variant: "destructive",
       });
     } finally {

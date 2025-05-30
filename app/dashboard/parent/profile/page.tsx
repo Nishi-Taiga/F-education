@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,13 +12,32 @@ import { useToast } from "@/components/ui/use-toast";
 import { PlusCircle, Trash2, Search, Loader2 } from "lucide-react";
 import axios from "axios";
 
-export default function ParentProfileSetup() {
+export default function ParentProfileEdit() {
   const router = useRouter();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [initialStudents, setInitialStudents] = useState<any[]>([]);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    parentName: string;
+    phone: string;
+    postalCode: string;
+    prefecture: string;
+    city: string;
+    address: string;
+    students: { 
+      lastName: string; 
+      firstName: string; 
+      lastNameFurigana: string; 
+      firstNameFurigana: string; 
+      gender: string; 
+      school: string; 
+      grade: string; 
+      birthDate: string;
+      id?: number;
+    }[];
+  }>({
     parentName: "",
     phone: "",
     postalCode: "",
@@ -34,10 +53,102 @@ export default function ParentProfileSetup() {
         gender: "", 
         school: "", 
         grade: "", 
-        birthDate: "" 
+        birthDate: "",
+        id: undefined,
       }
     ]
   });
+
+  useEffect(() => {
+    const fetchParentProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data: existingParent, error: checkError } = await supabase
+            .from('parent_profile')
+            .select('*')
+            .eq('email', user.email)
+            .maybeSingle();
+
+          console.log("Existing parent profile check:", { existingParent, checkError });
+          
+          if (existingParent) {
+            setFormData({
+              ...formData,
+              parentName: existingParent.name,
+              phone: existingParent.phone,
+              postalCode: existingParent.postal_code,
+              prefecture: existingParent.prefecture,
+              city: existingParent.city,
+              address: existingParent.address,
+            });
+
+            // 生徒情報を読み込み
+            const { data: studentsData, error: studentsError } = await supabase
+              .from('student_profile')
+              .select('*')
+              .eq('parent_id', existingParent.id);
+
+            console.log("Fetched students data:", { studentsData, studentsError });
+
+            if (!studentsError && studentsData && studentsData.length > 0) {
+               // Supabaseから取得したデータ形式をformDataのstudentsの形式に変換
+               const formattedStudents = studentsData.map(student => ({
+                   lastName: student.last_name || '',
+                   firstName: student.first_name || '',
+                   lastNameFurigana: student.last_name_furigana || '',
+                   firstNameFurigana: student.first_name_furigana || '',
+                   gender: student.gender || '',
+                   school: student.school || '',
+                   grade: student.grade || '',
+                   birthDate: student.birth_date || '',
+                   // 既存生徒のIDを保持しておくと更新時に便利
+                   id: student.id // 生徒のIDを追加
+               }));
+               setFormData(prev => ({ ...prev, students: formattedStudents }));
+
+               // 読み込み時の生徒リストを保持
+               if (studentsData) {
+                 setInitialStudents(studentsData.map(student => ({ ...student, id: student.id })));
+               }
+            } else if (!studentsError && studentsData && studentsData.length === 0) {
+              // 生徒が0人の場合、フォームを空の生徒情報で初期化
+               setFormData(prev => ({
+                 ...prev,
+                 students: [
+                   { 
+                     lastName: "", 
+                     firstName: "", 
+                     lastNameFurigana: "", 
+                     firstNameFurigana: "", 
+                     gender: "", 
+                     school: "", 
+                     grade: "", 
+                     birthDate: "",
+                     id: undefined,
+                   }
+                 ]
+               }));
+            } else {
+               console.error("Error fetching students profile:", studentsError);
+               toast({
+                 title: "生徒情報取得エラー",
+                 description: `生徒情報の読み込みに失敗しました: ${studentsError?.message}`,
+                 variant: "destructive",
+               });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching parent profile:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchParentProfile();
+  }, []);
 
   // 郵便番号から住所を検索する関数
   const searchAddressByPostalCode = async () => {
@@ -123,7 +234,8 @@ export default function ParentProfileSetup() {
         gender: "", 
         school: "", 
         grade: "", 
-        birthDate: ""
+        birthDate: "",
+        id: undefined,
       }]
     });
   };
@@ -229,24 +341,41 @@ export default function ParentProfileSetup() {
           throw error;
         }
         parentData = data[0];
+
+        // 新規保護者の場合、auth_user_idをprofileに紐付ける（初期設定画面のロジックだが、念のため残す）
+        try {
+          const { error: userUpdateError } = await supabase
+            .from('users')
+            .update({ 
+              parent_profile_id: parentData.id // parent_profileのIDをusersテーブルに保存
+            })
+            .eq('auth_user_id', user.id);
+
+          if (userUpdateError) {
+            console.warn("Warning: Could not update user parent_profile_id:", userUpdateError);
+          }
+        } catch (userUpdateError) {
+          console.warn("Warning: Error accessing users table for parent_profile_id update:", userUpdateError);
+        }
       }
 
       console.log("Parent profile saved:", parentData);
 
       try {
         // usersテーブルが存在しない場合でも処理を継続するため、try-catchで囲む
-        const { error: userUpdateError } = await supabase
-          .from('users')
-          .update({ 
-            profile_completed: true,
-            role: 'parent'
-          })
-          .eq('auth_user_id', user.id);
+        // プロフィール編集画面なので、profile_completedとroleの更新は不要
+        // const { error: userUpdateError } = await supabase
+        //   .from('users')
+        //   .update({ 
+        //     profile_completed: true,
+        //     role: 'parent'
+        //   })
+        //   .eq('auth_user_id', user.id);
 
-        if (userUpdateError) {
-          console.warn("Warning: Could not update user profile_completed flag:", userUpdateError);
-          // エラーをスローせずに続行
-        }
+        // if (userUpdateError) {
+        //   console.warn("Warning: Could not update user profile_completed flag:", userUpdateError);
+        //   // エラーをスローせずに続行
+        // }
       } catch (userUpdateError) {
         console.warn("Warning: Error accessing users table:", userUpdateError);
         // エラーをスローせずに続行
@@ -254,21 +383,31 @@ export default function ParentProfileSetup() {
 
       console.log("Saving student profiles...");
       
+      // フォームから削除された生徒を特定し削除
+      const currentStudentIds = new Set(formData.students.map(s => s.id).filter(id => id !== undefined));
+      const studentsToDelete = initialStudents.filter(student => !currentStudentIds.has(student.id));
+
+      for (const student of studentsToDelete) {
+          console.log("Deleting student:", student.id);
+          const { error: deleteError } = await supabase
+              .from('student_profile')
+              .delete()
+              .eq('id', student.id);
+
+          if (deleteError) {
+              console.error("Error deleting student profile:", deleteError);
+              throw deleteError; // 削除失敗はエラーとする
+          }
+          console.log("Student deleted:", student.id);
+      }
+
       // 生徒情報を保存または更新
-      for (const student of students) {
+      for (const student of formData.students) {
         // student_profile テーブルの構造に合わせて保存
-        const { data: existingStudent, error: studentCheckError } = await supabase
-          .from('student_profile')
-          .select('*')
-          .eq('parent_id', parentData.id) // 親IDで生徒を紐付け
-          .eq('last_name', student.lastName) // 姓名で既存生徒を検索 (簡易的なマッチング)
-          .eq('first_name', student.firstName)
-          .maybeSingle();
-
-        console.log("Existing student check for", student.lastName, student.firstName, ":", { existingStudent, studentCheckError });
-
-        if (existingStudent) {
+        // IDが存在すれば更新、存在しなければ新規挿入
+        if (student.id) {
           // 既存生徒を更新
+           console.log("Updating student:", student.id);
            const { data: studentUpdateData, error: studentUpdateError } = await supabase
             .from('student_profile')
             .update({
@@ -282,7 +421,7 @@ export default function ParentProfileSetup() {
               birth_date: student.birthDate,
               parent_id: parentData.id // 親IDを紐付け
             })
-            .eq('id', existingStudent.id)
+            .eq('id', student.id)
             .select();
 
           if (studentUpdateError) {
@@ -293,6 +432,7 @@ export default function ParentProfileSetup() {
 
         } else {
           // 新規生徒を作成
+          console.log("Inserting new student:");
           const { data: studentInsertData, error: studentInsertError } = await supabase
             .from('student_profile')
             .insert([{
@@ -314,7 +454,8 @@ export default function ParentProfileSetup() {
           }
           console.log("Student profile inserted:", studentInsertData);
 
-          // 新規生徒には初期チケット0枚を付与（parent_profile作成時に0枚設定済みなので不要かも）
+          // 新規生徒には初期チケット0枚を付与（初期設定画面のロジックだが、編集画面では不要な可能性あり）
+          // プロフィール編集時はチケット付与ロジックは不要と判断しコメントアウト
           // const { error: ticketInsertError } = await supabase
           //   .from('student_tickets')
           //   .insert({ student_id: studentInsertData[0].id, quantity: 0 });
@@ -326,18 +467,18 @@ export default function ParentProfileSetup() {
       }
 
       toast({
-        title: "登録完了",
-        description: "保護者プロフィールと生徒情報が登録されました",
+        title: "保存完了", // メッセージを更新完了に変更
+        description: "保護者プロフィールと生徒情報が保存されました",
       });
 
       // 登録完了後、ダッシュボードにリダイレクト
       router.push("/dashboard");
 
     } catch (error: any) {
-      console.error("Registration failed:", error);
+      console.error("Save failed:", error); // メッセージを保存失敗に変更
       toast({
-        title: "登録失敗",
-        description: `プロフィールの登録に失敗しました: ${error.message}`,
+        title: "保存失敗", // メッセージを保存失敗に変更
+        description: `プロフィールの保存に失敗しました: ${error.message}`,
         variant: "destructive",
       });
     } finally {
