@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const [isLoadingParentId, setIsLoadingParentId] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isInitialLoadingComplete, setIsInitialLoadingComplete] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [currentTutorId, setCurrentTutorId] = useState<number | null>(null);
   const [isReportEditModalOpen, setIsReportEditModalOpen] = useState(false);
@@ -206,13 +207,12 @@ export default function DashboardPage() {
     console.log("loadUserData 開始:", authUid);
     setIsLoadingParentId(true);
     setIsLoadingBookings(true);
-    setIsDataLoaded(false);
 
     if (!user || !user.auth_id) {
         console.log("loadUserData: user or auth_id is null, exiting.");
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
-        setIsDataLoaded(true);
+        setIsInitialLoadingComplete(true);
         return;
     }
 
@@ -231,6 +231,7 @@ export default function DashboardPage() {
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
         setIsDataLoaded(true);
+        setIsInitialLoadingComplete(true);
         return;
       }
 
@@ -283,6 +284,7 @@ export default function DashboardPage() {
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
         setIsDataLoaded(true);
+        setIsInitialLoadingComplete(true);
         return;
       }
 
@@ -297,6 +299,7 @@ export default function DashboardPage() {
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
         setIsDataLoaded(true);
+        setIsInitialLoadingComplete(true);
         toast({
           title: "エラー",
           description: `未対応のユーザーロールです: ${user.role}`,
@@ -306,6 +309,7 @@ export default function DashboardPage() {
 
     console.log("loadUserData 完了: isDataLoaded = true");
     setIsDataLoaded(true);
+    setIsInitialLoadingComplete(true);
   };
 
   // Main effect for authentication and data loading
@@ -318,6 +322,7 @@ export default function DashboardPage() {
       if (!user) {
         console.log('useEffect: auth loading complete and user is null. Redirecting to login.');
         router.push("/auth/"); // 修正: /auth/ にリダイレクト
+        setIsInitialLoadingComplete(true);
       } else if (!isDataLoaded) { // userが存在し、かつデータがまだロードされていなければデータロード開始
         console.log('useEffect (データロードトリガー): user detected', user);
         loadUserData(user.auth_id);
@@ -377,13 +382,15 @@ export default function DashboardPage() {
     console.log('students state updated:', students);
   }, [students]);
 
-  // Render loading state while authentication is loading OR data is loading
-  if (isAuthLoadingFromHook || isLoadingBookings || (user && !isDataLoaded)) {
+  // Render loading state while initial loading is not complete
+  if (!isInitialLoadingComplete) {
+    console.log('Rendering initial loading state...');
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
-  // Render not authenticated state if auth loading is complete but no user
+  // Render not authenticated state if initial loading is complete but no user
   if (!user) {
+      console.log('Rendering not authenticated state...');
       return <div className="flex justify-center items-center h-screen">認証情報がありません。ログインしてください。<Button onClick={() => router.push("/auth/")} className="ml-4">ログイン</Button></div>;
   }
 
