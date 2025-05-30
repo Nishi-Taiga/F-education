@@ -505,9 +505,9 @@ export default function ParentProfileEdit() {
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-3xl mx-auto">
           <Tabs defaultValue="parent" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="parent">保護者情報</TabsTrigger>
-              <TabsTrigger value="students">生徒情報</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 text-lg font-semibold">
+              <TabsTrigger value="parent" className="text-lg data-[state=active]:text-primary">保護者情報</TabsTrigger>
+              <TabsTrigger value="students" className="text-lg data-[state=active]:text-primary">生徒情報</TabsTrigger>
             </TabsList>
             <TabsContent value="parent">
               <Card className="mb-8">
@@ -620,11 +620,10 @@ export default function ParentProfileEdit() {
             </TabsContent>
             <TabsContent value="students">
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold mb-4">生徒情報</h2>
                 {formData.students.map((student, index) => (
                   <Card key={student.id || index} className="mb-4 border-gray-200 cursor-pointer" onClick={() => { setEditingStudentIndex(index); setIsEditingModalOpen(true); }}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-lg">生徒 {index + 1}</CardTitle>
+                      <CardTitle className="text-xl font-semibold">{student.lastName} {student.firstName}</CardTitle>
                       {formData.students.length > 1 && (
                         <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); removeStudent(index); }}>
                           <Trash2 className="mr-1 h-4 w-4" /> 削除
@@ -632,10 +631,6 @@ export default function ParentProfileEdit() {
                       )}
                     </CardHeader>
                     <CardContent>
-                      <p><strong>氏名:</strong> {student.lastName} {student.firstName}</p>
-                      <p><strong>ふりがな:</strong> {student.lastNameFurigana} {student.firstNameFurigana}</p>
-                      <p><strong>生年月日:</strong> {student.birthDate}</p>
-                      <p><strong>性別:</strong> {student.gender === 'male' ? '男性' : student.gender === 'female' ? '女性' : student.gender}</p>
                       <p><strong>学校:</strong> {student.school}</p>
                       <p><strong>学年:</strong> {student.grade}</p>
                     </CardContent>
