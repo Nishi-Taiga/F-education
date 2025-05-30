@@ -316,28 +316,28 @@ export default function DashboardPage() {
   useEffect(() => {
     console.log(`useEffect: user is ${user ? "present" : "null"} and auth loading is ${isAuthLoadingFromHook ? "complete" : "incomplete"}.`);
 
-    // 認証状態のロード完了を待つ
-    if (isAuthLoadingFromHook === false) {
-      console.log('Auth loading complete. Checking user state.');
-      // userがnullであればログインページにリダイレクト
-      if (!user) {
+    // 認証状態のロードが完了し、かつuserが存在する場合にデータロードを開始
+    if (!isAuthLoadingFromHook && user && !isDataLoaded) {
+      console.log('Auth loading complete and user is present. Initiating data load.', user);
+      loadUserData(user.auth_id);
+      // Note: setIsInitialLoadingComplete(true) is called inside loadUserData upon completion
+    } else if (!isAuthLoadingFromHook && !user) {
+       // 認証ロード完了後、userがnullの場合はリダイレクトして初期ロード完了
         console.log('Auth loading complete and user is null. Redirecting to /auth/.');
         router.push("/auth/");
-        setIsInitialLoadingComplete(true); // リダイレクトする場合も初期ロード完了とする
-      } else if (!isDataLoaded) { // userが存在し、かつデータがまだロードされていなければデータロード開始
-        console.log('User detected after auth loading. Initiating data load.');
-        loadUserData(user.auth_id);
-        // Note: setIsInitialLoadingComplete(true) is called inside loadUserData upon completion
-      } else {
-        // User is present and data is already loaded (e.g., returning to the page)
+        setIsInitialLoadingComplete(true);
+    } else if (user && isDataLoaded) {
+        // userが存在し、データもロード済みの場合は初期ロード完了
         console.log('User present and data already loaded. Initial loading complete.');
         setIsInitialLoadingComplete(true);
-      }
     } else {
-        console.log('Auth loading still in progress.');
+      console.log('Waiting for auth loading or user data.');
+      // Keep isInitialLoadingComplete false while loading or waiting for user
+      setIsInitialLoadingComplete(false);
     }
-    // isAuthLoadingFromHook と user を依存配列に含める
-  }, [isAuthLoadingFromHook, user, isDataLoaded, router]); // isDataLoaded, routerも依存配列に含める
+
+    // 依存配列に isAuthLoadingFromHook, user, isDataLoaded を含める
+  }, [isAuthLoadingFromHook, user, isDataLoaded, router]); // routerも依存配列に含める
 
   // Effect to handle data loading completion (Remove if not strictly necessary for logging)
   // useEffect(() => {
