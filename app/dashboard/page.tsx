@@ -316,27 +316,35 @@ export default function DashboardPage() {
   useEffect(() => {
     console.log(`useEffect: user is ${user ? "present" : "null"} and auth loading is ${isAuthLoadingFromHook ? "complete" : "incomplete"}.`);
 
-    // 認証状態のロードが完了したら（isAuthLoadingFromHookがfalseになったら）処理を開始
-    if (!isAuthLoadingFromHook) {
+    // 認証状態のロード完了を待つ
+    if (isAuthLoadingFromHook === false) {
+      console.log('Auth loading complete. Checking user state.');
       // userがnullであればログインページにリダイレクト
       if (!user) {
-        console.log('useEffect: auth loading complete and user is null. Redirecting to login.');
-        router.push("/auth/"); // 修正: /auth/ にリダイレクト
-        setIsInitialLoadingComplete(true);
+        console.log('Auth loading complete and user is null. Redirecting to /auth/.');
+        router.push("/auth/");
+        setIsInitialLoadingComplete(true); // リダイレクトする場合も初期ロード完了とする
       } else if (!isDataLoaded) { // userが存在し、かつデータがまだロードされていなければデータロード開始
-        console.log('useEffect (データロードトリガー): user detected', user);
+        console.log('User detected after auth loading. Initiating data load.');
         loadUserData(user.auth_id);
+        // Note: setIsInitialLoadingComplete(true) is called inside loadUserData upon completion
+      } else {
+        // User is present and data is already loaded (e.g., returning to the page)
+        console.log('User present and data already loaded. Initial loading complete.');
+        setIsInitialLoadingComplete(true);
       }
+    } else {
+        console.log('Auth loading still in progress.');
     }
-    // isAuthLoadingFromHook を依存配列に追加し、ロード完了をトリガーにする
-  }, [user, isAuthLoadingFromHook, isDataLoaded, router]); // isDataLoadedも依存配列に含める
+    // isAuthLoadingFromHook と user を依存配列に含める
+  }, [isAuthLoadingFromHook, user, isDataLoaded, router]); // isDataLoaded, routerも依存配列に含める
 
-  // Effect to handle data loading completion
-  useEffect(() => {
-    if (isDataLoaded) {
-      console.log('loadUserData 完了: isDataLoaded =', isDataLoaded);
-    }
-  }, [isDataLoaded]);
+  // Effect to handle data loading completion (Remove if not strictly necessary for logging)
+  // useEffect(() => {
+  //   if (isDataLoaded) {
+  //     console.log('loadUserData 完了: isDataLoaded =', isDataLoaded);
+  //   }
+  // }, [isDataLoaded]);
 
   // Effect to log parent ID loading status
   useEffect(() => {
