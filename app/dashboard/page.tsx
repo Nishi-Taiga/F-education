@@ -321,7 +321,7 @@ export default function DashboardPage() {
       console.log('Auth loading complete and user is present. Initiating data load.', user);
       loadUserData(user.auth_id);
       // Note: setIsInitialLoadingComplete(true) is called inside loadUserData upon completion
-    } else if (!isAuthLoadingFromHook && !user) {
+    } else if (!user) {
        // 認証ロード完了後、userがnullの場合はリダイレクトして初期ロード完了
         console.log('Auth loading complete and user is null. Redirecting to /auth/.');
         router.push("/auth/");
