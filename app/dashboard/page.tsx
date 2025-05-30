@@ -559,6 +559,13 @@ export default function DashboardPage() {
                                   <FileText className="h-4 w-4 mr-2 text-gray-600" />
                                   <span className="text-xs md:text-sm font-medium text-gray-900">過去レポート</span>
                               </Button>
+                              <Button
+                                  className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                                  onClick={() => router.push('/dashboard/tutor/profile')}
+                              >
+                                  <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                                  <span className="text-xs md:text-sm font-medium text-gray-900">プロフィール設定</span>
+                              </Button>
                           </>
                       ) : user.role === 'parent' ? (
                           <>
@@ -582,6 +589,13 @@ export default function DashboardPage() {
                               >
                                   <FileText className="h-4 w-4 mr-2 text-gray-600" />
                                   <span className="text-xs md:text-sm font-medium text-gray-900">授業レポート</span>
+                              </Button>
+                              <Button
+                                  className="h-auto py-3 md:py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center"
+                                  onClick={() => router.push('/dashboard/parent/profile')}
+                              >
+                                  <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                                  <span className="text-xs md:text-sm font-medium text-gray-900">プロフィール設定</span>
                               </Button>
                           </>
                       ) : (
