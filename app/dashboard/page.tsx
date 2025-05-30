@@ -316,30 +316,36 @@ export default function DashboardPage() {
   useEffect(() => {
     console.log(`useEffect: user is ${user ? "present" : "null"} and auth loading is ${isAuthLoadingFromHook ? "complete" : "incomplete"}.`);
 
-    // 認証状態のロードが完了し、かつuserが存在する場合にデータロードを開始
-    if (!isAuthLoadingFromHook && user && !isDataLoaded) {
-      console.log('Auth loading complete and user is present. Initiating data load.', user);
-      loadUserData(user.auth_id);
-      // Note: setIsInitialLoadingComplete(true) is called inside loadUserData upon completion
-    } else if (!user) {
-       // 認証ロード完了後、userがnullの場合はリダイレクトして初期ロード完了
-        console.log('Auth loading complete and user is null. Redirecting to /auth/.');
+    // 認証状態のロードが完了したら（isAuthLoadingFromHookがfalseになったら）処理を進める
+    if (isAuthLoadingFromHook === false) {
+      console.log('Auth loading complete. Final check on user state.', { userAtComplete: user });
+      // userが確定的にnullであればログインページにリダイレクト
+      if (!user) {
+        console.log('Auth loading complete and user is definitively null. Redirecting to /auth/.');
         router.push("/auth/");
-        setIsInitialLoadingComplete(true);
-    } else if (user && isDataLoaded) {
-        // userが存在し、データもロード済みの場合は初期ロード完了
-        console.log('User present and data already loaded. Initial loading complete.');
-        setIsInitialLoadingComplete(true);
+        setIsInitialLoadingComplete(true); // リダイレクトする場合も初期ロード完了とする
+      } else { // userが確定的にnullでなければ（認証済みであれば）
+         console.log('Auth loading complete and user is present. Proceeding with data load if needed.', user);
+         if (!isDataLoaded) {
+            loadUserData(user.auth_id);
+            // Note: setIsInitialLoadingComplete(true) is called inside loadUserData upon completion
+         } else {
+            // User present and data already loaded (e.g., returning to the page, hot reload)
+            console.log('User present and data already loaded. Initial loading complete.');
+            setIsInitialLoadingComplete(true);
+         }
+      }
     } else {
-      console.log('Waiting for auth loading or user data.');
-      // Keep isInitialLoadingComplete false while loading or waiting for user
-      setIsInitialLoadingComplete(false);
+        console.log('Auth loading still in progress or waiting for user state from hook.');
+        // Keep initial loading state true while auth is loading
+        setIsInitialLoadingComplete(false); // Ensure loading screen stays if auth is still in progress
     }
 
-    // 依存配列に isAuthLoadingFromHook, user, isDataLoaded を含める
-  }, [isAuthLoadingFromHook, user, isDataLoaded, router]); // routerも依存配列に含める
+    // 依存配列に isAuthLoadingFromHook と user を含める
+    // user の変更も監視し、認証状態が遅れて反映された場合にもトリガーする
+  }, [isAuthLoadingFromHook, user, isDataLoaded, router]);
 
-  // Effect to handle data loading completion (Remove if not strictly necessary for logging)
+  // Effect to handle data loading completion (Remove as main logic is in the first useEffect)
   // useEffect(() => {
   //   if (isDataLoaded) {
   //     console.log('loadUserData 完了: isDataLoaded =', isDataLoaded);
@@ -391,17 +397,21 @@ export default function DashboardPage() {
   }, [students]);
 
   // Render loading state while initial loading is not complete
+  // This includes waiting for auth to be fully resolved and data loaded
   if (!isInitialLoadingComplete) {
     console.log('Rendering initial loading state...');
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
   // Render not authenticated state if initial loading is complete but no user
+  // This check happens ONLY after isInitialLoadingComplete is true
   if (!user) {
       console.log('Rendering not authenticated state...');
       return <div className="flex justify-center items-center h-screen">認証情報がありません。ログインしてください。<Button onClick={() => router.push("/auth/")} className="ml-4">ログイン</Button></div>;
   }
 
+  // Render dashboard if authenticated and initial loading is complete
+  console.log('Rendering dashboard...');
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
       <CommonHeader />
