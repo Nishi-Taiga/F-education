@@ -207,14 +207,18 @@ export default function DashboardPage() {
     console.log("loadUserData 開始:", authUid);
     setIsLoadingParentId(true);
     setIsLoadingBookings(true);
+    setIsDataLoaded(false); // loadUserDataが呼ばれたらデータはまだロード中とマーク
 
     if (!user || !user.auth_id) {
         console.log("loadUserData: user or auth_id is null, exiting.");
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
-        setIsInitialLoadingComplete(true);
+        setIsDataLoaded(true); // データロードは行わないが、ロード処理としては完了とマーク
+        setIsInitialLoadingComplete(true); // 初期ロード完了
         return;
     }
+
+    let parentOrTutorLoaded = false;
 
     if (user.role === 'parent') {
       console.log("loadUserData: ロールは保護者です。");
@@ -230,43 +234,41 @@ export default function DashboardPage() {
         console.error('親プロフィール取得エラー', parentError);
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
-        setIsDataLoaded(true);
-        setIsInitialLoadingComplete(true);
-        return;
-      }
-
-      console.log("親IDが取得できました:", parent.id);
-      setCurrentParentId(parent.id);
-      setIsLoadingParentId(false);
-
-      await fetchBookingsForParent(parent.id);
-
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('student_profile')
-        .select('id, last_name, first_name')
-        .eq('parent_id', parent.id);
-
-      console.log("生徒データ取得結果", studentsData, studentsError);
-
-      if (!studentsError && studentsData) {
-        const studentsWithTickets = await Promise.all(studentsData.map(async student => {
-          const { data: ticketsData, error: ticketsError } = await supabase
-            .from('student_tickets')
-            .select('quantity')
-            .eq('student_id', student.id);
-
-          const ticketCount = ticketsError || !ticketsData ? 0 : ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0);
-
-          return {
-            ...student,
-            ticketCount: ticketCount,
-          };
-        }));
-
-        console.log("生徒情報＋チケット数", studentsWithTickets);
-        setStudents(studentsWithTickets);
+        // データロードは失敗したが、このパスでの処理は完了
       } else {
-        console.error("生徒情報取得エラー", studentsError);
+        console.log("親IDが取得できました:", parent.id);
+        setCurrentParentId(parent.id);
+        setIsLoadingParentId(false);
+        await fetchBookingsForParent(parent.id);
+
+        const { data: studentsData, error: studentsError } = await supabase
+          .from('student_profile')
+          .select('id, last_name, first_name')
+          .eq('parent_id', parent.id);
+
+        console.log("生徒データ取得結果", studentsData, studentsError);
+
+        if (!studentsError && studentsData) {
+          const studentsWithTickets = await Promise.all(studentsData.map(async student => {
+            const { data: ticketsData, error: ticketsError } = await supabase
+              .from('student_tickets')
+              .select('quantity')
+              .eq('student_id', student.id);
+
+            const ticketCount = ticketsError || !ticketsData ? 0 : ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0);
+
+            return {
+              ...student,
+              ticketCount: ticketCount,
+            };
+          }));
+
+          console.log("生徒情報＋チケット数", studentsWithTickets);
+          setStudents(studentsWithTickets);
+        } else {
+          console.error("生徒情報取得エラー", studentsError);
+        }
+        parentOrTutorLoaded = true; // 親データのロードが成功
       }
 
     } else if (user.role === 'tutor') {
@@ -283,66 +285,71 @@ export default function DashboardPage() {
         console.error('講師プロフィール取得エラー', tutorError);
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
-        setIsDataLoaded(true);
-        setIsInitialLoadingComplete(true);
-        return;
+        // データロードは失敗したが、このパスでの処理は完了
+      } else {
+        console.log("講師IDが取得できました:", tutor.id);
+        setCurrentTutorId(tutor.id);
+        setIsLoadingParentId(false);
+        await fetchBookingsForTutor(tutor.id);
+        parentOrTutorLoaded = true; // 講師データのロードが成功
       }
-
-      console.log("講師IDが取得できました:", tutor.id);
-      setCurrentTutorId(tutor.id);
-      setIsLoadingParentId(false);
-
-      await fetchBookingsForTutor(tutor.id);
 
     } else {
         console.warn("loadUserData: 未対応のユーザーロールです", user.role);
         setIsLoadingParentId(false);
         setIsLoadingBookings(false);
-        setIsDataLoaded(true);
-        setIsInitialLoadingComplete(true);
         toast({
           title: "エラー",
           description: `未対応のユーザーロールです: ${user.role}`,
           variant: "destructive",
         });
+        // 未対応ロールの場合、データロードは完了したものとして扱う
+        parentOrTutorLoaded = true;
     }
 
-    console.log("loadUserData 完了: isDataLoaded = true");
+    // ユーザーロールに基づいたデータのロードが完了した場合のみ isDataLoaded を true にする
+    // エラーまたは未対応ロールの場合も、ロード処理としては完了
     setIsDataLoaded(true);
+    console.log("loadUserData 完了: isDataLoaded =", true);
+
+    // loadUserDataが完了したら、setIsInitialLoadingCompleteをtrueに設定
+    // これにより、ロードが完了するまでローディング表示が維持される
     setIsInitialLoadingComplete(true);
+    console.log("setIsInitialLoadingComplete を true に設定");
   };
 
   // Main effect for authentication and data loading
   useEffect(() => {
-    console.log(`useEffect: user is ${user ? "present" : "null"} and auth loading is ${isAuthLoadingFromHook ? "complete" : "incomplete"}.`);
+    console.log(`useEffect: user is ${user ? "present" : "null"} and auth loading is ${isAuthLoadingFromHook ? "incomplete" : "complete"}.`);
 
     // 認証状態のロードが完了したら（isAuthLoadingFromHookがfalseになったら）処理を進める
     if (isAuthLoadingFromHook === false) {
       console.log('Auth loading complete. Final check on user state.', { userAtComplete: user });
-      // userが確定的にnullであればログインページにリダイレクト
+      // userが確定的にnullであればログインページにリダイレクトし、初期ロード完了とする
       if (!user) {
         console.log('Auth loading complete and user is definitively null. Redirecting to /auth/.');
-        router.push("/dashboard/");
-        setIsInitialLoadingComplete(true); // リダイレクトする場合も初期ロード完了とする
+        router.push("/auth/");
+        setIsInitialLoadingComplete(true); // ログインページにリダイレクトする場合も初期ロード完了とする
       } else { // userが確定的にnullでなければ（認証済みであれば）
          console.log('Auth loading complete and user is present. Proceeding with data load if needed.', user);
+         // データがまだロードされていなければ、ロードを開始
          if (!isDataLoaded) {
+            // loadUserData内でデータロード完了後、setIsDataLoaded(true)とsetIsInitialLoadingComplete(true)を呼び出す
             loadUserData(user.auth_id);
-            // Note: setIsInitialLoadingComplete(true) is called inside loadUserData upon completion
          } else {
             // User present and data already loaded (e.g., returning to the page, hot reload)
             console.log('User present and data already loaded. Initial loading complete.');
-            setIsInitialLoadingComplete(true);
+            setIsInitialLoadingComplete(true); // 認証済みでデータもすでにロード済みなら初期ロード完了
          }
       }
     } else {
-        console.log('Auth loading still in progress or waiting for user state from hook.');
-        // Keep initial loading state true while auth is loading
-        setIsInitialLoadingComplete(false); // Ensure loading screen stays if auth is still in progress
+        console.log('Auth loading still in progress or waiting for user state from hook. Setting initial loading incomplete.');
+        // 認証情報のロード中は初期ロード未完了状態を維持
+        setIsInitialLoadingComplete(false);
     }
 
-    // 依存配列に isAuthLoadingFromHook と user を含める
-    // user の変更も監視し、認証状態が遅れて反映された場合にもトリガーする
+    // 依存配列に isAuthLoadingFromHook, user, isDataLoaded, router を含める
+    // isDataLoaded の変更も監視し、データロード完了時に setIsInitialLoadingComplete(true) が確実に呼ばれるようにする
   }, [isAuthLoadingFromHook, user, isDataLoaded, router]);
 
   // Effect to handle data loading completion (Remove as main logic is in the first useEffect)
