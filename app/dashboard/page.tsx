@@ -308,22 +308,23 @@ export default function DashboardPage() {
     setIsDataLoaded(true);
   };
 
+  // Main effect for authentication and data loading
   useEffect(() => {
     console.log(`useEffect: user is ${user ? "present" : "null"} and auth loading is ${isAuthLoadingFromHook ? "complete" : "incomplete"}.`);
 
-    // 認証状態のロードが完了したら（isLoadingFromHookがfalseになったら）処理を開始
+    // 認証状態のロードが完了したら（isAuthLoadingFromHookがfalseになったら）処理を開始
     if (!isAuthLoadingFromHook) {
       // userがnullであればログインページにリダイレクト
       if (!user) {
         console.log('useEffect: auth loading complete and user is null. Redirecting to login.');
-        router.push("/login");
+        router.push("/auth/"); // 修正: /auth/ にリダイレクト
       } else if (!isDataLoaded) { // userが存在し、かつデータがまだロードされていなければデータロード開始
         console.log('useEffect (データロードトリガー): user detected', user);
         loadUserData(user.auth_id);
       }
     }
-    // 依存配列にuser, isAuthLoadingFromHook, isDataLoaded, routerを含める
-  }, [user, isAuthLoadingFromHook, isDataLoaded, router]);
+    // isAuthLoadingFromHook を依存配列に追加し、ロード完了をトリガーにする
+  }, [user, isAuthLoadingFromHook, isDataLoaded, router]); // isDataLoadedも依存配列に含める
 
   // Effect to handle data loading completion
   useEffect(() => {
@@ -376,12 +377,14 @@ export default function DashboardPage() {
     console.log('students state updated:', students);
   }, [students]);
 
-  if (isAuthLoadingFromHook || isLoadingBookings || !isDataLoaded) {
+  // Render loading state while authentication is loading OR data is loading
+  if (isAuthLoadingFromHook || isLoadingBookings || (user && !isDataLoaded)) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
+  // Render not authenticated state if auth loading is complete but no user
   if (!user) {
-      return <div className="flex justify-center items-center h-screen">認証情報がありません。</div>;
+      return <div className="flex justify-center items-center h-screen">認証情報がありません。ログインしてください。<Button onClick={() => router.push("/auth/")} className="ml-4">ログイン</Button></div>;
   }
 
   return (
