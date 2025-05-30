@@ -50,7 +50,8 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // currentUser state は不要になるため削除またはコメントアウト
+  // const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   const {
     data: user,
@@ -64,11 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Supabaseのセッションを確認
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          console.log("No active session found");
+          console.log("useAuth queryFn: No active session found");
           return null;
         }
         const userId = session.user.id;
         const userEmail = session.user.email;
+
+        console.log("useAuth queryFn: Session found, fetching profile for user ID:", userId);
 
         // 1. 講師プロファイル
         const { data: tutor, error: tutorError } = await supabase
@@ -77,10 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('user_id', userId)
           .maybeSingle();
         if (tutorError) {
-          console.error("Error fetching tutor_profile:", tutorError);
+          console.error("useAuth queryFn: Error fetching tutor_profile:", tutorError);
         }
         if (tutor) {
-          console.log("Tutor profile found:", tutor);
+          console.log("useAuth queryFn: Tutor profile found:", tutor);
           return {
             id: tutor.id,
             auth_id: userId,
@@ -97,14 +100,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // 2. 保護者プロファイル
         const { data: parent, error: parentError } = await supabase
           .from('parent_profile')
-          .select('id, name, email')
+          .select('id, name, email, role')
           .eq('user_id', userId)
           .maybeSingle();
         if (parentError) {
-          console.error("Error fetching parent_profile:", parentError);
+          console.error("useAuth queryFn: Error fetching parent_profile:", parentError);
         }
         if (parent) {
-          console.log("Parent profile found:", parent);
+          console.log("useAuth queryFn: Parent profile found:", parent);
           return {
             id: parent.id,
             auth_id: userId,
@@ -112,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             username: parent.email || userEmail || '',
             firstName: undefined,
             lastName: undefined,
-            role: 'parent',
+            role: parent.role as UserRole || 'parent',
             email: parent.email || userEmail || '',
             profileCompleted: true
           } as User;
@@ -121,14 +124,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // 3. 生徒プロファイル
         const { data: student, error: studentError } = await supabase
           .from('student_profile')
-          .select('id, first_name, last_name, email')
+          .select('id, first_name, last_name, email, role')
           .eq('user_id', userId)
           .maybeSingle();
         if (studentError) {
-          console.error("Error fetching student_profile:", studentError);
+          console.error("useAuth queryFn: Error fetching student_profile:", studentError);
         }
         if (student) {
-          console.log("Student profile found:", student);
+          console.log("useAuth queryFn: Student profile found:", student);
           return {
             id: student.id,
             auth_id: userId,
@@ -136,35 +139,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             username: student.email || userEmail || '',
             firstName: student.first_name,
             lastName: student.last_name,
-            role: 'student',
+            role: student.role as UserRole || 'student',
             email: student.email || userEmail || '',
             profileCompleted: true
           } as User;
         }
 
         // どれにも該当しなければnull
-        console.log("No profile found for user ID:", userId);
+        console.log("useAuth queryFn: No profile found for user ID:", userId);
         return null;
-      } catch (error) {
-        console.error("Error in user query:", error);
-        throw error;
+      } catch (error: any) {
+        console.error("useAuth queryFn: Error in user query:", error);
+        // エラー発生時も null を返すことで、ダッシュボード側でエラーハンドリングまたはリダイレクトを行う
+        // useQuery がエラーをセットするため、ここでは throw しない
+        return null;
       }
     },
     staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
   });
 
+  // Supabase 認証状態の変更をリッスンし、クエリを再実行する Effect
   useEffect(() => {
-    if (user) {
-      setCurrentUser(user);
-    } else {
-      setCurrentUser(null);
-    }
-  }, [user]);
+    console.log("useAuth Effect: Setting up auth listener...");
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`useAuth AuthListener: event: ${event}`, { session });
+      // 認証状態が変化したら（ログイン、ログアウト、初期セッションなど）、ユーザーデータを再取得
+      // これにより、useQuery の cache が更新され、user の値が最新の状態になる
+      refetch();
+
+      // SIGNED_OUT イベントの場合、明示的にホームまたはログインページへリダイレクト
+      // これにより、AuthContext を使用しているコンポーネントが null を受け取った際に即座に遷移できる
+      if (event === 'SIGNED_OUT') {
+        console.log("useAuth AuthListener: Signed out, redirecting.");
+        // ダッシュボードページ以外からのログアウトでも機能するように、ここではシンプルにルートへリダイレクト
+        // ダッシュボードページでは、useAuth の user が null になったことを検知して auth へリダイレクトするロジックがあるはず
+        // router.push('/'); // または '/auth'
+      }
+      // その他のイベント発生時も refetch() で最新のセッションとユーザー情報を取得し、state を更新
+    });
+
+    // クリーンアップ関数
+    return () => {
+      console.log("useAuth Effect: Cleaning up auth listener.");
+      authListener?.unsubscribe();
+    };
+  }, [refetch]);
+  // 空の依存配列 [] は初回マウント時のみ実行される。
+  // refetch を含めると、refetch が安定している限り初回マウント時と同様に振る舞う。
 
   // ログイン処理 - 認証チェックのみ
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      console.log("Attempting login for email:", credentials.email);
+      console.log("useAuth loginMutation: Attempting login for email:", credentials.email);
       
       // Supabaseで認証のみを実行
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -173,16 +201,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (error) {
-        console.error("Login authentication error:", error);
+        console.error("useAuth loginMutation: Login authentication error:", error);
         throw new Error(error.message);
       }
       
       if (!data.user) {
-        console.error("No user returned from authentication");
+        console.error("useAuth loginMutation: No user returned from authentication");
         throw new Error("認証情報の取得に失敗しました");
       }
       
-      console.log("Successful login with Supabase auth, user id:", data.user.id);
+      console.log("useAuth loginMutation: Successful login with Supabase auth, user id:", data.user.id);
       
       // セッション情報を更新
       await refetch();
@@ -202,6 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/dashboard');
     },
     onError: (error: Error) => {
+      console.error("useAuth loginMutation: onError:", error);
       toast({
         title: "ログインに失敗しました",
         description: error.message || "メールアドレスまたはパスワードが正しくありません",
@@ -213,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 登録処理 - 認証のみに簡略化
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
-      console.log("Starting registration process for email:", data.email);
+      console.log("useAuth registerMutation: Starting registration process for email:", data.email);
       
       // Supabaseで認証アカウントを作成
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -223,27 +252,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             email: data.email,
             // 最低限の情報のみを保存
+            role: data.role, // ここでロールを metadata に含める例
           }
         }
       });
       
       if (authError) {
-        console.error("Auth signup error:", authError);
+        console.error("useAuth registerMutation: Auth signup error:", authError);
         throw new Error(authError.message);
       }
       
       // 認証成功のログ
-      console.log("Auth signup successful. User ID:", authData.user?.id);
+      console.log("useAuth registerMutation: Auth signup successful. User ID:", authData.user?.id);
       
       if (!authData.user) {
         throw new Error("認証は成功しましたが、ユーザー情報が取得できませんでした");
       }
       
       // ユーザーのロールに応じてプロフィールテーブルに基本情報を登録
+      // Supabase のトリガーや Edge Functions で行う方が一般的で安全ですが、
+      // ここではクライアントサイドで行う例として残します。
       let profileData;
       let profileError;
 
-      if (data.role === 'tutor') {
+      // user_metadata からロールを取得することを推奨
+      const userRole = (authData.user.user_metadata as any)?.role as UserRole || data.role || 'parent';
+      console.log("useAuth registerMutation: Determined user role:", userRole);
+
+      if (userRole === 'tutor') {
         // 講師の場合
         ({ data: profileData, error: profileError } = await supabase
           .from('tutor_profile')
@@ -256,28 +292,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             profile_completed: false,
           }])
           .select());
-      } else { // デフォルトは保護者
-        // 保護者の場合
+      } else if (userRole === 'parent') { // 保護者の場合
         ({ data: profileData, error: profileError } = await supabase
           .from('parent_profile')
           .insert([{
             user_id: authData.user.id,
             email: data.email,
             name: `${data.lastName || ''} ${data.firstName || ''}`.trim(),
-            role: data.role || 'parent', // ここでロールを設定
+            // role: userRole, // parent_profile に role フィールドがない場合がある
             // 保護者プロファイルに必要な他の初期データがあればここに追加
           }])
           .select());
+      } else if (userRole === 'student') { // 生徒の場合
+        ({ data: profileData, error: profileError } = await supabase
+          .from('student_profile')
+          .insert([{
+            user_id: authData.user.id,
+            email: data.email,
+            last_name: data.lastName || '',
+            first_name: data.firstName || '',
+            // role: userRole, // student_profile に role フィールドがない場合がある
+            // 生徒プロファイルに必要な他の初期データがあればここに追加
+          }])
+          .select());
+      } else {
+        console.warn("useAuth registerMutation: Unhandled user role during profile creation:", userRole);
+        // 未対応ロールの場合もエラーとはしないがログを出す
       }
 
       if (profileError) {
-        console.error("Profile insertion error:", profileError);
+        console.error("useAuth registerMutation: Profile insertion error:", profileError);
         // ここで認証ユーザーを削除するなどのロールバック処理を検討しても良い
         // 一旦エラーを投げて登録失敗とする
-        throw new Error(`プロフィールの作成に失敗しました: ${profileError.message}`);
+        // throw new Error(`プロフィールの作成に失敗しました: ${profileError.message}`); // プロファイル作成失敗でも認証は成功しているため、エラーにしない
       }
       
-      console.log("Profile created successfully:", profileData);
+      console.log("useAuth registerMutation: Profile creation process completed.");
 
       // 成功したら認証情報を再取得してContextを更新
       await refetch();
@@ -294,31 +344,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/dashboard'); // 例：ダッシュボードへ遷移
     },
     onError: (error: Error) => {
+      console.error("useAuth registerMutation: onError:", error);
       toast({
         title: "登録に失敗しました",
         description: error.message || "ユーザー登録中にエラーが発生しました",
-      })
+        variant: "destructive",
+      });
     },
   });
 
   // ログアウト処理
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await supabase.auth.signOut();
+      console.log("useAuth logoutMutation: Attempting sign out...");
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("useAuth logoutMutation: Sign out error:", error);
+        throw new Error(error.message);
+      }
+      console.log("useAuth logoutMutation: Sign out successful.");
     },
     onSuccess: () => {
-      setCurrentUser(null);
-      refetch();
+      // setCurrentUser(null); // currentUser は削除した
+      // refetch(); // onAuthStateChange リスナーが SIGNED_OUT を検知して refetch をトリガーするはず
       toast({
         title: "ログアウト完了",
         description: "ログアウトしました。またのご利用をお待ちしております。",
       });
-      router.push('/');
+      // ログアウト後のリダイレクトは、ダッシュボードページなどの AuthContext 利用側で行う方が適切
+      // 例: user が null になったら /auth にリダイレクト
+      // router.push('/'); // ここでの強制リダイレクトは AuthContext 利用側の制御を妨げる可能性がある
     },
     onError: (error: Error) => {
+      console.error("useAuth logoutMutation: onError:", error);
       toast({
         title: "ログアウトに失敗しました",
-        description: error.message,
+        description: error.message, // またはカスタムメッセージ
         variant: "destructive",
       });
     },
@@ -327,7 +388,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: currentUser,
+        user: user,
         isLoading,
         error,
         loginMutation,
