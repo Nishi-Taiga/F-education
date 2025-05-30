@@ -11,33 +11,42 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { PlusCircle, Trash2, Search, Loader2 } from "lucide-react";
 import axios from "axios";
+import { CommonHeader } from "@/components/common-header";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StudentEditModal } from '@/src/components/StudentEditModal';
+
+export interface Student {
+  lastName: string;
+  firstName: string;
+  lastNameFurigana: string;
+  firstNameFurigana: string;
+  gender: string;
+  school: string;
+  grade: string;
+  birthDate: string;
+  id?: number;
+}
+
+interface ParentProfileFormData {
+  parentName: string;
+  phone: string;
+  postalCode: string;
+  prefecture: string;
+  city: string;
+  address: string;
+  students: Student[];
+}
 
 export default function ParentProfileEdit() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [editingStudentIndex, setEditingStudentIndex] = useState<number | null>(null);
+  const [isEditingModalOpen, setIsEditingModalOpen] = useState(false);
   const [initialStudents, setInitialStudents] = useState<any[]>([]);
   
-  const [formData, setFormData] = useState<{
-    parentName: string;
-    phone: string;
-    postalCode: string;
-    prefecture: string;
-    city: string;
-    address: string;
-    students: { 
-      lastName: string; 
-      firstName: string; 
-      lastNameFurigana: string; 
-      firstNameFurigana: string; 
-      gender: string; 
-      school: string; 
-      grade: string; 
-      birthDate: string;
-      id?: number;
-    }[];
-  }>({
+  const [formData, setFormData] = useState<ParentProfileFormData>({
     parentName: "",
     phone: "",
     postalCode: "",
@@ -214,30 +223,34 @@ export default function ParentProfileEdit() {
     { value: "高校3年生", label: "高校3年生" },
   ];
 
-  const handleStudentChange = (index: number, field: string, value: string) => {
-    const updatedStudents = [...formData.students];
-    updatedStudents[index] = {
-      ...updatedStudents[index],
+  const handleStudentChange = (index: number, field: keyof Student, value: string) => {
+    const newStudents = [...formData.students];
+    newStudents[index] = {
+      ...newStudents[index],
       [field]: value
     };
-    setFormData({ ...formData, students: updatedStudents });
+    setFormData({ ...formData, students: newStudents });
+  };
+
+  const handleSaveStudent = (updatedStudent: Student) => {
+    const newStudents = [...formData.students];
+    if (editingStudentIndex !== null) {
+      newStudents[editingStudentIndex] = updatedStudent;
+      setFormData({ ...formData, students: newStudents });
+      setIsEditingModalOpen(false);
+      setEditingStudentIndex(null);
+    }
   };
 
   const addStudent = () => {
-    setFormData({
-      ...formData,
-      students: [...formData.students, {
-        lastName: "", 
-        firstName: "", 
-        lastNameFurigana: "", 
-        firstNameFurigana: "", 
-        gender: "", 
-        school: "", 
-        grade: "", 
-        birthDate: "",
-        id: undefined,
-      }]
-    });
+    setFormData(prevFormData => ({
+      ...prevFormData,
+      students: [
+        ...prevFormData.students,
+        { id: undefined, lastName: '', firstName: '', lastNameFurigana: '', firstNameFurigana: '', gender: '', birthDate: '', school: '', grade: '' },
+      ],
+    }));
+    setIsEditingModalOpen(true);
   };
 
   const removeStudent = (index: number) => {
@@ -487,241 +500,161 @@ export default function ParentProfileEdit() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold text-center mb-6">保護者プロフィール設定</h1>
-
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-xl">保護者情報</CardTitle>
-            <CardDescription>保護者様の情報をご入力ください。</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="parentName">氏名</Label>
-                  <Input
-                    id="parentName"
-                    type="text"
-                    placeholder="山田 太郎"
-                    value={formData.parentName}
-                    onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">電話番号</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="09012345678" // 例
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                    <Label htmlFor="postalCode">郵便番号</Label>
-                    <div className="flex gap-2">
-                        <Input
-                            id="postalCode"
-                            type="text"
-                            placeholder="100-0001" // 例
-                            value={formData.postalCode}
-                            onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                            required
-                            maxLength={8}
-                        />
-                         <Button 
-                            type="button" 
-                            onClick={searchAddressByPostalCode} 
-                            disabled={isSearchingAddress || formData.postalCode.length < 7}
-                            className="flex items-center"
-                         >
-                            {isSearchingAddress ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Search className="mr-2 h-4 w-4" />
-                            )}
-                            検索
-                         </Button>
-                    </div>
-                 </div>
-                <div>
-                  <Label htmlFor="prefecture">都道府県</Label>
-                  <Input
-                    id="prefecture"
-                    type="text"
-                    placeholder="東京都"
-                    value={formData.prefecture}
-                    onChange={(e) => setFormData({ ...formData, prefecture: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="city">市区町村以降</Label>
-                <Input
-                  id="city"
-                  type="text"
-                  placeholder="千代田区千代田"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  required
-                />
-              </div>
-
-               <div>
-                <Label htmlFor="address">番地・建物名</Label>
-                <Input
-                  id="address"
-                  type="text"
-                  placeholder="1-1-1"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  required
-                />
-              </div>
-
-              {/* 生徒情報セクション */}
-              <h2 className="text-xl font-semibold mt-8 mb-4">生徒情報</h2>
-              {formData.students.map((student, index) => (
-                <Card key={index} className="mb-4 border-gray-200">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-lg">生徒 {index + 1}</CardTitle>
-                    {formData.students.length > 1 && (
-                      <Button variant="destructive" size="sm" onClick={() => removeStudent(index)}>
-                        <Trash2 className="mr-1 h-4 w-4" /> 削除
-                      </Button>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+    <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
+      <CommonHeader title="プロフィール設定" showBackButton={true} backTo="/dashboard" />
+      <div className="container mx-auto py-8 px-4">
+        <div className="max-w-3xl mx-auto">
+          <Tabs defaultValue="parent" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="parent">保護者情報</TabsTrigger>
+              <TabsTrigger value="students">生徒情報</TabsTrigger>
+            </TabsList>
+            <TabsContent value="parent">
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle className="text-xl">保護者情報</CardTitle>
+                  <CardDescription>保護者様の情報をご入力ください。</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor={`lastName-${index}`}>姓</Label>
+                        <Label htmlFor="parentName">氏名</Label>
                         <Input
-                          id={`lastName-${index}`}
+                          id="parentName"
                           type="text"
-                          placeholder="山田"
-                          value={student.lastName}
-                          onChange={(e) => handleStudentChange(index, 'lastName', e.target.value)}
+                          placeholder="山田 太郎"
+                          value={formData.parentName}
+                          onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
                           required
                         />
                       </div>
                       <div>
-                        <Label htmlFor={`firstName-${index}`}>名</Label>
+                        <Label htmlFor="phone">電話番号</Label>
                         <Input
-                          id={`firstName-${index}`}
-                          type="text"
-                          placeholder="太郎"
-                          value={student.firstName}
-                          onChange={(e) => handleStudentChange(index, 'firstName', e.target.value)}
+                          id="phone"
+                          type="tel"
+                          placeholder="09012345678" // 例
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                           required
                         />
                       </div>
                     </div>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor={`lastNameFurigana-${index}`}>姓（ふりがな）</Label>
-                        <Input
-                          id={`lastNameFurigana-${index}`}
-                          type="text"
-                          placeholder="やまだ"
-                          value={student.lastNameFurigana}
-                          onChange={(e) => handleStudentChange(index, 'lastNameFurigana', e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`firstNameFurigana-${index}`}>名（ふりがな）</Label>
-                        <Input
-                          id={`firstNameFurigana-${index}`}
-                          type="text"
-                          placeholder="たろう"
-                          value={student.firstNameFurigana}
-                          onChange={(e) => handleStudentChange(index, 'firstNameFurigana', e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor={`gender-${index}`}>性別</Label>
-                         <select
-                            id={`gender-${index}`}
-                            value={student.gender}
-                            onChange={(e) => handleStudentChange(index, 'gender', e.target.value)}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            required
-                          >
-                            <option value="">選択してください</option>
-                            <option value="male">男性</option>
-                            <option value="female">女性</option>
-                            <option value="other">その他</option>
-                          </select>
-                      </div>
                        <div>
-                        <Label htmlFor={`birthDate-${index}`}>生年月日</Label>
-                         <Input
-                           id={`birthDate-${index}`}
-                           type="date"
-                           value={student.birthDate}
-                           onChange={(e) => handleStudentChange(index, 'birthDate', e.target.value)}
-                           required
-                         />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Label htmlFor="postalCode">郵便番号</Label>
+                          <div className="flex gap-2">
+                              <Input
+                                  id="postalCode"
+                                  type="text"
+                                  placeholder="100-0001" // 例
+                                  value={formData.postalCode}
+                                  onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                                  required
+                                  maxLength={8}
+                              />
+                               <Button 
+                                  type="button" 
+                                  onClick={searchAddressByPostalCode} 
+                                  disabled={isSearchingAddress || formData.postalCode.length < 7}
+                                  className="flex items-center"
+                               >
+                                  {isSearchingAddress ? (
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                      <Search className="mr-2 h-4 w-4" />
+                                  )}
+                                  検索
+                               </Button>
+                          </div>
+                       </div>
                       <div>
-                        <Label htmlFor={`school-${index}`}>学校名</Label>
+                        <Label htmlFor="prefecture">都道府県</Label>
                         <Input
-                          id={`school-${index}`}
+                          id="prefecture"
                           type="text"
-                          placeholder="〇〇小学校"
-                          value={student.school}
-                          onChange={(e) => handleStudentChange(index, 'school', e.target.value)}
+                          placeholder="東京都"
+                          value={formData.prefecture}
+                          onChange={(e) => setFormData({ ...formData, prefecture: e.target.value })}
                           required
                         />
                       </div>
-                      <div>
-                        <Label htmlFor={`grade-${index}`}>学年</Label>
-                          <select
-                            id={`grade-${index}`}
-                            value={student.grade}
-                            onChange={(e) => handleStudentChange(index, 'grade', e.target.value)}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            required
-                          >
-                            <option value="">選択してください</option>
-                            {gradeOptions.map(option => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                          </select>
-                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
 
-              <Button type="button" variant="outline" onClick={addStudent} className="w-full flex items-center justify-center">
-                <PlusCircle className="mr-2 h-4 w-4" /> 生徒を追加
-              </Button>
+                    <div>
+                      <Label htmlFor="city">市区町村以降</Label>
+                      <Input
+                        id="city"
+                        type="text"
+                        placeholder="千代田区千代田"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        required
+                      />
+                    </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  'プロフィールを保存'
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                     <div>
+                      <Label htmlFor="address">番地・建物名</Label>
+                      <Input
+                        id="address"
+                        type="text"
+                        placeholder="1-1-1"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        'プロフィールを保存'
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="students">
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold mb-4">生徒情報</h2>
+                {formData.students.map((student, index) => (
+                  <Card key={student.id || index} className="mb-4 border-gray-200 cursor-pointer" onClick={() => { setEditingStudentIndex(index); setIsEditingModalOpen(true); }}>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-lg">生徒 {index + 1}</CardTitle>
+                      {formData.students.length > 1 && (
+                        <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); removeStudent(index); }}>
+                          <Trash2 className="mr-1 h-4 w-4" /> 削除
+                        </Button>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <p><strong>氏名:</strong> {student.lastName} {student.firstName}</p>
+                      <p><strong>ふりがな:</strong> {student.lastNameFurigana} {student.firstNameFurigana}</p>
+                      <p><strong>生年月日:</strong> {student.birthDate}</p>
+                      <p><strong>性別:</strong> {student.gender === 'male' ? '男性' : student.gender === 'female' ? '女性' : student.gender}</p>
+                      <p><strong>学校:</strong> {student.school}</p>
+                      <p><strong>学年:</strong> {student.grade}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                <Button type="button" variant="outline" onClick={addStudent} className="w-full flex items-center justify-center">
+                  <PlusCircle className="mr-2 h-4 w-4" /> 生徒を追加
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+          <StudentEditModal 
+            isOpen={isEditingModalOpen}
+            onClose={() => setIsEditingModalOpen(false)}
+            student={editingStudentIndex !== null ? formData.students[editingStudentIndex] : null}
+            onSave={handleSaveStudent}
+          />
+        </div>
       </div>
     </div>
   );

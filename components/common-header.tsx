@@ -101,7 +101,7 @@ export function CommonHeader({
                        {/* 講師用の設定ページがあれば追加 */}
                       <DropdownMenuItem onClick={() => navigate("/dashboard/tutor/profile")}> 
                         <Settings className="h-4 w-4 mr-2" />
-                        プロフィール設定
+                        設定
                       </DropdownMenuItem>
                   </>
               ) : user?.role === 'parent' ? (
@@ -124,7 +124,7 @@ export function CommonHeader({
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate("/dashboard/parent/profile")}> 
                           <Settings className="h-4 w-4 mr-2" />
-                          プロフィール設定
+                          設定
                       </DropdownMenuItem>
                   </>
               ) : (
