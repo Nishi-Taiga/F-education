@@ -322,7 +322,7 @@ export default function DashboardPage() {
       // userが確定的にnullであればログインページにリダイレクト
       if (!user) {
         console.log('Auth loading complete and user is definitively null. Redirecting to /auth/.');
-        router.push("/auth/");
+        router.push("/dashboard/");
         setIsInitialLoadingComplete(true); // リダイレクトする場合も初期ロード完了とする
       } else { // userが確定的にnullでなければ（認証済みであれば）
          console.log('Auth loading complete and user is present. Proceeding with data load if needed.', user);
