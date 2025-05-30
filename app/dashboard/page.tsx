@@ -309,14 +309,92 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    if (user && user.auth_id && !isDataLoaded) {
-      console.log("useEffect (データロードトリガー): user detected", user);
-      loadUserData(user.auth_id);
-    } else if (!user && !isAuthLoadingFromHook) {
-      console.log("useEffect: user is null and auth loading is complete. Redirecting to login.");
-      router.push('/');
+    console.log(`useEffect: user is ${user ? "present" : "null"} and auth loading is ${isAuthLoadingFromHook ? "complete" : "incomplete"}.`);
+
+    // Check if auth loading is complete and user is null, then redirect to login.
+    // If auth loading is complete and user is present, proceed to load data.
+    if (!isAuthLoadingFromHook) { // Wait for authentication to complete
+      if (!user) {
+        console.log('useEffect: user is null after auth loading complete. Redirecting to login.');
+        router.push("/login");
+      } else if (!isDataLoaded) { // Only load data if user is present and data hasn't been loaded yet
+        console.log('useEffect (データロードトリガー): user detected', user);
+        loadUserData(user.auth_id);
+      }
     }
-  }, [user, isDataLoaded, isAuthLoadingFromHook, router]);
+  }, [user, isAuthLoadingFromHook, isDataLoaded, router]); // Added isAuthLoadingFromHook and isDataLoaded to dependencies
+
+  // Subscribe to auth state changes
+  useEffect(() => {
+    console.log("Auth state change subscription useEffect running.");
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`Auth state change detected: event=${event}, session=${session ? "present" : "null"}`);
+      if (event === 'SIGNED_IN' && session) {
+        // User just signed in or session restored
+        console.log('Auth state: SIGNED_IN. User session present.', session.user);
+        // The useAuth hook should update the user state, triggering the data loading useEffect
+      } else if (event === 'SIGNED_OUT') {
+        // User signed out
+        console.log('Auth state: SIGNED_OUT. Redirecting to login.');
+        router.push('/login');
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [router]); // Depend on router
+
+  // Effect to handle data loading completion
+  useEffect(() => {
+    if (isDataLoaded) {
+      console.log('loadUserData 完了: isDataLoaded =', isDataLoaded);
+    }
+  }, [isDataLoaded]);
+
+  // Effect to log parent ID loading status
+  useEffect(() => {
+    if (!isLoadingParentId) {
+      console.log('isLoadingParentId is now false. Current Parent ID:', currentParentId);
+    }
+  }, [isLoadingParentId, currentParentId]);
+
+  // Effect to log tutor ID loading status
+  useEffect(() => {
+    if (currentTutorId !== null) {
+      console.log('Tutor IDが取得できました:', currentTutorId);
+    }
+  }, [currentTutorId]);
+
+  // Effect to log booking loading status
+  useEffect(() => {
+    console.log('isLoadingBookings state changed:', isLoadingBookings);
+  }, [isLoadingBookings]);
+
+  // Effect to log bookingToCancel state
+  useEffect(() => {
+    console.log('bookingToCancel state changed:', bookingToCancel);
+  }, [bookingToCancel]);
+
+  // Effect to log showCancelModal state
+  useEffect(() => {
+    console.log('showCancelModal state changed:', showCancelModal);
+  }, [showCancelModal]);
+
+  // Effect to log report modal state
+  useEffect(() => {
+    console.log('isReportModalOpen state changed:', isReportModalOpen);
+  }, [isReportModalOpen]);
+
+  // Effect to log report edit modal state
+  useEffect(() => {
+    console.log('isReportEditModalOpen state changed:', isReportEditModalOpen);
+  }, [isReportEditModalOpen]);
+
+  // Effect to log students state
+  useEffect(() => {
+    console.log('students state updated:', students);
+  }, [students]);
 
   if (isAuthLoadingFromHook || isLoadingBookings || !isDataLoaded) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
