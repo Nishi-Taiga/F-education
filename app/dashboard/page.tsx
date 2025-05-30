@@ -414,7 +414,7 @@ export default function DashboardPage() {
   // This check happens ONLY after isInitialLoadingComplete is true
   if (!user) {
       console.log('Rendering not authenticated state...');
-      return <div className="flex justify-center items-center h-screen">認証情報がありません。ログインしてください。<Button onClick={() => router.push("/auth/")} className="ml-4">ログイン</Button></div>;
+      return <div className="flex flex-col items-center justify-center h-screen">認証情報がありません。ログインしてください。<Button onClick={() => router.push("/auth/")} className="ml-4">ログイン</Button></div>;
   }
 
   // Render dashboard if authenticated and initial loading is complete
