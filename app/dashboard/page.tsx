@@ -311,39 +311,19 @@ export default function DashboardPage() {
   useEffect(() => {
     console.log(`useEffect: user is ${user ? "present" : "null"} and auth loading is ${isAuthLoadingFromHook ? "complete" : "incomplete"}.`);
 
-    // Check if auth loading is complete and user is null, then redirect to login.
-    // If auth loading is complete and user is present, proceed to load data.
-    if (!isAuthLoadingFromHook) { // Wait for authentication to complete
+    // 認証状態のロードが完了したら（isLoadingFromHookがfalseになったら）処理を開始
+    if (!isAuthLoadingFromHook) {
+      // userがnullであればログインページにリダイレクト
       if (!user) {
-        console.log('useEffect: user is null after auth loading complete. Redirecting to login.');
+        console.log('useEffect: auth loading complete and user is null. Redirecting to login.');
         router.push("/login");
-      } else if (!isDataLoaded) { // Only load data if user is present and data hasn't been loaded yet
+      } else if (!isDataLoaded) { // userが存在し、かつデータがまだロードされていなければデータロード開始
         console.log('useEffect (データロードトリガー): user detected', user);
         loadUserData(user.auth_id);
       }
     }
-  }, [user, isAuthLoadingFromHook, isDataLoaded, router]); // Added isAuthLoadingFromHook and isDataLoaded to dependencies
-
-  // Subscribe to auth state changes
-  useEffect(() => {
-    console.log("Auth state change subscription useEffect running.");
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`Auth state change detected: event=${event}, session=${session ? "present" : "null"}`);
-      if (event === 'SIGNED_IN' && session) {
-        // User just signed in or session restored
-        console.log('Auth state: SIGNED_IN. User session present.', session.user);
-        // The useAuth hook should update the user state, triggering the data loading useEffect
-      } else if (event === 'SIGNED_OUT') {
-        // User signed out
-        console.log('Auth state: SIGNED_OUT. Redirecting to login.');
-        router.push('/login');
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [router]); // Depend on router
+    // 依存配列にuser, isAuthLoadingFromHook, isDataLoaded, routerを含める
+  }, [user, isAuthLoadingFromHook, isDataLoaded, router]);
 
   // Effect to handle data loading completion
   useEffect(() => {
