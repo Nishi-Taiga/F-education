@@ -99,9 +99,9 @@ export function CommonHeader({
                           過去レポート
                       </DropdownMenuItem>
                        {/* 講師用の設定ページがあれば追加 */}
-                      <DropdownMenuItem onClick={() => navigate("/settings")}> 
+                      <DropdownMenuItem onClick={() => navigate("/dashboard/tutor/profile")}> 
                         <Settings className="h-4 w-4 mr-2" />
-                        設定
+                        プロフィール設定
                       </DropdownMenuItem>
                   </>
               ) : user?.role === 'parent' ? (
@@ -122,9 +122,9 @@ export function CommonHeader({
                           <FileText className="h-4 w-4 mr-2 text-gray-600" />
                           授業レポート
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/settings")}> 
+                      <DropdownMenuItem onClick={() => navigate("/dashboard/parent/profile")}> 
                           <Settings className="h-4 w-4 mr-2" />
-                          設定
+                          プロフィール設定
                       </DropdownMenuItem>
                   </>
               ) : (
