@@ -14,6 +14,7 @@ import axios from "axios";
 import { CommonHeader } from "@/components/common-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StudentEditModal } from '@/src/components/StudentEditModal';
+import { CreateStudentAccountModal } from '@/src/components/CreateStudentAccountModal';
 
 export interface Student {
   lastName: string;
@@ -25,6 +26,7 @@ export interface Student {
   grade: string;
   birthDate: string;
   id?: number;
+  authUserId?: string;
 }
 
 interface ParentProfileFormData {
@@ -45,6 +47,9 @@ export default function ParentProfileEdit() {
   const [editingStudentIndex, setEditingStudentIndex] = useState<number | null>(null);
   const [isEditingModalOpen, setIsEditingModalOpen] = useState(false);
   const [initialStudents, setInitialStudents] = useState<any[]>([]);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [studentToCreateAccountIndex, setStudentToCreateAccountIndex] = useState<number | null>(null);
+  const [isCreateAccountModalOpen, setIsCreateAccountModalOpen] = useState(false);
   
   const [formData, setFormData] = useState<ParentProfileFormData>({
     parentName: "",
@@ -113,7 +118,8 @@ export default function ParentProfileEdit() {
                    grade: student.grade || '',
                    birthDate: student.birth_date || '',
                    // 既存生徒のIDを保持しておくと更新時に便利
-                   id: student.id // 生徒のIDを追加
+                   id: student.id, // 生徒のIDを追加
+                   authUserId: student.auth_user_id // 生徒のSupabase AuthユーザーIDを追加 (もしあれば)
                }));
                setFormData(prev => ({ ...prev, students: formattedStudents }));
 
@@ -251,6 +257,7 @@ export default function ParentProfileEdit() {
       ],
     }));
     setIsEditingModalOpen(true);
+    setEditingStudentIndex(formData.students.length);
   };
 
   const removeStudent = (index: number) => {
@@ -264,6 +271,94 @@ export default function ParentProfileEdit() {
         variant: "destructive"
       });
     }
+  };
+
+  const handleCreateStudentAccount = async (email: string, password: string) => {
+    if (studentToCreateAccountIndex === null) return;
+
+    setIsCreatingAccount(true);
+    const student = formData.students[studentToCreateAccountIndex];
+
+    try {
+      // Supabase Authでユーザーを作成
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+            data: { // ユーザーメタデータとして保存 (任意)
+                name: `${student.lastName} ${student.firstName}`,
+                role: 'student', // ロールを'student'として設定
+                student_profile_id: student.id // student_profileのIDを紐付け（RLSによっては不要かも）
+            }
+        }
+      });
+
+      if (authError) {        
+         // すでにユーザーが存在する場合のエラーコードをハンドリング
+         if (authError.message.includes('already exists')) {
+             throw new Error(`このメールアドレス (${email}) は既に登録されています。`);
+         }
+         console.error("Error creating auth user:", authError);
+         throw new Error(`アカウント作成に失敗しました: ${authError.message}`);
+      }
+
+      if (!data.user) { // data.user が null の場合（メール確認が必要な場合など）
+          // ここでは簡単化のため即時ログインを想定。必要であればメール確認フローを実装。
+           throw new Error("アカウント作成は成功しましたが、メール確認が必要です。"); // 例
+      }
+
+      const newAuthUserId = data.user.id; // 作成されたユーザーのID
+      console.log("Auth user created:", newAuthUserId);
+
+      // student_profileテーブルにauth_user_idを紐付け
+      if (student.id) { // 既存生徒の場合
+        console.log(`Linking auth user ${newAuthUserId} to student profile ${student.id}`);
+        const { error: profileUpdateError } = await supabase
+          .from('student_profile')
+          .update({ auth_user_id: newAuthUserId })
+          .eq('id', student.id);
+
+        if (profileUpdateError) {
+           console.error("Error linking auth user to student profile:", profileUpdateError);
+           // ここでアカウントだけ作って紐付け失敗した場合のリカバリーが必要になる可能性も
+           throw new Error(`生徒プロフィールへのアカウント紐付けに失敗しました: ${profileUpdateError.message}`);
+        }
+        console.log("Auth user linked successfully.");
+
+        // formDataの該当生徒のauthUserIdを更新してUIに反映
+        const updatedStudents = [...formData.students];
+        updatedStudents[studentToCreateAccountIndex] = { ...updatedStudents[studentToCreateAccountIndex], authUserId: newAuthUserId };
+        setFormData({ ...formData, students: updatedStudents });
+
+      } else { // 新規追加されたまだ保存されていない生徒の場合
+         // このケースは現状のUIでは生徒追加後すぐにアカウント作成ボタンが出るわけではないので稀だが考慮
+         // 生徒プロフィールが先に保存されている前提のロジックにする方がシンプルかもしれない。
+         // ここでは、もし未保存の生徒に対してアカウント作成を試みた場合のハンドリングを記載。
+         // 未保存生徒の場合、アカウント作成後に生徒プロフィールを新規作成し、auth_user_idを紐付ける。
+         console.warn("Attempted to create account for unsaved student. This flow is not fully supported yet.");
+         throw new Error("生徒プロフィールが未保存のため、アカウントを作成できません。先に生徒情報を保存してください。");
+         // または、ここで生徒プロフィールを新規作成するロジックを実装することも可能。
+      }
+
+      toast({ title: "アカウント作成成功", description: "生徒アカウントが正常に作成されました。" });
+      setIsCreateAccountModalOpen(false);
+      setStudentToCreateAccountIndex(null);
+
+    } catch (error: any) {
+      console.error("Account creation failed:", error);
+      toast({
+        title: "アカウント作成失敗",
+        description: error.message || "生徒アカウントの作成中にエラーが発生しました",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingAccount(false);
+    }
+  };
+
+  const openCreateAccountModal = (index: number) => {
+    setStudentToCreateAccountIndex(index);
+    setIsCreateAccountModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -637,6 +732,20 @@ export default function ParentProfileEdit() {
                   </Card>
                 ))}
 
+                {/* 生徒アカウント作成ボタン */}
+                {formData.students.map((student, index) => (
+                   !student.authUserId && (
+                     <div key={`create-account-${index}`} className="flex justify-center mt-2">
+                        <Button 
+                           variant="secondary" 
+                           size="sm" 
+                           onClick={(e) => { e.stopPropagation(); openCreateAccountModal(index); }}>
+                          生徒アカウントを作成
+                        </Button>
+                     </div>
+                   )
+                ))}
+
                 <Button type="button" variant="outline" onClick={addStudent} className="w-full flex items-center justify-center">
                   <PlusCircle className="mr-2 h-4 w-4" /> 生徒を追加
                 </Button>
@@ -648,6 +757,12 @@ export default function ParentProfileEdit() {
             onClose={() => setIsEditingModalOpen(false)}
             student={editingStudentIndex !== null ? formData.students[editingStudentIndex] : null}
             onSave={handleSaveStudent}
+          />
+          <CreateStudentAccountModal
+            isOpen={isCreateAccountModalOpen}
+            onClose={() => setIsCreateAccountModalOpen(false)}
+            onSave={handleCreateStudentAccount}
+            isLoading={isCreatingAccount}
           />
         </div>
       </div>
