@@ -505,9 +505,9 @@ export default function ParentProfileEdit() {
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-3xl mx-auto">
           <Tabs defaultValue="parent" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 text-lg font-semibold">
-              <TabsTrigger value="parent" className="text-lg data-[state=active]:text-primary">保護者情報</TabsTrigger>
-              <TabsTrigger value="students" className="text-lg data-[state=active]:text-primary">生徒情報</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="parent" className="text-lg font-semibold data-[state=active]:bg-secondary data-[state=active]:text-primary data-[state=active]:shadow-sm">保護者情報</TabsTrigger>
+              <TabsTrigger value="students" className="text-lg font-semibold data-[state=active]:bg-secondary data-[state=active]:text-primary data-[state=active]:shadow-sm">生徒情報</TabsTrigger>
             </TabsList>
             <TabsContent value="parent">
               <Card className="mb-8">
