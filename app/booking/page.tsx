@@ -285,7 +285,7 @@ export default function BookingPage() {
   // コンポーネネントのマウント時にユーザーデータをフェッチ
   useEffect(() => {
     fetchUserData();
-  }, [router, toast]);
+  }, []);
 
   // Top-level loading check
   if (isLoading) {
@@ -837,7 +837,7 @@ export default function BookingPage() {
                   ) : students && students.length > 0 ? (
                     <Select
                       value={selectedStudentId?.toString() || ""}
-                      onValueChange={(value) => {
+                      onValueChange={(value: string) => {
                         const studentId = parseInt(value);
                         setSelectedStudentId(studentId);
                         setSelectedSubject(null);

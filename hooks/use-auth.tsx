@@ -208,7 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Supabase 認証状態の変更をリッスンし、クエリを再実行する Effect
   useEffect(() => {
     console.log("useAuth Effect: Setting up auth listener...");
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log(`useAuth AuthListener: event: ${event}`, { session });
       // 認証状態が変化したら（ログイン、ログアウト、初期セッションなど）、ユーザーデータを再取得
       // これにより、useQuery の cache が更新され、user の値が最新の状態になる
@@ -228,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // クリーンアップ関数
     return () => {
       console.log("useAuth Effect: Cleaning up auth listener.");
-      authListener?.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, [refetch]);
   // 空の依存配列 [] は初回マウント時のみ実行される。
