@@ -532,7 +532,7 @@ export default function DashboardPage() {
             <>
             <div className="md:col-span-2">
                <Card className="p-6 mb-6">
-                 <h2 className="text-xl font-semibold mb-4">今後の予約</h2>
+                 <h2 className="text-xl font-semibold mb-4">授業予定</h2>
                  {isLoadingBookings ? (
                    <div>予約情報を読み込み中...</div>
                  ) : bookings.length > 0 ? (
@@ -556,7 +556,7 @@ export default function DashboardPage() {
              <>
              <div className="md:col-span-2">
                <Card className="p-6 mb-6">
-                 <h2 className="text-xl font-semibold mb-4">今後の予約</h2>
+                 <h2 className="text-xl font-semibold mb-4">授業予定</h2>
                  {isLoadingBookings ? (
                    <div>読み込み中...</div>
                  ) : bookings.length > 0 ? (
