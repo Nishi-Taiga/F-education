@@ -173,6 +173,7 @@ export default function DashboardPage() {
       .from('bookings')
       .select(`
         *,
+        parent_id,
         student_profile (last_name, first_name),
         tutor_profile (last_name, first_name)
       `)
