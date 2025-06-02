@@ -297,14 +297,20 @@ export default function BookingPage() {
           return;
         }
         setUser(session.user);
+        console.log("Logged in user role:", session.user.role);
 
         // 保護者プロフィール取得
-        if (session.user.role !== 'student') { // 生徒ロールでない場合のみ保護者プロフィールを取得
+        // ユーザーが「保護者」ロールの場合にのみ保護者プロフィールを取得
+        if (session.user.role === 'student') {
+          // 生徒としてログインしている場合は保護者プロフィールを取得しない
+          setParentProfile(null); // 明示的にnullに設定
+          console.log("生徒としてログインしているため、保護者プロフィールの取得をスキップします。");
+        } else if (session.user.role === 'parent') {
           const { data: parentData, error: parentError } = await supabase
             .from('parent_profile')
             .select('*')
             .eq('user_id', session.user.id)
-            .single();
+            .maybeSingle();
           if (!parentError && parentData) {
             setParentProfile(parentData);
           } else if (parentError) {
@@ -316,9 +322,9 @@ export default function BookingPage() {
         if (session.user.role === 'student') {
           const { data: studentData, error: studentError } = await supabase
             .from('student_profile')
-            .select('*')
+            .select('*, parent_id') // parent_id を明示的に選択
             .eq('user_id', session.user.id)
-            .single();
+            .maybeSingle(); // single() から maybeSingle() に変更
 
           if (!studentError && studentData) {
             // 生徒のチケット数を取得
