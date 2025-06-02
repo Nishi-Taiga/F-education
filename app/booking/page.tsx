@@ -296,59 +296,74 @@ export default function BookingPage() {
           router.push('/');
           return;
         }
-        setUser(session.user);
-        console.log("Logged in user role:", session.user.role);
 
-        // 保護者プロフィール取得
-        // ユーザーが「保護者」ロールの場合にのみ保護者プロフィールを取得
-        if (session.user.role === 'student') {
-          // 生徒としてログインしている場合は保護者プロフィールを取得しない
-          setParentProfile(null); // 明示的にnullに設定
-          console.log("生徒としてログインしているため、保護者プロフィールの取得をスキップします。");
-        } else if (session.user.role === 'parent') {
-          const { data: parentData, error: parentError } = await supabase
+        setUser(session.user);
+        console.log("Logged in user role from session:", session.user.role); // Log original session role
+        console.log("Session user ID:", session.user.id); // セッションユーザーIDをログに出力
+
+        let determinedUserRole: 'student' | 'parent' | 'authenticated' = 'authenticated';
+        let currentParentProfile = null;
+        let currentStudents: Student[] = [];
+        let currentSelectedStudentId: number | null = null;
+        let currentStudentSchoolLevel: SchoolLevel | null = null;
+
+        // 最初に学生プロフィールを試行
+        const { data: studentProfileData, error: studentProfileError } = await supabase
+          .from('student_profile')
+          .select('*, parent_id') // Ensure parent_id is selected
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        console.log("Student profile query result:", { data: studentProfileData, error: studentProfileError }); // 学生プロフィール取得結果をログに出力
+
+        if (!studentProfileError && studentProfileData) {
+          determinedUserRole = 'student';
+          // 生徒のチケット数を取得
+          const { data: ticketsData } = await supabase
+            .from('student_tickets')
+            .select('quantity')
+            .eq('student_id', studentProfileData.id);
+
+          const ticketCount = ticketsData ? ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0;
+          const studentWithTickets: Student = {
+              ...studentProfileData as Student,
+              ticketCount: ticketCount
+          };
+          currentStudents.push(studentWithTickets);
+          currentSelectedStudentId = studentWithTickets.id;
+          currentStudentSchoolLevel = getSchoolLevelFromGrade(studentWithTickets.grade);
+          console.log("生徒としてログインし、自身の生徒情報を設定しました:", studentWithTickets);
+
+        } else if (studentProfileError) {
+          console.warn("生徒プロフィール取得エラー（存在しない場合あり）:", studentProfileError.message);
+        }
+
+        // 学生プロフィールが見つからなかった場合、保護者プロフィールを試行
+        if (determinedUserRole !== 'student') {
+          const { data: parentProfileData, error: parentProfileError } = await supabase
             .from('parent_profile')
             .select('*')
             .eq('user_id', session.user.id)
             .maybeSingle();
-          if (!parentError && parentData) {
-            setParentProfile(parentData);
-          } else if (parentError) {
-            console.warn("保護者プロフィール取得エラー（存在しない場合あり）:", parentError.message);
+          
+          console.log("Parent profile query result:", { data: parentProfileData, error: parentProfileError }); // 保護者プロフィール取得結果をログに出力
+
+          if (!parentProfileError && parentProfileData) {
+            determinedUserRole = 'parent';
+            currentParentProfile = parentProfileData;
+            console.log("保護者としてログインし、保護者情報を設定しました:", parentProfileData);
+          } else if (parentProfileError) {
+            console.warn("保護者プロフィール取得エラー（存在しない場合あり）:", parentProfileError.message);
           }
         }
+        
+        // Update all relevant states after determination
+        setParentProfile(currentParentProfile);
+        setStudents(currentStudents);
+        setSelectedStudentId(currentSelectedStudentId);
+        setStudentSchoolLevel(currentStudentSchoolLevel);
 
-        // 生徒アカウントの場合、自身の生徒プロフィールを読み込む
-        if (session.user.role === 'student') {
-          const { data: studentData, error: studentError } = await supabase
-            .from('student_profile')
-            .select('*, parent_id') // parent_id を明示的に選択
-            .eq('user_id', session.user.id)
-            .maybeSingle(); // single() から maybeSingle() に変更
-
-          if (!studentError && studentData) {
-            // 生徒のチケット数を取得
-            const { data: ticketsData } = await supabase
-              .from('student_tickets')
-              .select('quantity')
-              .eq('student_id', studentData.id);
-
-            const ticketCount = ticketsData ? ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0;
-            const studentWithTickets: Student = {
-                ...studentData as Student,
-                ticketCount: ticketCount
-            };
-
-            setStudents([studentWithTickets]); // 自身の生徒情報を配列としてセット
-            setSelectedStudentId(studentWithTickets.id); // 自身を自動選択
-            setStudentSchoolLevel(getSchoolLevelFromGrade(studentWithTickets.grade));
-            console.log("生徒としてログインし、自身の生徒情報を設定しました:", studentWithTickets);
-          } else {
-            console.warn("生徒としてログインしましたが、生徒プロフィールが見つかりません:", studentError);
-            // フォールバックとして中学生用の科目を設定
-            setStudentSchoolLevel("junior_high");
-          }
-        }
+        console.log("Logged in user role determined for app logic:", determinedUserRole);
 
       } catch (error) {
         console.error("データ取得エラー:", error);
@@ -360,31 +375,36 @@ export default function BookingPage() {
     fetchUserData();
   }, [router]);
 
-  // 生徒情報を取得
+  // 生徒情報を取得 (保護者アカウントのみ)
   useEffect(() => {
-    const fetchStudents = async () => {
-      // 生徒ロールの場合、または保護者プロフィールがまだ取得できていない場合は何もしない
-      if (!user || user.role === 'student' || !parentProfile) return;
-
+    const fetchStudentsForParent = async () => {
+      // parentProfile が設定されていれば、それが保護者であることを意味する
+      // また、parentProfile.id が確定していることを確認
+      if (!parentProfile || parentProfile.id === undefined) {
+        console.log("parentProfileがないため、生徒情報取得をスキップします。");
+        return;
+      }
       setIsLoadingStudents(true);
       try {
         const { data: studentsData, error: studentsError } = await supabase
           .from('student_profile')
-          .select('*')
-          .eq('parent_id', parentProfile.id);
+          .select('*, parent_id') // parent_id を選択
+          .eq('parent_id', parentProfile.id); // 保護者IDでフィルタリング
+
         if (!studentsError && studentsData) {
-          // 生徒ごとにstudent_ticketsからチケット数を取得
           const studentsWithTickets = await Promise.all(studentsData.map(async student => {
             const { data: ticketsData } = await supabase
               .from('student_tickets')
               .select('quantity')
-              .eq('student_id', student.id)
+              .eq('student_id', student.id);
             return {
               ...student,
               ticketCount: ticketsData ? ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0
             };
           }));
           setStudents(studentsWithTickets);
+        } else if (studentsError) {
+          console.error("生徒情報取得エラー:", studentsError);
         }
       } catch (error) {
         console.error("生徒情報取得エラー:", error);
@@ -392,12 +412,16 @@ export default function BookingPage() {
         setIsLoadingStudents(false);
       }
     };
-    fetchStudents();
-  }, [user, parentProfile]);
+    // parentProfile が有効な場合にのみ実行
+    if (parentProfile) {
+      fetchStudentsForParent();
+    }
+  }, [parentProfile]); // Depend on parentProfile
 
   // 生徒選択時の処理（保護者アカウント）
   useEffect(() => {
-    if (user?.role === 'student') return;
+    // user.role の代わりに parentProfile の有無で保護者かどうかを判断
+    if (!parentProfile) return; // 保護者でない場合はスキップ
 
     if (selectedStudentId && students.length > 0) {
       const selectedStudent = students.find(student => student.id === selectedStudentId);
@@ -408,7 +432,7 @@ export default function BookingPage() {
         setStudentSchoolLevel(null);
       }
     }
-  }, [selectedStudentId, students, user]);
+  }, [selectedStudentId, students, parentProfile]); // Add parentProfile to dependency array
 
   // 既存予約を取得
   useEffect(() => {
@@ -777,7 +801,7 @@ export default function BookingPage() {
               </div>
 
               {/* 生徒選択 (保護者アカウントの場合のみ表示) */}
-              {user?.role !== 'student' && (
+              {user?.role === 'parent' && (
                 <div className="mb-4">
                   <div className="flex items-center space-x-2 mb-2">
                     <User className="h-4 w-4 text-primary" />
@@ -922,12 +946,12 @@ export default function BookingPage() {
                 <div className="flex justify-center items-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : ((user?.role !== 'student' && !selectedStudentId) || !selectedSubject) ? (
+              ) : ((user?.role === 'parent' && !selectedStudentId) || !selectedSubject) ? (
                 <div className="border rounded-md p-6 text-center bg-gray-50">
                   <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 mb-2">授業の予約には以下の情報が必要です</p>
                   <ul className="text-sm text-gray-600 mb-4 space-y-1">
-                    {user?.role !== 'student' && (
+                    {user?.role === 'parent' && (
                       <li className="flex items-center justify-center">
                         <User className="h-3.5 w-3.5 text-primary mr-1.5" />
                         <span>受講する生徒</span>
@@ -957,11 +981,11 @@ export default function BookingPage() {
                 <h3 className="text-base font-medium text-gray-900 mb-3">授業時間を選択</h3>
               </div>
 
-              {((user?.role !== 'student' && !selectedStudentId) || (!user?.role && !selectedStudentId) || !selectedSubject) ? (
+              {((user?.role === 'parent' && !selectedStudentId) || (!selectedSubject)) ? (
                 <div className="p-4 border rounded-md bg-gray-50 text-center">
                   <p className="text-gray-600 mb-2">授業時間を選択するには</p>
                   <ul className="text-sm text-gray-600 mb-2 space-y-1">
-                    {user?.role !== 'student' && !selectedStudentId && (
+                    {user?.role === 'parent' && !selectedStudentId && (
                       <li className="flex items-center justify-center">
                         <User className="h-3.5 w-3.5 text-amber-500 mr-1.5" />
                         <span className="text-amber-700">生徒を選択してください</span>
