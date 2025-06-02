@@ -156,6 +156,9 @@ export default function DashboardPage() {
       .order('date', { ascending: true })
       .order('time_slot', { ascending: true });
 
+    console.log('fetchBookingsForStudent API call result - Data:', bookingsData);
+    console.log('fetchBookingsForStudent API call result - Error:', bookingsError);
+
     if (!bookingsError && bookingsData) {
       console.log('Fetched bookingsData for student:', bookingsData.length, 'bookings:', bookingsData);
       const formattedBookings = bookingsData.map(booking => ({
