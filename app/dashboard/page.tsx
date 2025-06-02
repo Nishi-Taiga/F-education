@@ -368,6 +368,7 @@ export default function DashboardPage() {
     console.log("Dashboard useEffect: user state changed.", user);
 
     const initialLoad = async () => {
+      console.log("initialLoad function started.");
       if (!user) {
         console.log("User is null, redirecting to auth.");
         // 認証されていない場合はログインページへリダイレクト
@@ -380,8 +381,9 @@ export default function DashboardPage() {
       setIsAuthenticated(true);
       console.log("User is authenticated.");
 
-      // ユーザーのロールに基づいてデータをロード
-      if (user.role === 'parent') {
+      console.log("Checking user role for data load:", user?.role);
+      if (user?.role === 'parent') {
+         console.log("User role is parent, loading parent data.");
         // 保護者の場合、保護者プロフィールをロードし、生徒と予約を取得
         const parentId = await loadParentOrTutorData(user.auth_id, 'parent');
         // loadParentOrTutorData の中で fetchBookingsForParent が呼ばれる
@@ -392,6 +394,7 @@ export default function DashboardPage() {
            setIsDataLoaded(true);
         }
       } else if (user.role === 'tutor') {
+        console.log("User role is tutor, loading tutor data.");
         // 講師の場合、講師プロフィールをロードし、予約を取得
         const tutorId = await loadParentOrTutorData(user.auth_id, 'tutor');
         // loadParentOrTutorData の中で fetchBookingsForTutor が呼ばれる
@@ -402,6 +405,7 @@ export default function DashboardPage() {
            setIsDataLoaded(true);
         }
       } else if (user.role === 'student') {
+        console.log("User role is student, loading student data.");
         // 生徒の場合、生徒プロフィールをロードし、予約を取得
         const studentProfileId = await loadStudentData(user.auth_id);
         // loadStudentData の中で fetchBookingsForStudent が呼ばれる
