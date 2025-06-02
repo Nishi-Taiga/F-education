@@ -290,48 +290,9 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
             {isTutor && '先生、本日もよろしくお願いします'}
           </p>
         </div>
-        
-        <div className="flex flex-wrap gap-3">
-          {(isParent || isStudent) && (
-            <Button onClick={handleBookingPageClick} size="lg" className="shadow-sm">
-              <Plus className="mr-2 h-5 w-5" />
-              授業を予約する
-            </Button>
-          )}
-          
-          {isParent && (
-            <Button variant="outline" size="lg" onClick={handleBuyTicketsClick} className="shadow-sm">
-              <Ticket className="mr-2 h-5 w-5" />
-              チケット購入 ({availableTickets}枚)
-            </Button>
-          )}
-          
-          {isTutor && (
-            <>
-              <Button onClick={handleScheduleClick} size="lg" className="shadow-sm">
-                <CalendarRange className="mr-2 h-5 w-5" />
-                シフト登録
-              </Button>
-              <Button variant="outline" size="lg" onClick={handleProfileClick} className="shadow-sm">
-                <User className="mr-2 h-5 w-5" />
-                プロフィール編集
-              </Button>
-            </>
-          )}
-          
-          <Button variant="outline" size="lg" onClick={handleReportsClick} className="shadow-sm">
-            <FileText className="mr-2 h-5 w-5" />
-            レポート一覧
-          </Button>
-          
-          {/* ログアウトボタン追加 */}
-          <Button variant="outline" size="lg" onClick={handleLogout} className="shadow-sm text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700">
-            <LogOut className="mr-2 h-5 w-5" />
-            ログアウト
-          </Button>
-        </div>
       </div>
 
+      {/* メインコンテンツ（カレンダー、予約一覧など）*/}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <Card className="lg:col-span-2 shadow-md">
           <CardHeader className="pb-4">
@@ -446,9 +407,9 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
               </Tabs>
             </CardContent>
             <CardFooter className="pt-2">
-              <Button 
-                variant="outline" 
-                className="w-full" 
+              <Button
+                variant="outline"
+                className="w-full"
                 onClick={handleReportsClick}
               >
                 すべての予約を表示
@@ -541,21 +502,54 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
               </CardFooter>
             </Card>
           )}
-
-          {userProfile?.role === 'student' && (
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">予約・レポート</h2>
-              <div className="flex flex-col space-y-4">
-                <Button onClick={() => router.push('/search-tutors')} className="w-full">
-                  <Calendar className="mr-2 h-4 w-4" /> 授業を予約する
-                </Button>
-                <Button onClick={() => router.push('/reports')} className="w-full">
-                  <FileText className="mr-2 h-4 w-4" /> レポート一覧を見る
-                </Button>
-              </div>
-            </Card>
-          )}
         </div>
+      </div>
+
+      {/* フッターのようなボタンエリアをここに追加します */}
+      <div className="mt-8 flex flex-wrap justify-center gap-3"> {/* 上部の余白と中央寄せを追加 */}
+         {/* 授業を予約するボタン（保護者と生徒） */}
+          {(isParent || isStudent) && (
+            <Button onClick={handleBookingPageClick} size="lg" className="shadow-sm">
+              <Plus className="mr-2 h-5 w-5" />
+              授業を予約する
+            </Button>
+          )}
+
+          {/* チケット購入ボタン（保護者のみ） */}
+          {isParent && (
+            <Button variant="outline" size="lg" onClick={handleBuyTicketsClick} className="shadow-sm">
+              <Ticket className="mr-2 h-5 w-5" />
+              チケット購入 ({availableTickets}枚)
+            </Button>
+          )}
+
+          {/* 講師用ボタン */}
+          {isTutor && (
+            <>
+              <Button onClick={handleScheduleClick} size="lg" className="shadow-sm">
+                <CalendarRange className="mr-2 h-5 w-5" />
+                シフト登録
+              </Button>
+              <Button variant="outline" size="lg" onClick={handleProfileClick} className="shadow-sm">
+                <User className="mr-2 h-5 w-5" />
+                プロフィール編集
+              </Button>
+            </>
+          )}
+
+          {/* 生徒用のレポート確認ボタン */}
+          {isStudent && (
+             <Button variant="outline" size="lg" onClick={handleReportsClick} className="shadow-sm">
+               <FileText className="mr-2 h-5 w-5" />
+               レポート確認
+             </Button>
+          )}
+
+          {/* ログアウトボタン */}
+          <Button variant="outline" size="lg" onClick={handleLogout} className="shadow-sm text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700">
+            <LogOut className="mr-2 h-5 w-5" />
+            ログアウト
+          </Button>
       </div>
 
       {/* 予約詳細モーダル */}
