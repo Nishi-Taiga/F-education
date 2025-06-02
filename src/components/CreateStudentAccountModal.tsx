@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 interface CreateStudentAccountModalProps {
   isOpen: boolean;
@@ -15,13 +16,25 @@ interface CreateStudentAccountModalProps {
 export function CreateStudentAccountModal({ isOpen, onClose, onSave, isLoading }: CreateStudentAccountModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { toast } = useToast();
 
   const handleSave = async () => {
-    if (email && password) {
-      await onSave(email, password);
-      setEmail('');
-      setPassword('');
+    if (!email || !password) {
+      return;
     }
+
+    if (!email.includes('@') || !email.split('@')[1]?.includes('.')) {
+      toast({
+        title: "入力エラー",
+        description: "有効なメールアドレス形式を入力してください。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await onSave(email, password);
+    setEmail('');
+    setPassword('');
   };
 
   const handleClose = () => {
