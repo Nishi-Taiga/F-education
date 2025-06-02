@@ -302,6 +302,7 @@ export default function DashboardPage() {
     setIsLoadingBookings(false);
     setIsStudentDataLoaded(true);
     console.log("loadStudentData 完了");
+    setIsDataLoaded(true);
     return studentProfile.id;
   };
 
