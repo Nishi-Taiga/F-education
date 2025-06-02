@@ -273,6 +273,7 @@ export default function DashboardPage() {
     if (role === 'tutor') await fetchBookingsForTutor(profileId);
 
     console.log(`${role} loadData 完了`);
+    setIsDataLoaded(true);
     return profileId;
   };
 
