@@ -729,21 +729,18 @@ export default function ParentProfileEdit() {
                       <p><strong>学校:</strong> {student.school}</p>
                       <p><strong>学年:</strong> {student.grade}</p>
                     </CardContent>
+                    {/* 生徒アカウント作成ボタン (カード内) */}
+                    {!student.authUserId && (
+                      <div className="px-6 pb-6 flex justify-end">
+                         <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            onClick={(e) => { e.stopPropagation(); openCreateAccountModal(index); }}>
+                            生徒アカウントを作成
+                         </Button>
+                      </div>
+                    )}
                   </Card>
-                ))}
-
-                {/* 生徒アカウント作成ボタン */}
-                {formData.students.map((student, index) => (
-                   !student.authUserId && (
-                     <div key={`create-account-${index}`} className="flex justify-center mt-2">
-                        <Button 
-                           variant="secondary" 
-                           size="sm" 
-                           onClick={(e) => { e.stopPropagation(); openCreateAccountModal(index); }}>
-                          生徒アカウントを作成
-                        </Button>
-                     </div>
-                   )
                 ))}
 
                 <Button type="button" variant="outline" onClick={addStudent} className="w-full flex items-center justify-center">
