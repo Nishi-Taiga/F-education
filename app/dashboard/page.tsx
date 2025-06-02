@@ -420,14 +420,6 @@ export default function DashboardPage() {
                    </div>
                    <p className="text-sm text-gray-500 mt-2">現在の利用可能チケット数です。</p>
                 </Card>
-
-                 <Card className="p-6">
-                   <h3 className="text-lg font-semibold mb-4">新しい予約</h3>
-                   <p className="text-sm text-gray-600 mb-4">講師を探して授業を予約できます。</p>
-                   <Button onClick={() => router.push('/search-tutors')} className="w-full">
-                     <Calendar className="mr-2 h-4 w-4" /> 講師を探して予約する
-                   </Button>
-                 </Card>
               </div>
             </Card>
 
@@ -509,14 +501,6 @@ export default function DashboardPage() {
                    <h3 className="text-lg font-semibold mb-4">担当生徒</h3>
                    <p className="text-sm text-gray-500">担当生徒一覧はまだ実装されていません。</p>
                 </Card>
-
-                 <Card className="p-6">
-                   <h3 className="text-lg font-semibold mb-4">レポート確認・作成ボタンカード</h3>
-                   <p className="text-sm text-gray-600 mb-4">生徒へのレポート作成・確認ができます。</p>
-                    <Button onClick={() => router.push('/reports?role=tutor')} className="w-full">
-                      <FileText className="mr-2 h-4 w-4 text-gray-600" /> レポート一覧を見る
-                    </Button>
-                 </Card>
               </div>
             </Card>
 
@@ -545,6 +529,30 @@ export default function DashboardPage() {
 
         </div>
       </main>
+
+      {/* フッターボタン */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 flex justify-around items-center">
+        {user?.role === 'parent' && (
+          <>
+            <Button variant="ghost" onClick={() => router.push('/buy-tickets')}>チケット購入</Button>
+            <Button variant="ghost" onClick={() => router.push('/search-tutors')}>授業予約</Button>
+            <Button variant="ghost" onClick={() => router.push('/reports')}>授業レポート</Button>
+          </>
+        )}
+        {user?.role === 'student' && (
+          <>
+            <Button variant="ghost" onClick={() => router.push('/search-tutors')}>授業予約</Button>
+            <Button variant="ghost" onClick={() => router.push('/reports')}>授業レポート</Button>
+          </>
+        )}
+        {user?.role === 'tutor' && (
+          <>
+            <Button variant="ghost" onClick={() => router.push('/shifts')}>シフト管理</Button>
+            <Button variant="ghost" onClick={() => setIsReportModalOpen(true)}>新規レポート</Button>
+            <Button variant="ghost" onClick={() => router.push('/reports?role=tutor')}>過去レポート</Button>
+          </>
+        )}
+      </footer>
 
       <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
         <DialogContent>
