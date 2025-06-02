@@ -539,8 +539,11 @@ export default function DashboardPage() {
                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
                      {bookings.map((booking: any) => (
                        <BookingCard key={booking.id} booking={booking} userRole={user?.role} onCancelClick={() => {
+                           console.log("Cancel button clicked for booking:", booking.id);
                            setBookingToCancel(booking);
+                           console.log("setBookingToCancel called.");
                            setShowCancelModal(true);
+                           console.log("setShowCancelModal(true) called.");
                        }} />
                      ))}
                    </div>
@@ -558,19 +561,17 @@ export default function DashboardPage() {
                <Card className="p-6 mb-6">
                  <h2 className="text-xl font-semibold mb-4">授業予定</h2>
                  {isLoadingBookings ? (
-                   <div>読み込み中...</div>
+                   <div>予約情報を読み込み中...</div>
                  ) : bookings.length > 0 ? (
                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
                      {bookings.map((booking: any) => (
-                       <BookingCard
-                         key={booking.id}
-                         booking={booking}
-                         userRole={'student'}
-                         onCancelClick={() => {
-                            setBookingToCancel(booking);
-                            setShowCancelModal(true);
-                         }}
-                       />
+                       <BookingCard key={booking.id} booking={booking} userRole={user?.role} onCancelClick={() => {
+                           console.log("Cancel button clicked for booking:", booking.id);
+                           setBookingToCancel(booking);
+                           console.log("setBookingToCancel called.");
+                           setShowCancelModal(true);
+                           console.log("setShowCancelModal(true) called.");
+                       }} />
                      ))}
                    </div>
                  ) : (
@@ -592,8 +593,11 @@ export default function DashboardPage() {
                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
                      {bookings.map((booking: any) => (
                        <BookingCard key={booking.id} booking={booking} userRole={user?.role} onCancelClick={() => {
+                            console.log("Cancel button clicked for booking:", booking.id);
                             setBookingToCancel(booking);
+                            console.log("setBookingToCancel called.");
                             setShowCancelModal(true);
+                            console.log("setShowCancelModal(true) called.");
                        }} />
                      ))}
                    </div>
@@ -675,8 +679,12 @@ export default function DashboardPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCancelModal(false)}>キャンセルしない</Button>
             <Button variant="destructive" onClick={() => {
-                if (bookingToCancel && user?.id && currentParentId !== null) {
-                    handleCancelBooking(bookingToCancel.id, bookingToCancel.studentId, currentParentId);
+                if (bookingToCancel) {
+                    handleCancelBooking(
+                        bookingToCancel.id,
+                        bookingToCancel.studentId,
+                        bookingToCancel.parentId
+                    );
                 }
             }}>キャンセルする</Button>
           </DialogFooter>
