@@ -218,7 +218,6 @@ export default function DashboardPage() {
       setIsLoadingBookings(false);
       if (role === 'parent') setIsParentDataLoaded(true);
       if (role === 'tutor') setIsTutorDataLoaded(true);
-      setIsDataLoaded(true);
       return null;
     }
 
@@ -233,9 +232,18 @@ export default function DashboardPage() {
         .single();
       profileId = parent?.id;
       profileError = error;
-      console.log("親データ取得結果", parent, error);
-      if (profileId) setCurrentParentId(profileId);
-      setIsParentDataLoaded(true);
+      console.log("loadParentOrTutorData: 親データ取得結果", parent, error);
+      if (profileId) {
+         setCurrentParentId(profileId);
+         setIsParentDataLoaded(true);
+      } else {
+         // プロフィールが見つからなかった場合
+         setIsParentDataLoaded(true);
+         setIsLoadingBookings(false);
+         console.warn(`loadParentOrTutorData: ${role} profile not found for authId: ${authId}`);
+         // データロードは完了しなかったが、ローディング状態は解除する
+         return null;
+      }
 
     } else if (role === 'tutor') {
       const { data: tutor, error } = await supabase
@@ -376,17 +384,32 @@ export default function DashboardPage() {
         // 保護者の場合、保護者プロフィールをロードし、生徒と予約を取得
         const parentId = await loadParentOrTutorData(user.auth_id, 'parent');
         // loadParentOrTutorData の中で fetchBookingsForParent が呼ばれる
-        setIsDataLoaded(true);
+        if (parentId !== null) {
+          setIsDataLoaded(true);
+        } else {
+           // プロフィールが見つからずデータロードが完了しなかった場合
+           setIsDataLoaded(true);
+        }
       } else if (user.role === 'tutor') {
         // 講師の場合、講師プロフィールをロードし、予約を取得
         const tutorId = await loadParentOrTutorData(user.auth_id, 'tutor');
         // loadParentOrTutorData の中で fetchBookingsForTutor が呼ばれる
-        setIsDataLoaded(true);
+        if (tutorId !== null) {
+          setIsDataLoaded(true);
+        } else {
+           // プロフィールが見つからずデータロードが完了しなかった場合
+           setIsDataLoaded(true);
+        }
       } else if (user.role === 'student') {
         // 生徒の場合、生徒プロフィールをロードし、予約を取得
         const studentProfileId = await loadStudentData(user.auth_id);
         // loadStudentData の中で fetchBookingsForStudent が呼ばれる
-        setIsDataLoaded(true);
+        if (studentProfileId !== null) {
+          setIsDataLoaded(true);
+        } else {
+           // プロフィールが見つからずデータロードが完了しなかった場合
+           setIsDataLoaded(true);
+        }
       } else {
         console.error("Unknown user role:", user.role);
         toast({
