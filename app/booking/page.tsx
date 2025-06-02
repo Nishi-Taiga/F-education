@@ -298,14 +298,18 @@ export default function BookingPage() {
         }
         setUser(session.user);
 
-        // 保護者プロフィール取得を追加
-        const { data: parentData, error: parentError } = await supabase
-          .from('parent_profile')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single();
-        if (!parentError && parentData) {
-          setParentProfile(parentData);
+        // 保護者プロフィール取得
+        if (session.user.role !== 'student') { // 生徒ロールでない場合のみ保護者プロフィールを取得
+          const { data: parentData, error: parentError } = await supabase
+            .from('parent_profile')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single();
+          if (!parentError && parentData) {
+            setParentProfile(parentData);
+          } else if (parentError) {
+            console.warn("保護者プロフィール取得エラー（存在しない場合あり）:", parentError.message);
+          }
         }
 
         // 生徒アカウントの場合、自身の生徒プロフィールを読み込む
@@ -353,8 +357,8 @@ export default function BookingPage() {
   // 生徒情報を取得
   useEffect(() => {
     const fetchStudents = async () => {
-      // 生徒ロールの場合は、すでにfetchUserDataで自身の生徒情報をセットしているので何もしない
-      if (!user || user.role === 'student') return;
+      // 生徒ロールの場合、または保護者プロフィールがまだ取得できていない場合は何もしない
+      if (!user || user.role === 'student' || !parentProfile) return;
 
       setIsLoadingStudents(true);
       try {
