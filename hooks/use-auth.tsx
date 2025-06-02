@@ -84,42 +84,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         console.log("useAuth queryFn: Session found, fetching profile for user ID:", userId);
 
-        // まずusersテーブルからユーザーのロールを取得する
-        let userRole: UserRole | undefined;
-        const { data: basicUserData, error: basicUserError } = await supabase
-          .from('users')
-          .select('role') // ロールのみを選択
-          .eq('auth_user_id', userId)
-          .maybeSingle();
-
-        if (basicUserError) {
-          console.error("useAuth queryFn: Error fetching basic user data:", basicUserError);
-          // エラーが発生した場合は、ロール不明として処理を続行
-          userRole = undefined; // ロールを未定義とする
-        } else {
-           userRole = basicUserData?.role as UserRole | undefined;
-           console.log("useAuth queryFn: Determined user role:", userRole);
-        }
-
-
         let userProfile: User | null = null;
 
-        // ロールに基づいてプロフィールを取得する順序を変更
-        // usersテーブルからのロール取得に失敗した場合も、全てのプロフィールタイプを試行するフォールバックロジックを維持
-        if (userRole === 'student') {
-          // 1. 生徒プロファイル (生徒としてログインしている可能性が高い場合)
-          const { data: student, error: studentError } = await supabase
-            .from('student_profile')
-            .select('*') // すべてのカラムを選択
-            .eq('user_id', userId)
-            .maybeSingle();
+        // 優先順位として、まず生徒プロフィール、次に保護者、最後に講師を確認
+        // 1. 生徒プロファイル
+        const { data: student, error: studentError } = await supabase
+          .from('student_profile')
+          .select('*') // すべてのカラムを選択
+          .eq('user_id', userId)
+          .maybeSingle();
 
-          if (!studentError && student) {
-            userProfile = { ...student, role: 'student', auth_id: userId, email: userEmail };
-            console.log("useAuth queryFn: Student profile found:", userProfile);
-          } else {
-            console.error("useAuth queryFn: Error fetching student_profile:", studentError);
-          }
+        if (!studentError && student) {
+          userProfile = { ...student, role: 'student', auth_id: userId, email: userEmail };
+          console.log("useAuth queryFn: Student profile found:", userProfile);
+        } else {
+          console.error("useAuth queryFn: Error fetching student_profile:", studentError);
         }
 
         // ロールがstudentでない、またはstudentプロファイルが見つからなかった場合
@@ -140,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // 上記いずれでも見つからなかった場合
-        if (!userProfile && userRole !== 'student') {
+        if (!userProfile && !student) {
            // 3. 講師プロファイル (ロールがtutorの場合、またはロール不明の場合)
            const { data: tutor, error: tutorError } = await supabase
              .from('tutor_profile')
