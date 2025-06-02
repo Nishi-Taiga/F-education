@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { ReportCreationModal } from "@/components/report-creation-modal";
 import { ReportEditModal } from "@/components/report-edit-modal";
+import { format } from "date-fns";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -38,6 +39,8 @@ export default function DashboardPage() {
   const [isTutorDataLoaded, setIsTutorDataLoaded] = useState(false);
   const [isStudentDataLoaded, setIsStudentDataLoaded] = useState(false);
 
+  const today = format(new Date(), 'yyyy-MM-dd');
+
   const fetchBookingsForParent = async (parentId: number) => {
     setIsLoadingBookings(true);
     console.log('Inside fetchBookingsForParent for parentId:', parentId);
@@ -49,6 +52,7 @@ export default function DashboardPage() {
         tutor_profile (last_name, first_name)
       `)
       .eq('parent_id', parentId)
+      .gte('date', today)
       .order('date', { ascending: true })
       .order('time_slot', { ascending: true });
 
@@ -68,7 +72,7 @@ export default function DashboardPage() {
         tutorId: booking.tutor_id?.toString(),
         studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
         tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
-        onParentCancelClick: user?.role === 'parent' ? () => {
+        onCancelClick: () => {
           setBookingToCancel({
             id: booking.id.toString(),
             date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'),
@@ -78,9 +82,11 @@ export default function DashboardPage() {
             studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
             tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
             studentId: booking.student_id?.toString(),
+            tutorId: booking.tutor_id?.toString(),
+            parentId: booking.parent_id,
           });
           setShowCancelModal(true);
-        } : undefined,
+        },
       }));
       setBookings(formattedBookings);
       console.log('Bookings state updated for parent:', formattedBookings);
@@ -110,6 +116,7 @@ export default function DashboardPage() {
         parent_profile (name)
       `)
       .eq('tutor_id', tutorId)
+      .gte('date', today)
       .order('date', { ascending: true })
       .order('time_slot', { ascending: true });
 
@@ -126,7 +133,21 @@ export default function DashboardPage() {
         tutorId: booking.tutor_id?.toString(),
         studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
         tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
-        onCancelClick: undefined,
+        onCancelClick: () => {
+          setBookingToCancel({
+            id: booking.id.toString(),
+            date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'),
+            startTime: booking.time_slot.split(' - ')[0],
+            endTime: booking.time_slot.split(' - ')[1],
+            subject: booking.subject,
+            studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
+            tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
+            studentId: booking.student_id?.toString(),
+            tutorId: booking.tutor_id?.toString(),
+            parentId: booking.parent_id,
+          });
+          setShowCancelModal(true);
+        },
       }));
       setBookings(formattedBookings);
       console.log('Bookings state updated for tutor:', formattedBookings);
@@ -156,6 +177,7 @@ export default function DashboardPage() {
         tutor_profile (last_name, first_name)
       `)
       .eq('student_id', studentProfileId)
+      .gte('date', today)
       .order('date', { ascending: true })
       .order('time_slot', { ascending: true });
 
@@ -175,7 +197,21 @@ export default function DashboardPage() {
         tutorId: booking.tutor_id?.toString(),
         studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
         tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
-        onCancelClick: undefined,
+        onCancelClick: () => {
+          setBookingToCancel({
+            id: booking.id.toString(),
+            date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'),
+            startTime: booking.time_slot.split(' - ')[0],
+            endTime: booking.time_slot.split(' - ')[1],
+            subject: booking.subject,
+            studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
+            tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
+            studentId: booking.student_id?.toString(),
+            tutorId: booking.tutor_id?.toString(),
+            parentId: booking.parent_id,
+          });
+          setShowCancelModal(true);
+        },
       }));
       setBookings(formattedBookings);
       console.log('Bookings state updated for student:', formattedBookings);
@@ -502,7 +538,7 @@ export default function DashboardPage() {
                  ) : bookings.length > 0 ? (
                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
                      {bookings.map((booking: any) => (
-                       <BookingCard key={booking.id} booking={booking} userRole={user?.role} onParentCancelClick={() => {
+                       <BookingCard key={booking.id} booking={booking} userRole={user?.role} onCancelClick={() => {
                            setBookingToCancel(booking);
                            setShowCancelModal(true);
                        }} />
@@ -530,6 +566,10 @@ export default function DashboardPage() {
                          key={booking.id}
                          booking={booking}
                          userRole={'student'}
+                         onCancelClick={() => {
+                            setBookingToCancel(booking);
+                            setShowCancelModal(true);
+                         }}
                        />
                      ))}
                    </div>
@@ -551,7 +591,10 @@ export default function DashboardPage() {
                  ) : bookings.length > 0 ? (
                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
                      {bookings.map((booking: any) => (
-                       <BookingCard key={booking.id} booking={booking} userRole={user?.role} />
+                       <BookingCard key={booking.id} booking={booking} userRole={user?.role} onCancelClick={() => {
+                            setBookingToCancel(booking);
+                            setShowCancelModal(true);
+                       }} />
                      ))}
                    </div>
                  ) : (

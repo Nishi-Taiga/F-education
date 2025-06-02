@@ -352,7 +352,6 @@ return (
                       <TableHead>時間</TableHead>
                       <TableHead>科目</TableHead>
                       <TableHead>{userRole === 'tutor' ? '生徒' : '講師'}</TableHead>
-                      <TableHead>操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

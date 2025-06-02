@@ -35,10 +35,10 @@ interface BookingCardProps {
   // レポート表示は講師と保護者の両方で必要になる可能性があるため残す
   onViewReport?: () => void;
   // 保護者のみにキャンセル機能を許可するため、関数ごと渡す
-  onParentCancelClick?: () => void;
+  onCancelClick?: () => void;
 }
 
-export function BookingCard({ booking, userRole, onViewReport, onParentCancelClick }: BookingCardProps) {
+export function BookingCard({ booking, userRole, onViewReport, onCancelClick }: BookingCardProps) {
   // 日付のフォーマット
   const formattedDate = format(booking.date, "M月d日 (EEE)", { locale: ja });
   const { isCancellingLoading } = booking;
@@ -180,7 +180,7 @@ export function BookingCard({ booking, userRole, onViewReport, onParentCancelCli
       )}
 
       {/* キャンセルボタンを追加 */}
-      {onParentCancelClick && !isCancelled && !isInPast && (
+      {onCancelClick && !isCancelled && !isInPast && (
         <div className="mt-3 pt-3 border-t">
           <Button
             variant="outline"
@@ -188,7 +188,7 @@ export function BookingCard({ booking, userRole, onViewReport, onParentCancelCli
             className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
             onClick={(e) => {
               e.stopPropagation(); // 親要素のクリックイベントが発火するのを防ぐ
-              onParentCancelClick();
+              onCancelClick();
             }}
             disabled={isCancellingLoading}
           >
