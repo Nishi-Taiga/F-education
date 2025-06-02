@@ -599,14 +599,13 @@ export default function BookingPage() {
       for (const booking of selectedBookings) {
         // 予約に使用する parent_id を取得
         let bookingParentId: number | null = null;
-        if (user?.role !== 'student' && parentProfile) {
+        if (user?.role === 'parent' && parentProfile) {
           // 保護者の場合
           bookingParentId = parentProfile.id;
         } else if (user?.role === 'student' && students.length > 0) {
           // 生徒の場合、自身の parent_id を取得
-          // students[0] がログインしている生徒自身の情報になる想定
           const loggedInStudent = students[0];
-          if (loggedInStudent && loggedInStudent.parent_id) {
+          if (loggedInStudent && loggedInStudent.parent_id !== undefined) {
             bookingParentId = loggedInStudent.parent_id;
           }
         }
@@ -670,13 +669,13 @@ export default function BookingPage() {
 
         // チケット消費を行う生徒の parent_id を取得
         let studentParentId: number | null = null;
-        if (user?.role !== 'student' && parentProfile) {
+        if (user?.role === 'parent' && parentProfile) {
            // 保護者の場合
            studentParentId = parentProfile.id;
         } else if (user?.role === 'student' && students.length > 0) {
            // 生徒の場合、自身の parent_id を取得
            const loggedInStudent = students[0];
-           if (loggedInStudent && loggedInStudent.parent_id) {
+           if (loggedInStudent && loggedInStudent.parent_id !== undefined) {
              studentParentId = loggedInStudent.parent_id;
            }
         }
