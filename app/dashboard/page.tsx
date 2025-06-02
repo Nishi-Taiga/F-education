@@ -405,24 +405,17 @@ export default function DashboardPage() {
 
       <main className="flex-1 py-8 px-4 md:px-6">
         <div className="max-w-7xl mx-auto grid gap-8 md:grid-cols-2">
+          <Card className="p-6 md:col-span-2">
+            <h2 className="text-xl font-semibold mb-4">カレンダー</h2>
+            {isLoadingBookings ? (
+               <div>カレンダー情報を読み込み中...</div>
+            ) : (
+               <SimpleCalendar bookings={bookings} />
+            )}
+          </Card>
+
           {user?.role === 'parent' && (
             <>
-            <Card className="p-6 md:col-span-2">
-              <h2 className="text-xl font-semibold mb-4">ようこそ、{user?.lastName} {user?.firstName} さん</h2>
-              <p className="text-gray-600 mb-6">保護者ダッシュボードです。生徒の予約やチケット情報を管理できます。</p>
-              
-              <div className="grid gap-6 md:grid-cols-2">
-                <Card className="p-6">
-                   <h3 className="text-lg font-semibold mb-4">チケット情報</h3>
-                   <div className="flex items-center space-x-2">
-                      <Ticket className="h-5 w-5 text-blue-500" />
-                      <p className="text-2xl font-bold">- 枚</p>
-                   </div>
-                   <p className="text-sm text-gray-500 mt-2">現在の利用可能チケット数です。</p>
-                </Card>
-              </div>
-            </Card>
-
             <div className="md:col-span-2">
                <Card className="p-6 mb-6">
                  <h2 className="text-xl font-semibold mb-4">今後の予約</h2>
@@ -441,29 +434,13 @@ export default function DashboardPage() {
                    <div>今後の予約はありません。</div>
                  )}
                </Card>
-                <Card className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">カレンダー</h2>
-                  <SimpleCalendar bookings={bookings} />
-                </Card>
             </div>
             </>
           )}
 
           {user?.role === 'student' && (
              <>
-             <Card className="p-6">
-               <h2 className="text-xl font-semibold mb-4">予約・レポート</h2>
-               <div className="flex flex-col space-y-4">
-                 <Button onClick={() => router.push('/search-tutors')} className="w-full">
-                   <Calendar className="mr-2 h-4 w-4" /> 授業を予約する
-                 </Button>
-                 <Button variant="outline" onClick={() => router.push('/reports')} className="w-full">
-                   <FileText className="mr-2 h-4 w-4 text-gray-600" /> 授業レポートを見る
-                 </Button>
-               </div>
-             </Card>
-
-             <div className="md:col-span-1">
+             <div className="md:col-span-2">
                <Card className="p-6 mb-6">
                  <h2 className="text-xl font-semibold mb-4">今後の予約</h2>
                  {isLoadingBookings ? (
@@ -482,28 +459,12 @@ export default function DashboardPage() {
                    <div>今後の予約はありません。</div>
                  )}
                </Card>
-               <Card className="p-6">
-                 <h2 className="text-xl font-semibold mb-4">カレンダー</h2>
-                 <SimpleCalendar bookings={bookings} />
-               </Card>
              </div>
              </>
           )}
 
           {user?.role === 'tutor' && (
              <>
-            <Card className="p-6 md:col-span-2">
-              <h2 className="text-xl font-semibold mb-4">ようこそ、{user?.lastName} {user?.firstName} 先生</h2>
-              <p className="text-gray-600 mb-6">講師ダッシュボードです。担当予約や生徒のレポートを確認できます。</p>
-              
-              <div className="grid gap-6 md:grid-cols-2">
-                <Card className="p-6">
-                   <h3 className="text-lg font-semibold mb-4">担当生徒</h3>
-                   <p className="text-sm text-gray-500">担当生徒一覧はまだ実装されていません。</p>
-                </Card>
-              </div>
-            </Card>
-
             <div className="md:col-span-2">
                <Card className="p-6 mb-6">
                  <h2 className="text-xl font-semibold mb-4">今後の担当予約</h2>
@@ -519,10 +480,6 @@ export default function DashboardPage() {
                    <div>今後の担当予約はありません。</div>
                  )}
                </Card>
-                <Card className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">カレンダー</h2>
-                  <SimpleCalendar bookings={bookings} />
-                </Card>
             </div>
              </>
           )}
@@ -538,7 +495,7 @@ export default function DashboardPage() {
               <Ticket className="h-5 w-5" />
               <span>チケット購入</span>
             </Button>
-            <Button variant="outline" onClick={() => router.push('/search-tutors')} className="flex flex-col items-center text-center">
+            <Button variant="outline" onClick={() => router.push('/booking')} className="flex flex-col items-center text-center">
               <Calendar className="h-5 w-5" />
               <span>授業予約</span>
             </Button>
@@ -550,7 +507,7 @@ export default function DashboardPage() {
         )}
         {user?.role === 'student' && (
           <>
-            <Button variant="outline" onClick={() => router.push('/search-tutors')} className="flex flex-col items-center text-center">
+            <Button variant="outline" onClick={() => router.push('/booking')} className="flex flex-col items-center text-center">
               <Calendar className="h-5 w-5" />
               <span>授業予約</span>
             </Button>
