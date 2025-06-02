@@ -85,6 +85,12 @@ export default function ReportsPage() {
         let currentUserRole: string | null = null;
 
         // プロフィールとロールの取得
+        const { data: studentProfile, error: studentError } = await supabase
+            .from('student_profile')
+            .select('id, user_id, role') // roleカラムも取得
+            .eq('user_id', authUid)
+            .single();
+
         const { data: parentProfile, error: parentError } = await supabase
             .from('parent_profile')
             .select('id, user_id, role') // roleカラムも取得
@@ -97,7 +103,10 @@ export default function ReportsPage() {
             .eq('user_id', authUid)
             .single();
 
-        if (parentProfile) {
+        if (studentProfile) {
+            currentUserId = studentProfile.id;
+            currentUserRole = studentProfile.role; // student_profileからロールを取得
+        } else if (parentProfile) {
             currentUserId = parentProfile.id;
             currentUserRole = parentProfile.role; // parent_profileからロールを取得
         } else if (tutorProfile) {
@@ -136,6 +145,9 @@ export default function ReportsPage() {
         } else if (currentUserRole === 'parent') {
           // 保護者の場合、自分の生徒の予約（レポート済み含む）を取得
           reportQuery = reportQuery.eq('parent_id', currentUserId);
+        } else if (currentUserRole === 'student') {
+          // 生徒の場合、自分の予約（レポート済み含む）を取得
+          reportQuery = reportQuery.eq('student_id', currentUserId);
         } else {
              // 未対応ロールの場合は空の結果を返すかエラーハンドリング
             console.warn("未対応のユーザーロールです", currentUserRole);
