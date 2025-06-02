@@ -47,7 +47,8 @@ export function CommonHeader({
   const headerTitle = title || "F education";
 
   const handleLogout = async () => {
-    logoutMutation.mutate();
+    await logoutMutation.mutate();
+    router.push('/auth'); // ログアウト後に/authへ明示的に遷移
   };
 
   return (
