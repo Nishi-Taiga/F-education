@@ -26,12 +26,14 @@ interface CommonHeaderProps {
   showBackButton?: boolean;
   backTo?: string;
   title?: string;
+  userRole?: string;
 }
 
 export function CommonHeader({ 
   showBackButton = false, 
   backTo = "/", 
-  title
+  title,
+  userRole
 }: CommonHeaderProps) {
   const { user, logoutMutation } = useAuth();
   const router = useRouter();

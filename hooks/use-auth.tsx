@@ -7,10 +7,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase/client";
 
 // ユーザータイプの定義
-type UserRole = 'parent' | 'tutor' | 'student';
+export type UserRole = 'parent' | 'tutor' | 'student';
 
 // ユーザー情報の型
-type User = {
+export type User = {
   id: number; 
   auth_id: string;  // Supabaseの認証IDを格納
   displayName?: string;
@@ -20,6 +20,17 @@ type User = {
   role: UserRole;
   email: string;
   profileCompleted: boolean;
+};
+
+// 認証されたユーザープロフィールの型定義
+export type UserProfile = {
+  id: number;
+  auth_user_id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role: string;
+  profile_completed?: boolean;
 };
 
 type AuthContextType = {
