@@ -282,6 +282,28 @@ export default function BookingPage() {
 
   const timeSlotSectionRef = useRef<HTMLDivElement>(null);
 
+  // コンポーネネントのマウント時にユーザーデータをフェッチ
+  useEffect(() => {
+    fetchUserData();
+  }, [router, toast]);
+
+  // Top-level loading check
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+        <p>データを読み込み中...</p>
+      </div>
+    );
+  }
+
+  // After loading, if current user role is not determined, or invalid, redirect.
+  // This case should ideally not be hit if fetchUserData works correctly.
+  if (!currentUserRole || !['parent', 'tutor', 'student'].includes(currentUserRole)) {
+    router.push('/auth');
+    return null;
+  }
+
   // 科目選択時の共通処理
   const handleSubjectChange = (value: string) => {
     setSelectedSubject(value);
@@ -307,6 +329,7 @@ export default function BookingPage() {
       }
 
       const authUid = session.user.id;
+      setUser(session.user); // session.userをuserステートに設定
 
       let profileId: number | null = null;
       let role: UserRole | null = null;
@@ -315,9 +338,13 @@ export default function BookingPage() {
       // 1. 生徒プロフィールを最初にチェック
       const { data: studentProfile, error: studentError } = await supabase
         .from('student_profile')
-        .select('id, first_name, last_name, grade, student_tickets(quantity)')
+        .select('id, first_name, last_name, grade, student_tickets(quantity), parent_id') // parent_id を選択
         .eq('user_id', authUid)
         .single();
+
+      if (studentError) {
+        console.error("生徒プロフィール取得エラー:", studentError);
+      }
 
       if (studentProfile) {
         profileId = studentProfile.id;
@@ -330,6 +357,7 @@ export default function BookingPage() {
           ticketCount: studentProfile.student_tickets[0]?.quantity || 0,
           parent_id: studentProfile.parent_id,
         };
+        setStudentSchoolLevel(getSchoolLevelFromGrade(studentProfileData.grade));
       } else {
         // 2. 生徒でなければ、保護者プロフィールをチェック
         const { data: parentProfile, error: parentError } = await supabase
@@ -337,10 +365,15 @@ export default function BookingPage() {
           .select('id, role')
           .eq('user_id', authUid)
           .single();
+        
+        if (parentError) {
+          console.error("保護者プロフィール取得エラー:", parentError);
+        }
 
         if (parentProfile) {
           profileId = parentProfile.id;
           role = parentProfile.role as UserRole;
+          setParentProfile(parentProfile); // parentProfile ステートを更新
         } else {
           // 3. 保護者でなければ、講師プロフィールをチェック
           const { data: tutorProfile, error: tutorError } = await supabase
@@ -349,12 +382,20 @@ export default function BookingPage() {
             .eq('user_id', authUid)
             .single();
 
+          if (tutorError) {
+            console.error("講師プロフィール取得エラー:", tutorError);
+          }
+
           if (tutorProfile) {
             profileId = tutorProfile.id;
             role = 'tutor';
           }
         }
       }
+
+      // デバッグログを追加
+      console.log("fetchUserData完了 - 検出されたロール:", role);
+      console.log("fetchUserData完了 - 生徒プロフィールデータ:", studentProfileData);
 
       if (!profileId || !role) {
         console.error("プロフィールが見つかりません");
@@ -413,7 +454,7 @@ export default function BookingPage() {
 
   // 生徒選択時の処理（保護者アカウント）
   useEffect(() => {
-    if (user?.role === 'student') return;
+    if (currentUserRole === 'student') return; // user?.role を currentUserRole に変更
 
     if (selectedStudentId && students.length > 0) {
       const selectedStudent = students.find(student => student.id === selectedStudentId);
@@ -424,7 +465,7 @@ export default function BookingPage() {
         setStudentSchoolLevel(null);
       }
     }
-  }, [selectedStudentId, students, user]);
+  }, [selectedStudentId, students, currentUserRole]); // 依存配列に currentUserRole を追加
 
   // 既存予約を取得
   useEffect(() => {
@@ -761,7 +802,7 @@ export default function BookingPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-gray-700">{user?.displayName || user?.username}</span>
+            <span className="text-gray-700">{user?.email || user?.id}</span>
           </div>
         </div>
       </header>
@@ -782,7 +823,7 @@ export default function BookingPage() {
               </div>
 
               {/* 生徒選択 (保護者アカウントの場合のみ表示) */}
-              {user?.role !== 'student' && (
+              {currentUserRole === 'parent' && (
                 <div className="mb-4">
                   <div className="flex items-center space-x-2 mb-2">
                     <User className="h-4 w-4 text-primary" />
@@ -838,7 +879,7 @@ export default function BookingPage() {
                   <BookOpen className="h-4 w-4 text-primary" />
                   <Label className="text-sm font-medium">授業科目を選択</Label>
                 </div>
-                {user?.role === 'student' ? (
+                {currentUserRole === 'student' ? (
                   // 生徒アカウントの場合は学年から科目選択
                   studentSchoolLevel ? (
                     <Select
@@ -878,9 +919,8 @@ export default function BookingPage() {
                       </Select>
                     </div>
                   )
-                ) : (
-                  // 親アカウントの場合は生徒選択必須
-                  !selectedStudentId ? (
+                ) : currentUserRole === 'parent' ? ( // 保護者アカウントの場合
+                  !selectedStudentId ? ( // 生徒選択が必須
                     <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">先に生徒を選択してください</div>
                   ) : studentSchoolLevel ? (
                     <Select
@@ -920,6 +960,22 @@ export default function BookingPage() {
                       </Select>
                     </div>
                   )
+                ) : ( // 講師アカウントの場合 (currentUserRole === 'tutor')
+                  <Select // 講師は生徒選択なしで科目を選択
+                    value={selectedSubject || ""}
+                    onValueChange={handleSubjectChange}
+                  >
+                    <SelectTrigger className="w-full bg-white border-2 shadow-sm">
+                      <SelectValue placeholder="科目を選択してください" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-2 shadow-lg z-50">
+                      {Object.values(subjectsBySchoolLevel).flat().filter((value, index, self) => self.indexOf(value) === index).sort().map((subject) => (
+                        <SelectItem key={subject} value={subject}>
+                          {subject}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 
@@ -927,12 +983,12 @@ export default function BookingPage() {
                 <div className="flex justify-center items-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : ((user?.role !== 'student' && !selectedStudentId) || !selectedSubject) ? (
+              ) : ((currentUserRole === 'parent' && !selectedStudentId) || !selectedSubject) ? (
                 <div className="border rounded-md p-6 text-center bg-gray-50">
                   <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 mb-2">授業の予約には以下の情報が必要です</p>
                   <ul className="text-sm text-gray-600 mb-4 space-y-1">
-                    {user?.role !== 'student' && (
+                    {currentUserRole === 'parent' && (
                       <li className="flex items-center justify-center">
                         <User className="h-3.5 w-3.5 text-primary mr-1.5" />
                         <span>受講する生徒</span>
@@ -962,11 +1018,11 @@ export default function BookingPage() {
                 <h3 className="text-base font-medium text-gray-900 mb-3">授業時間を選択</h3>
               </div>
 
-              {((user?.role !== 'student' && !selectedStudentId) || (!user?.role && !selectedStudentId) || !selectedSubject) ? (
+              {((currentUserRole === 'parent' && !selectedStudentId) || !selectedSubject) ? (
                 <div className="p-4 border rounded-md bg-gray-50 text-center">
                   <p className="text-gray-600 mb-2">授業時間を選択するには</p>
                   <ul className="text-sm text-gray-600 mb-2 space-y-1">
-                    {user?.role !== 'student' && !selectedStudentId && (
+                    {currentUserRole === 'parent' && !selectedStudentId && (
                       <li className="flex items-center justify-center">
                         <User className="h-3.5 w-3.5 text-amber-500 mr-1.5" />
                         <span className="text-amber-700">生徒を選択してください</span>
@@ -1179,9 +1235,16 @@ export default function BookingPage() {
                   }
                 }
                 // 生徒が選択されていない場合や生徒のチケット情報がない場合は従来通りユーザー全体のチケット数をチェック
-                else if (user && user.ticketCount < selectedBookings.length) {
+                else if (currentUserRole === 'student' && selectedStudent) {
+                  // 生徒アカウントでログインしている場合、selectedStudentのチケット数を使用
+                  if (selectedStudent.ticketCount < selectedBookings.length) {
+                    hasEnoughTickets = false;
+                    ticketErrorMessage = `${selectedStudent.last_name} ${selectedStudent.first_name}のチケットが不足しています（残り${selectedStudent.ticketCount}枚、必要${selectedBookings.length}枚）`;
+                  }
+                } else if (currentUserRole === 'parent' && parentProfile && parentProfile.ticketCount < selectedBookings.length) {
+                  // 保護者アカウントでログインしている場合、保護者のチケット数を使用
                   hasEnoughTickets = false;
-                  ticketErrorMessage = `チケットが不足しています（残り${user.ticketCount}枚、必要${selectedBookings.length}枚）`;
+                  ticketErrorMessage = `チケットが不足しています（残り${parentProfile.ticketCount}枚、必要${selectedBookings.length}枚）`;
                 }
 
                 if (!hasEnoughTickets) {
