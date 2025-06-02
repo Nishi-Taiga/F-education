@@ -414,17 +414,40 @@ export default function DashboardPage() {
 
   }, [user, isAuthLoadingFromHook, isDataLoaded, router, toast, isLoadingBookings, isAuthenticated]);
 
-  const isDashboardLoading = isAuthLoadingFromHook || (user?.role === 'parent' && !isParentDataLoaded) || (user?.role === 'tutor' && !isTutorDataLoaded) || (user?.role === 'student' && !isStudentDataLoaded);
+  // ユーザー、認証状態、データロード状態に基づいてダッシュボードのローディング状態を判断
+  // isAuthLoadingFromHook は useAuth からのローディング状態
+  // isDataLoaded は このコンポーネントでのプロフィールと予約データのロード完了状態
+  const isDashboardLoading = isAuthLoadingFromHook || (user && !isDataLoaded);
 
-  if (!isInitialLoadingComplete || !user || !user.role || !['parent', 'tutor', 'student'].includes(user.role)) {
-    if (!isInitialLoadingComplete) {
-      return <div className="flex justify-center items-center h-screen">初期データを読み込み中...</div>;
-    } else if (!user) {
-      return <div className="flex justify-center items-center h-screen">認証されていません。</div>;
-    } else if (!user.role || !['parent', 'tutor', 'student'].includes(user.role)) {
-      return <div className="flex justify-center items-center h-screen">アクセス権限がありません。</div>;
-    }
-    return <div className="flex justify-center items-center h-screen">ダッシュボードを読み込み中...</div>;
+  // useAuth からの認証ローディングが完了し、かつユーザーがいない場合は認証ページへリダイレクト
+  // useAuth の user と isLoading を使用して、認証および初期プロフィールロードの状態をシンプルに判定
+  if (!isAuthLoadingFromHook && !user) {
+    console.log("Not authenticated and auth loading complete, redirecting to auth.");
+    router.push('/auth');
+    return <div className="flex justify-center items-center h-screen">認証ページへリダイレクト中...</div>;
+  }
+
+  // ユーザー情報があり、かつデータがまだロードされていない場合はローディング表示
+  if (user && !isDataLoaded) {
+    console.log("User exists but data not loaded.", { user, isDataLoaded, isLoadingBookings, isParentDataLoaded, isTutorDataLoaded, isStudentDataLoaded });
+     return <div className="flex justify-center items-center h-screen">ダッシュボードを読み込み中...</div>;
+  }
+
+  // ユーザー情報がなく、認証ローディング中の場合は初期ロード表示
+  if (isAuthLoadingFromHook && !user) {
+     console.log("Auth loading in progress, user is null.");
+     return <div className="flex justify-center items-center h-screen">認証情報を読み込み中...</div>;
+  }
+
+  // 認証ローディング完了後もユーザー情報がない、またはロールが無効な場合
+  if (!user || !user.role || !['parent', 'tutor', 'student'].includes(user.role)) {
+     console.error("Authentication complete but user is null or has invalid role.", user);
+    // アクセス権限がない、または予期しない状態
+    if (isInitialLoadingComplete && !user) {
+       return <div className="flex justify-center items-center h-screen">初期データを読み込み中...</div>;
+     } else if (!user?.role || !['parent', 'tutor', 'student'].includes(user.role)) {
+       return <div className="flex justify-center items-center h-screen">アクセス権限がありません。</div>;
+     }
   }
 
   return (
