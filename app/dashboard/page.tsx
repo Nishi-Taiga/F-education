@@ -27,6 +27,8 @@ export default function DashboardPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<any>(null);
   const [currentParentId, setCurrentParentId] = useState<number | null>(null);
+  const [currentStudentProfileId, setCurrentStudentProfileId] = useState<number | null>(null);
+  const [totalTickets, setTotalTickets] = useState<number | null>(null);
   const [isLoadingParentId, setIsLoadingParentId] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -91,6 +93,30 @@ export default function DashboardPage() {
       setBookings(formattedBookings);
       console.log('Bookings state updated for parent:', formattedBookings);
     }
+
+    // 保護者の生徒のチケット数を取得
+    const { data: studentsData, error: studentsError } = await supabase
+      .from('student_profile')
+      .select('id')
+      .eq('parent_id', parentId);
+
+    let totalParentTickets = 0;
+    if (!studentsError && studentsData) {
+      const studentIds = studentsData.map(s => s.id);
+      if (studentIds.length > 0) {
+        const { data: ticketsData, error: ticketsError } = await supabase
+          .from('student_tickets')
+          .select('quantity')
+          .in('student_id', studentIds);
+
+        if (!ticketsError && ticketsData) {
+          totalParentTickets = ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0);
+        } else if (ticketsError) {
+          console.error("Error fetching student tickets for parent:", ticketsError);
+        }
+      }
+    }
+    setTotalTickets(totalParentTickets);
 
     if (bookingsError) {
       console.error('Error fetching bookings for parent:', bookingsError);
@@ -217,6 +243,20 @@ export default function DashboardPage() {
       setBookings(formattedBookings);
       console.log('Bookings state updated for student:', formattedBookings);
     }
+
+    // 生徒のチケット数を取得
+    const { data: ticketsData, error: ticketsError } = await supabase
+      .from('student_tickets')
+      .select('quantity')
+      .eq('student_id', parseInt(studentProfileId));
+
+    let studentTicketCount = 0;
+    if (!ticketsError && ticketsData) {
+      studentTicketCount = ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0);
+    } else if (ticketsError) {
+      console.error("Error fetching student tickets:", ticketsError);
+    }
+    setTotalTickets(studentTicketCount);
 
     if (bookingsError) {
       console.error('Error fetching bookings for student:', bookingsError);
@@ -521,6 +561,13 @@ export default function DashboardPage() {
 
       <main className="flex-1 py-8 px-4 md:px-6">
         <div className="max-w-7xl mx-auto grid gap-8 md:grid-cols-2">
+          {/* チケット残数表示 */}
+          {(user?.role === 'parent' || user?.role === 'student') && totalTickets !== null && (
+            <Card className="p-4 md:col-span-2 text-center bg-blue-50 border-blue-200 shadow-sm">
+              <h3 className="text-lg font-semibold text-blue-800">現在のチケット残数: {totalTickets}枚</h3>
+            </Card>
+          )}
+
           <Card className="p-6 md:col-span-2">
             {isLoadingBookings ? (
                <div>カレンダー情報を読み込み中...</div>
