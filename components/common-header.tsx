@@ -35,8 +35,8 @@ export function CommonHeader({
   title,
   userRole
 }: CommonHeaderProps) {
-  const { user, logoutMutation } = useAuth();
   const router = useRouter();
+  const { user, logoutMutation } = useAuth();
   
   // Navigate関数
   const navigate = (path: string) => {
@@ -45,6 +45,10 @@ export function CommonHeader({
 
   // ヘッダータイトルを決定
   const headerTitle = title || "F education";
+
+  const handleLogout = async () => {
+    logoutMutation.mutate();
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm w-full">
@@ -156,7 +160,7 @@ export function CommonHeader({
               )}
               {/* ログアウトは全ての認証済みユーザーに表示 */}
               {user && (
-                   <DropdownMenuItem onClick={() => logoutMutation.mutate()} className="text-red-600 hover:text-red-700">
+                   <DropdownMenuItem onClick={handleLogout} className="text-red-600 hover:text-red-700 cursor-pointer">
                       <LogOut className="h-4 w-4 mr-2 text-red-600" />
                       ログアウト
                   </DropdownMenuItem>

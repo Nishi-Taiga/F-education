@@ -406,7 +406,6 @@ export default function DashboardPage() {
       <main className="flex-1 py-8 px-4 md:px-6">
         <div className="max-w-7xl mx-auto grid gap-8 md:grid-cols-2">
           <Card className="p-6 md:col-span-2">
-            <h2 className="text-xl font-semibold mb-4">カレンダー</h2>
             {isLoadingBookings ? (
                <div>カレンダー情報を読み込み中...</div>
             ) : (
@@ -507,11 +506,11 @@ export default function DashboardPage() {
         )}
         {user?.role === 'student' && (
           <>
-            <Button variant="outline" onClick={() => router.push('/booking')} className="flex flex-col items-center text-center">
+            <Button variant="outline" onClick={() => router.push('/booking')} className="flex flex-row items-center justify-center text-center space-x-1">
               <Calendar className="h-5 w-5" />
               <span>授業予約</span>
             </Button>
-            <Button variant="outline" onClick={() => router.push('/reports')} className="flex flex-col items-center text-center">
+            <Button variant="outline" onClick={() => router.push('/reports')} className="flex flex-row items-center justify-center text-center space-x-1">
               <FileText className="h-5 w-5" />
               <span>授業レポート</span>
             </Button>
@@ -519,15 +518,15 @@ export default function DashboardPage() {
         )}
         {user?.role === 'tutor' && (
           <>
-            <Button variant="outline" onClick={() => router.push('/tutor/schedule')} className="flex flex-col items-center text-center">
+            <Button variant="outline" onClick={() => router.push('/tutor/schedule')} className="flex flex-row items-center justify-center text-center space-x-1">
               <Calendar className="h-5 w-5" />
               <span>シフト管理</span>
             </Button>
-            <Button variant="outline" onClick={() => setIsReportModalOpen(true)} className="flex flex-col items-center text-center">
+            <Button variant="outline" onClick={() => setIsReportModalOpen(true)} className="flex flex-row items-center justify-center text-center space-x-1">
               <FileText className="h-5 w-5" />
               <span>新規レポート</span>
             </Button>
-            <Button variant="outline" onClick={() => router.push('/reports?role=tutor')} className="flex flex-col items-center text-center">
+            <Button variant="outline" onClick={() => router.push('/reports?role=tutor')} className="flex flex-row items-center justify-center text-center space-x-1">
               <FileText className="h-5 w-5" />
               <span>過去レポート</span>
             </Button>
