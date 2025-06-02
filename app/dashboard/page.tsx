@@ -423,11 +423,8 @@ export default function DashboardPage() {
       setIsInitialLoadingComplete(true);
     };
 
-    // user オブジェクトが確定したら初期ロードを実行
-    // user の変更、または isAuthLoadingFromHook が false になったタイミングで実行
-    // ただし、isLoadingBookings が true の間は再実行しないようにする
-    // isDataLoaded が true になったら初期ロードは完了とみなす
-    if (user && !isDataLoaded && !isLoadingBookings) {
+    // useAuth のローディングが完了し、ユーザーオブジェクトが存在し、かつダッシュボードのデータがまだロードされていない場合に初期ロードを実行
+    if (!isAuthLoadingFromHook && user && !isDataLoaded) {
        console.log("Executing initialLoad due to user change.", { user, isDataLoaded, isLoadingBookings });
        initialLoad();
     } else if (!user && !isAuthLoadingFromHook && isAuthenticated) {
@@ -452,24 +449,18 @@ export default function DashboardPage() {
   // isDataLoaded は このコンポーネントでのプロフィールと予約データのロード完了状態
   const isDashboardLoading = isAuthLoadingFromHook || (user && !isDataLoaded);
 
-  // useAuth からの認証ローディングが完了し、かつユーザーがいない場合は認証ページへリダイレクト
-  // useAuth の user と isLoading を使用して、認証および初期プロフィールロードの状態をシンプルに判定
-  if (!isAuthLoadingFromHook && !user) {
+  // 認証情報と初期データロードの状態に基づいた表示判定
+  // useAuth のローディングが完了し、ユーザーオブジェクトが存在しない場合は認証ページへリダイレクト
+  if (!isAuthLoadingFromHook && !user && isInitialLoadingComplete) {
     console.log("Not authenticated and auth loading complete, redirecting to auth.");
     router.push('/auth');
     return <div className="flex justify-center items-center h-screen">認証ページへリダイレクト中...</div>;
   }
 
-  // ユーザー情報があり、かつデータがまだロードされていない場合はローディング表示
-  if (user && !isDataLoaded) {
+  // useAuth のローディング中、またはユーザーはいるがダッシュボードの初期データロードが完了していない場合
+  if (isAuthLoadingFromHook || (user && !isDataLoaded)) {
     console.log("User exists but data not loaded.", { user, isDataLoaded, isLoadingBookings, isParentDataLoaded, isTutorDataLoaded, isStudentDataLoaded });
      return <div className="flex justify-center items-center h-screen">ダッシュボードを読み込み中...</div>;
-  }
-
-  // ユーザー情報がなく、認証ローディング中の場合は初期ロード表示
-  if (isAuthLoadingFromHook && !user) {
-     console.log("Auth loading in progress, user is null.");
-     return <div className="flex justify-center items-center h-screen">認証情報を読み込み中...</div>;
   }
 
   // 認証ローディング完了後もユーザー情報がない、またはロールが無効な場合
