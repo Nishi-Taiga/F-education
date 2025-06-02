@@ -588,6 +588,21 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
           } : undefined}
         />
       )}
+
+      {userProfile?.role === 'student' && (
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">予約・レポート</h2>
+          <div className="flex flex-col space-y-4">
+            <Button onClick={() => router.push('/search-tutors')} className="w-full">
+              <Calendar className="mr-2 h-4 w-4" /> 授業を予約する
+            </Button>
+            {/* レポート確認ボタンを追加 */}
+            <Button onClick={() => router.push('/reports')} className="w-full">
+              <FileText className="mr-2 h-4 w-4" /> レポート一覧を見る
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };
