@@ -43,6 +43,7 @@ type BookingSelection = {
   tutorId: number;
   tutorShiftId: number;
   tutorName: string;
+  parent_id?: number;
 };
 
 type SchoolLevel = "elementary" | "junior_high" | "high_school";
@@ -560,12 +561,17 @@ export default function BookingPage() {
 
     // 生徒情報を取得
     let studentName: string | undefined = undefined;
+    let studentParentId: number | undefined = undefined;
+
     if (selectedStudentId && students) {
       const student = students.find((s: Student) => s.id === selectedStudentId);
       if (student) {
         studentName = `${student.last_name} ${student.first_name}`;
+        studentParentId = student.parent_id;
       }
     }
+
+    console.log("handleTutorSelection: studentParentId before adding to bookings:", studentParentId);
 
     const dateObj = parse(selectedDate, "yyyy-MM-dd", new Date());
     const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
@@ -580,13 +586,16 @@ export default function BookingPage() {
       subject: selectedSubject,
       tutorId,
       tutorShiftId: shiftId,
-      tutorName: tutor.name
+      tutorName: tutor.name,
+      parent_id: studentParentId,
     }]);
 
     // 選択をリセット
     setSelectedTutorId(null);
     setSelectedShiftId(null);
     setSelectedTimeSlot(null);
+
+    console.log("Inline Tutor Select: parent_id added to bookings:", studentParentId);
   };
 
   const completeBooking = async () => {
@@ -598,21 +607,12 @@ export default function BookingPage() {
       // Create an array of booking data to send to the mutation
       for (const booking of selectedBookings) {
         // 予約に使用する parent_id を取得
-        let bookingParentId: number | null = null;
-        if (user?.role === 'parent' && parentProfile) {
-          // 保護者の場合
-          bookingParentId = parentProfile.id;
-        } else if (user?.role === 'student' && students.length > 0) {
-          // 生徒の場合、自身の parent_id を取得
-          const loggedInStudent = students[0];
-          if (loggedInStudent && loggedInStudent.parent_id !== undefined) {
-            bookingParentId = loggedInStudent.parent_id;
-          }
-        }
+        const bookingParentId = booking.parent_id;
 
-        if (bookingParentId === null) {
+        console.log("completeBooking: bookingParentId for current booking:", bookingParentId);
+
+        if (bookingParentId === null || bookingParentId === undefined) {
           console.error("親IDが取得できませんでした。");
-          // エラーをユーザーに通知するか、ここで処理を中断することも考慮
           throw new Error("予約に必要な親情報が不足しています。");
         }
 
@@ -667,28 +667,18 @@ export default function BookingPage() {
         const lessonsBookedCount = selectedBookings.length;
         const newTicketCount = Math.max(0, currentTicketCount - lessonsBookedCount);
 
-        // チケット消費を行う生徒の parent_id を取得
-        let studentParentId: number | null = null;
-        if (user?.role === 'parent' && parentProfile) {
-           // 保護者の場合
-           studentParentId = parentProfile.id;
-        } else if (user?.role === 'student' && students.length > 0) {
-           // 生徒の場合、自身の parent_id を取得
-           const loggedInStudent = students[0];
-           if (loggedInStudent && loggedInStudent.parent_id !== undefined) {
-             studentParentId = loggedInStudent.parent_id;
-           }
-        }
+        // チケット消費を行う生徒の parent_id を取得（selectedBookings から取得）
+        const studentParentIdForTicket = selectedBookings[0].parent_id; // selectedBookingsから直接取得
 
         // student_tickets テーブルに新しいレコードを挿入
-        if (studentParentId !== null) {
+        if (studentParentIdForTicket !== undefined && studentParentIdForTicket !== null) {
           const { error: insertTicketError } = await supabase
             .from('student_tickets')
             .insert([
               {
                 student_id: studentId,
                 quantity: -lessonsBookedCount, // 消費したチケット数（負の値）を挿入
-                parent_id: studentParentId // parent_id を追加
+                parent_id: studentParentIdForTicket // parent_id を追加
                 // created_at はDB側で自動生成されることを期待
               }
             ]);
@@ -700,7 +690,7 @@ export default function BookingPage() {
             // 必要に応じてエラーハンドリングやロールバックのロジックを追加検討。
           }
         } else {
-           console.error("チケット消費に必要な親IDが取得できませんでした。");
+           console.error("チケット消費に必要な親IDが取得できませんでした。(BookingSelection)");
            // 親IDがない場合のエラーハンドリング
         }
       }
@@ -1077,7 +1067,10 @@ export default function BookingPage() {
                                   tutorId: tutor.tutorId,
                                   tutorShiftId: tutor.shiftId,
                                   tutorName: tutor.name,
+                                  parent_id: students?.find(s => s.id === selectedStudentId)?.parent_id, // parent_idを追加
                                 }]);
+
+                                console.log("Inline Tutor Select: parent_id added to bookings:", students?.find(s => s.id === selectedStudentId)?.parent_id);
 
                                 // 選択をリセット
                                 setSelectedTutorId(null); // これらはもう不要だが、後のために残すか検討
