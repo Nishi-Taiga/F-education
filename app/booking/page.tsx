@@ -174,7 +174,10 @@ function CalendarView({
                   : "hover:bg-gray-100 border-gray-200 cursor-pointer"
               }`}
               disabled={isPast || isSunday || isFullyBooked || !interactive}
-              onClick={() => interactive && onSelectDate && !isPast && !isSunday && !isFullyBooked && onSelectDate(dateStr)}
+              onClick={(e) => {
+                // e.preventDefault(); // 一時的にコメントアウト
+                interactive && onSelectDate && !isPast && !isSunday && !isFullyBooked && onSelectDate(dateStr);
+              }}
             >
               {day.getDate()}
             </button>
@@ -282,8 +285,61 @@ export default function BookingPage() {
 
   const timeSlotSectionRef = useRef<HTMLDivElement>(null);
 
+  // 利用可能な講師を取得
+  const fetchAvailableTutors = async () => {
+    console.log("BookingPage useEffect: Fetching available tutors. Subject:", selectedSubject, "Date:", selectedDate, "Time Slot:", selectedTimeSlot, "School Level:", studentSchoolLevel);
+    if (!selectedSubject || !selectedDate || !selectedTimeSlot || !studentSchoolLevel) {
+      setAvailableTutors([]);
+      console.log("BookingPage useEffect: Missing criteria for fetching tutors. Resetting available tutors.");
+      return;
+    }
+
+    setIsLoadingTutors(true);
+    try {
+      // time_slotの値（例: 16:00-17:30）に合わせてスペースを除去
+      const normalizedTimeSlot = selectedTimeSlot.replace(/\s/g, "");
+      const { data: shiftsData, error: shiftsError } = await supabase
+        .from('tutor_shifts')
+        .select(`
+            *,
+            tutor_profile (id, first_name, last_name, subjects)
+          `)
+        .eq('date', selectedDate)
+        .eq('time_slot', normalizedTimeSlot)
+        .eq('is_available', true);
+
+      if (shiftsError) {
+        console.error("講師取得エラー:", shiftsError);
+        setAvailableTutors([]);
+        return;
+      }
+
+      // 科目でフィルタリング
+      const filteredTutors = (shiftsData || []).filter(shift => {
+        if (!shift.tutor_profile?.subjects) return true;
+        return shift.tutor_profile.subjects.includes(selectedSubject);
+      }).map(shift => ({
+        tutorId: shift.tutor_profile.id,
+        shiftId: shift.id,
+        name: `${shift.tutor_profile.last_name} ${shift.tutor_profile.first_name}`,
+        subject: selectedSubject,
+        specialization: shift.tutor_profile.subjects
+      }));
+
+      setAvailableTutors(filteredTutors);
+      console.log("fetchAvailableTutors: Available tutors fetched:", filteredTutors);
+    } catch (error) {
+      console.error("講師取得エラー:", error);
+      setAvailableTutors([]);
+    } finally {
+      setIsLoadingTutors(false);
+      console.log("fetchAvailableTutors: Finished loading tutors.");
+    }
+  };
+
   // コンポーネネントのマウント時にユーザーデータをフェッチ
   useEffect(() => {
+    console.log("BookingPage useEffect: Initializing fetchUserData...");
     fetchUserData();
   }, []);
 
@@ -358,6 +414,7 @@ export default function BookingPage() {
           parent_id: studentProfile.parent_id,
         };
         setStudentSchoolLevel(getSchoolLevelFromGrade(studentProfileData.grade));
+        console.log("fetchUserData: Student profile detected. Student school level:", getSchoolLevelFromGrade(studentProfileData.grade));
       } else {
         // 2. 生徒でなければ、保護者プロフィールをチェック
         const { data: parentProfile, error: parentError } = await supabase
@@ -396,6 +453,7 @@ export default function BookingPage() {
       // デバッグログを追加
       console.log("fetchUserData完了 - 検出されたロール:", role);
       console.log("fetchUserData完了 - 生徒プロフィールデータ:", studentProfileData);
+      console.log("fetchUserData完了 - currentUserRole:", role, "currentUserId:", profileId);
 
       if (!profileId || !role) {
         console.error("プロフィールが見つかりません");
@@ -410,9 +468,10 @@ export default function BookingPage() {
       if (role === 'parent') {
         await fetchStudents(profileId); // 保護者の場合は生徒リストを取得
       } else if (role === 'student' && studentProfileData) {
-        setSelectedStudent(studentProfileData); // ログイン中の生徒を選択済みに設定
-        setCurrentStudentId(studentProfileData.id); // 予約用IDを設定
-        setStudents([studentProfileData]); // 生徒リストを自分のみに設定（UI表示のため）
+        setSelectedStudent(studentProfileData);
+        setCurrentStudentId(studentProfileData.id);
+        setStudents([studentProfileData]);
+        console.log("fetchUserData: Setting selected student and current student ID:", studentProfileData.id);
       }
 
     } catch (error) {
@@ -426,6 +485,7 @@ export default function BookingPage() {
 
   const fetchStudents = async (parentId: number) => {
     setIsLoadingStudents(true);
+    console.log("fetchStudents: Fetching students for parent ID:", parentId);
     try {
       const { data: studentsData, error: studentsError } = await supabase
         .from('student_profile')
@@ -444,33 +504,42 @@ export default function BookingPage() {
           };
         }));
         setStudents(studentsWithTickets);
+        console.log("fetchStudents: Students fetched successfully:", studentsWithTickets);
       }
     } catch (error) {
       console.error("生徒情報取得エラー:", error);
     } finally {
       setIsLoadingStudents(false);
+      console.log("fetchStudents: Finished loading students.");
     }
   };
 
   // 生徒選択時の処理（保護者アカウント）
   useEffect(() => {
-    if (currentUserRole === 'student') return; // user?.role を currentUserRole に変更
+    console.log("BookingPage useEffect: selectedStudentId or students changed. Current role:", currentUserRole, "Selected Student ID:", selectedStudentId);
+    if (currentUserRole === 'student') {
+      console.log("BookingPage useEffect: Current user is student, skipping parent student selection logic.");
+      return; // user?.role を currentUserRole に変更
+    }
 
     if (selectedStudentId && students.length > 0) {
       const selectedStudent = students.find(student => student.id === selectedStudentId);
       if (selectedStudent) {
         const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
         setStudentSchoolLevel(schoolLevel);
+        console.log("BookingPage useEffect: Selected student found. School level set to:", schoolLevel);
       } else {
         setStudentSchoolLevel(null);
+        console.log("BookingPage useEffect: Selected student not found in students list.");
       }
     }
-  }, [selectedStudentId, students, currentUserRole]); // 依存配列に currentUserRole を追加
+  }, [selectedStudentId, students, currentUserRole]);
 
   // 既存予約を取得
   useEffect(() => {
     const fetchBookings = async () => {
       setIsLoadingBookings(true);
+      console.log("fetchBookings: Fetching existing bookings...");
       try {
         const { data: bookingsData, error: bookingsError } = await supabase
           .from('bookings')
@@ -483,6 +552,7 @@ export default function BookingPage() {
         console.error("予約情報取得エラー:", error);
       } finally {
         setIsLoadingBookings(false);
+        console.log("fetchBookings: Finished loading bookings.");
       }
     };
 
@@ -491,70 +561,26 @@ export default function BookingPage() {
 
   // 利用可能な講師を取得
   useEffect(() => {
-    const fetchAvailableTutors = async () => {
-      if (!selectedSubject || !selectedDate || !selectedTimeSlot || !studentSchoolLevel) {
-        setAvailableTutors([]);
-        return;
-      }
-
-      setIsLoadingTutors(true);
-      try {
-        // time_slotの値（例: 16:00-17:30）に合わせてスペースを除去
-        const normalizedTimeSlot = selectedTimeSlot.replace(/\s/g, "");
-        const { data: shiftsData, error: shiftsError } = await supabase
-          .from('tutor_shifts')
-          .select(`
-            *,
-            tutor_profile (id, first_name, last_name, subjects)
-          `)
-          .eq('date', selectedDate)
-          .eq('time_slot', normalizedTimeSlot)
-          .eq('is_available', true);
-
-        if (shiftsError) {
-          console.error("講師取得エラー:", shiftsError);
-          setAvailableTutors([]);
-          return;
-        }
-
-        // 科目でフィルタリング
-        const filteredTutors = (shiftsData || []).filter(shift => {
-          if (!shift.tutor_profile?.subjects) return true;
-          return shift.tutor_profile.subjects.includes(selectedSubject);
-        }).map(shift => ({
-          tutorId: shift.tutor_profile.id,
-          shiftId: shift.id,
-          name: `${shift.tutor_profile.last_name} ${shift.tutor_profile.first_name}`,
-          subject: selectedSubject,
-          specialization: shift.tutor_profile.subjects
-        }));
-
-        setAvailableTutors(filteredTutors);
-      } catch (error) {
-        console.error("講師取得エラー:", error);
-        setAvailableTutors([]);
-      } finally {
-        setIsLoadingTutors(false);
-      }
-    };
-
-    fetchAvailableTutors();
+    fetchAvailableTutors(); // 関数を呼び出す
   }, [selectedSubject, selectedDate, selectedTimeSlot, studentSchoolLevel]);
 
   const handleDateSelection = (date: string) => {
     setSelectedDate(date);
     setSelectedTimeSlot(null);
+    console.log("handleDateSelection: Selected date:", date);
 
     // 生徒と科目が選択されていれば時間選択セクションまでスクロール
     if (selectedStudentId && selectedSubject) {
       setTimeout(() => {
         timeSlotSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+        console.log("handleDateSelection: Scrolling to time slot section.");
       }, 100);
     }
   };
 
   const handleTimeSlotSelection = (timeSlot: string) => {
     setSelectedTimeSlot(timeSlot);
+    console.log("handleTimeSlotSelection: Selected time slot:", timeSlot);
     // 講師と生徒情報はこの時点では選択されていない
     // 講師選択UIが後ほど表示される
   };
@@ -563,20 +589,24 @@ export default function BookingPage() {
     const newBookings = [...selectedBookings];
     newBookings.splice(index, 1);
     setSelectedBookings(newBookings);
+    console.log("removeBooking: Booking removed at index:", index, "New bookings:", newBookings);
   };
 
   const confirmBooking = () => {
     setShowConfirmationModal(true);
+    console.log("confirmBooking: Showing confirmation modal.");
   };
 
   // 講師選択した時の処理
   const handleTutorSelection = (tutorId?: number, shiftId?: number) => {
+    console.log("handleTutorSelection: Tutor selected. Tutor ID:", tutorId, "Shift ID:", shiftId);
     if (!selectedStudentId || !selectedSubject || !selectedDate || !selectedTimeSlot || !tutorId || !shiftId) {
       toast({
         title: "予約情報が不足しています",
         description: "生徒、科目、日時、講師をすべて選択してください",
         variant: "destructive"
       });
+      console.warn("handleTutorSelection: Missing booking info for tutor selection.");
       return;
     }
 
@@ -588,6 +618,7 @@ export default function BookingPage() {
         description: "別の講師を選択してください",
         variant: "destructive"
       });
+      console.error("handleTutorSelection: Tutor not found in available tutors.");
       return;
     }
 
@@ -597,6 +628,7 @@ export default function BookingPage() {
       const student = students.find((s: Student) => s.id === selectedStudentId);
       if (student) {
         studentName = `${student.last_name} ${student.first_name}`;
+        console.log("handleTutorSelection: Student name for booking:", studentName);
       }
     }
 
@@ -604,7 +636,7 @@ export default function BookingPage() {
     const formattedDate = format(dateObj, "yyyy年M月d日 (E)", { locale: ja });
 
     // 予約を追加
-    setSelectedBookings([...selectedBookings, {
+    const newBookingEntry = {
       date: selectedDate,
       formattedDate,
       timeSlot: selectedTimeSlot,
@@ -614,28 +646,39 @@ export default function BookingPage() {
       tutorId,
       tutorShiftId: shiftId,
       tutorName: tutor.name
-    }]);
+    };
+    setSelectedBookings([...selectedBookings, newBookingEntry]);
+    console.log("handleTutorSelection: Added new booking entry:", newBookingEntry);
 
     // 選択をリセット
     setSelectedTutorId(null);
     setSelectedShiftId(null);
     setSelectedTimeSlot(null);
+    console.log("handleTutorSelection: Resetting selections.");
   };
 
   const completeBooking = async () => {
-    if (selectedBookings.length === 0) return;
+    console.log("completeBooking: Starting booking completion process. Selected bookings count:", selectedBookings.length);
+    if (selectedBookings.length === 0) {
+      console.warn("completeBooking: No bookings selected.");
+      return;
+    }
 
     try {
       setIsLoading(true);
+      console.log("completeBooking: Setting isLoading to true.");
 
       // Create an array of booking data to send to the mutation
       for (const booking of selectedBookings) {
+        console.log("completeBooking: Processing booking:", booking);
         // 予約に使用する parent_id を取得
         let bookingParentId: number | null = null;
         if (currentUserRole === 'parent' && currentUserId) {
           bookingParentId = currentUserId;
+          console.log("completeBooking: Parent role, using currentUserId as bookingParentId.", bookingParentId);
         } else if (currentUserRole === 'student' && selectedStudent) {
           bookingParentId = selectedStudent.parent_id || null;
+          console.log("completeBooking: Student role, using selectedStudent.parent_id as bookingParentId.", bookingParentId);
         }
 
         if (bookingParentId === null) {
@@ -649,34 +692,38 @@ export default function BookingPage() {
           .insert([
             {
               date: booking.date,
-              time_slot: booking.timeSlot, // 'timeSlot' から 'time_slot' に修正済み
+              time_slot: booking.timeSlot,
               student_id: booking.student_id,
               subject: booking.subject,
-              tutor_id: booking.tutorId, // 'tutorId' から 'tutor_id' に修正済み
-              parent_id: bookingParentId, // parent_id を追加
-              tutor_shift_id: booking.tutorShiftId, // tutor_shift_id を追加
+              tutor_id: booking.tutorId,
+              parent_id: bookingParentId,
+              tutor_shift_id: booking.tutorShiftId,
               status: 'confirmed'
             }
           ]);
 
         if (bookingError) {
+          console.error("completeBooking: Booking insertion error:", bookingError);
           throw bookingError;
         }
+        console.log("completeBooking: Booking inserted successfully.");
 
         // シフトを予約済みに更新
         const { error: shiftError } = await supabase
           .from('tutor_shifts')
-          .update({ is_available: false }) // isBooked: true から is_available: false に修正
+          .update({ is_available: false })
           .eq('id', booking.tutorShiftId);
 
         if (shiftError) {
-          console.error("シフト更新エラー:", shiftError);
+          console.error("completeBooking: Shift update error:", shiftError);
         }
+        console.log("completeBooking: Tutor shift updated.");
       }
 
       // --- チケット消費処理 --- START
       if (selectedBookings.length > 0 && selectedBookings[0].student_id) {
         const studentId = selectedBookings[0].student_id;
+        console.log("completeBooking: Processing ticket consumption for student ID:", studentId);
 
         // 現在のチケット数を取得
         const { data: currentTicketsData, error: fetchTicketsError } = await supabase
@@ -689,6 +736,7 @@ export default function BookingPage() {
         let currentTicketCount = 0;
         if (!fetchTicketsError && currentTicketsData && currentTicketsData.length > 0) {
           currentTicketCount = currentTicketsData[0].quantity;
+          console.log("completeBooking: Current ticket count:", currentTicketCount);
         }
 
         // 新しいチケット数を計算
@@ -699,8 +747,10 @@ export default function BookingPage() {
         let studentParentId: number | null = null;
         if (currentUserRole === 'parent' && currentUserId) {
            studentParentId = currentUserId;
+           console.log("completeBooking: Ticket consumption parent ID (parent role):", studentParentId);
         } else if (currentUserRole === 'student' && selectedStudent) {
            studentParentId = selectedStudent.parent_id || null;
+           console.log("completeBooking: Ticket consumption parent ID (student role):", studentParentId);
         }
 
         // student_tickets テーブルに新しいレコードを挿入
@@ -710,21 +760,17 @@ export default function BookingPage() {
             .insert([
               {
                 student_id: studentId,
-                quantity: -lessonsBookedCount, // 消費したチケット数（負の値）を挿入
-                parent_id: studentParentId // parent_id を追加
-                // created_at はDB側で自動生成されることを期待
+                quantity: -lessonsBookedCount,
+                parent_id: studentParentId
               }
             ]);
 
           if (insertTicketError) {
-            console.error("チケット消費レコード挿入エラー:", insertTicketError);
-            // チケット消費に失敗した場合でも予約自体は完了しているため、
-            // ユーザーには予約完了を通知しつつ、内部的にエラーをログに残す。
-            // 必要に応じてエラーハンドリングやロールバックのロジックを追加検討。
+            console.error("completeBooking: Ticket consumption record insertion error:", insertTicketError);
           }
+          console.log("completeBooking: Ticket consumption record inserted.");
         } else {
-           console.error("チケット消費に必要な親IDが取得できませんでした。");
-           // 親IDがない場合のエラーハンドリング
+           console.error("completeBooking: チケット消費に必要な親IDが取得できませんでした。");
         }
       }
       // --- チケット消費処理の追加 --- END
@@ -733,12 +779,13 @@ export default function BookingPage() {
         title: "予約完了",
         description: "授業の予約が完了しました",
       });
+      console.log("completeBooking: Booking successful. Redirecting to dashboard.");
 
       setSelectedBookings([]);
       setShowConfirmationModal(false);
       router.push("/dashboard");
     } catch (error: any) {
-      console.error("予約エラー:", error);
+      console.error("completeBooking: 予約エラー:", error);
       toast({
         title: "予約エラー",
         description: error.message || "予約の作成に失敗しました",
@@ -746,11 +793,13 @@ export default function BookingPage() {
       });
     } finally {
       setIsLoading(false);
+      console.log("completeBooking: Setting isLoading to false.");
     }
   };
 
   // Check if a date has any already-booked time slots for the selected student
   const getDateAvailability = (date: string): {hasAvailable: boolean, isFullyBooked: boolean} => {
+    console.log("getDateAvailability: Checking date:", date, "for selected student ID:", selectedStudentId);
     if (!existingBookings) return {hasAvailable: true, isFullyBooked: false};
 
     // 生徒が選択されている場合、その生徒の予約のみをチェック
@@ -758,6 +807,7 @@ export default function BookingPage() {
       const bookedSlotsForStudentAndDate = existingBookings.filter(
         b => b.date === date && b.student_id === selectedStudentId
       );
+      console.log("getDateAvailability: Booked slots for student on this date:", bookedSlotsForStudentAndDate.length);
 
       return {
         hasAvailable: bookedSlotsForStudentAndDate.length < timeSlots.length,
@@ -767,6 +817,7 @@ export default function BookingPage() {
 
     // 生徒が選択されていない場合は、すべての予約をチェック（古い動作と互換性を保つ）
     const bookedSlotsForDate = existingBookings.filter(b => b.date === date);
+    console.log("getDateAvailability: Booked slots for this date (no student selected):", bookedSlotsForDate.length);
     return {
       hasAvailable: bookedSlotsForDate.length < timeSlots.length,
       isFullyBooked: bookedSlotsForDate.length === timeSlots.length
@@ -775,19 +826,24 @@ export default function BookingPage() {
 
   // Check if a specific time slot on a date is already booked for the selected student
   const isTimeSlotBooked = (date: string, timeSlot: string): boolean => {
+    console.log("isTimeSlotBooked: Checking time slot:", timeSlot, "on date:", date, "for selected student ID:", selectedStudentId);
     if (!existingBookings) return false;
 
     // 生徒が選択されている場合は、その生徒の予約のみをチェック
     if (selectedStudentId) {
-      return existingBookings.some(
+      const isBooked = existingBookings.some(
         b => b.date === date &&
           b.timeSlot === timeSlot &&
           b.student_id === selectedStudentId
       );
+      console.log("isTimeSlotBooked: Is booked for student:", isBooked);
+      return isBooked;
     }
 
     // 生徒が選択されていない場合は、すべての予約をチェック（古い動作と互換性を保つ）
-    return existingBookings.some(b => b.date === date && b.timeSlot === timeSlot);
+    const isBooked = existingBookings.some(b => b.date === date && b.timeSlot === timeSlot);
+    console.log("isTimeSlotBooked: Is booked (no student selected):", isBooked);
+    return isBooked;
   };
 
   return (
@@ -796,13 +852,15 @@ export default function BookingPage() {
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <div className="flex items-center">
-            <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.push("/dashboard")}>
+            <Button variant="ghost" size="icon" className="mr-2" onClick={(e) => { /* e.preventDefault(); */ router.push("/dashboard"); }}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-gray-700">{user?.email || user?.id}</span>
+            {/* BookingPage Render: Current User Email/ID:*/}
+            {/* {console.log("BookingPage Render: Current User Email/ID:", user?.email || user?.id)} */}
           </div>
         </div>
       </header>
@@ -823,6 +881,8 @@ export default function BookingPage() {
               </div>
 
               {/* 生徒選択 (保護者アカウントの場合のみ表示) */}
+              {/* BookingPage Render: Checking currentUserRole for student selection:*/}
+              {/* {console.log("BookingPage Render: Checking currentUserRole for student selection:", currentUserRole)} */}
               {currentUserRole === 'parent' && (
                 <div className="mb-4">
                   <div className="flex items-center space-x-2 mb-2">
@@ -841,14 +901,17 @@ export default function BookingPage() {
                         const studentId = parseInt(value);
                         setSelectedStudentId(studentId);
                         setSelectedSubject(null);
+                        console.log("BookingPage Select: Student selected. ID:", studentId);
 
                         // 生徒の学年から学校レベルを取得
                         const selectedStudent = students.find(student => student.id === studentId);
                         if (selectedStudent) {
                           const schoolLevel = getSchoolLevelFromGrade(selectedStudent.grade);
                           setStudentSchoolLevel(schoolLevel);
+                          console.log("BookingPage Select: Student school level determined:", schoolLevel);
                         } else {
                           setStudentSchoolLevel(null);
+                          console.warn("BookingPage Select: Selected student not found in students array.");
                         }
                       }}
                     >
@@ -868,6 +931,8 @@ export default function BookingPage() {
                   ) : (
                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700">
                       生徒情報が登録されていません。設定ページから生徒情報を登録してください。
+                      {/* BookingPage Render: No students found or loading.*/}
+                      {/* {console.log("BookingPage Render: No students found or loading.", { students, isLoadingStudents })} */}
                     </div>
                   )}
                 </div>
@@ -879,6 +944,8 @@ export default function BookingPage() {
                   <BookOpen className="h-4 w-4 text-primary" />
                   <Label className="text-sm font-medium">授業科目を選択</Label>
                 </div>
+                {/* BookingPage Render: Subject selection. Current role:*/}
+                {/* {console.log("BookingPage Render: Subject selection. Current role:", currentUserRole, "Student school level:", studentSchoolLevel)} */}
                 {currentUserRole === 'student' ? (
                   // 生徒アカウントの場合は学年から科目選択
                   studentSchoolLevel ? (
@@ -901,6 +968,8 @@ export default function BookingPage() {
                     <div className="space-y-2">
                       <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-600">
                         学年情報が取得できませんでした。中学生用の科目から選択できます。
+                        {/* BookingPage Render: Student school level not determined for subject selection.*/}
+                        {/* {console.warn("BookingPage Render: Student school level not determined for subject selection.")} */}
                       </div>
                       <Select
                         value={selectedSubject || ""}
@@ -999,13 +1068,15 @@ export default function BookingPage() {
                       <span>授業科目</span>
                     </li>
                   </ul>
+                  {/* BookingPage Render: Prerequisites not met for calendar display.*/}
+                  {/* {console.log("BookingPage Render: Prerequisites not met for calendar display.", { currentUserRole, selectedStudentId, selectedSubject })} */}
                 </div>
               ) : (
                 <CalendarView
                   bookings={existingBookings || []}
                   onSelectDate={handleDateSelection}
                   interactive={true}
-                  showLegend={false} // 生徒・保護者の予約ページには凡例を表示しない
+                  showLegend={false}
                 />
               )}
             </Card>
@@ -1017,7 +1088,8 @@ export default function BookingPage() {
               <div ref={timeSlotSectionRef}>
                 <h3 className="text-base font-medium text-gray-900 mb-3">授業時間を選択</h3>
               </div>
-
+              {/* BookingPage Render: Time slot section display check. Current role:*/}
+              {/* {console.log("BookingPage Render: Time slot section display check. Current role:", currentUserRole, "Selected Student ID:", selectedStudentId, "Selected Subject:", selectedSubject, "Selected Date:", selectedDate)} */}
               {((currentUserRole === 'parent' && !selectedStudentId) || !selectedSubject) ? (
                 <div className="p-4 border rounded-md bg-gray-50 text-center">
                   <p className="text-gray-600 mb-2">授業時間を選択するには</p>
@@ -1035,6 +1107,8 @@ export default function BookingPage() {
                       </li>
                     )}
                   </ul>
+                  {/* BookingPage Render: Prerequisites not met for time slot display.*/}
+                  {/* {console.log("BookingPage Render: Prerequisites not met for time slot display.")} */}
                 </div>
               ) : selectedDate ? (
                 <div id="date-selection" className="mb-4">
@@ -1059,7 +1133,10 @@ export default function BookingPage() {
                           variant="outline"
                           className="w-full justify-start h-auto py-3"
                           disabled={isBooked}
-                          onClick={() => handleTimeSlotSelection(timeSlot)}
+                          onClick={(e) => {
+                            // e.preventDefault(); // 一時的にコメントアウト
+                            handleTimeSlotSelection(timeSlot);
+                          }}
                         >
                           <span className="font-medium">{timeSlot}</span>
                           {isBooked && <span className="ml-2 text-xs text-red-500">(予約済み)</span>}
@@ -1080,6 +1157,8 @@ export default function BookingPage() {
                         <div className="flex items-center space-x-2 p-4">
                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
                           <span className="text-sm text-gray-500">講師情報を読み込み中...</span>
+                          {/* BookingPage Render: Loading tutors.*/}
+                          {/* {console.log("BookingPage Render: Loading tutors.")} */}
                         </div>
                       ) : availableTutors && availableTutors.length > 0 ? (
                         <div className="space-y-3">
@@ -1090,7 +1169,8 @@ export default function BookingPage() {
                                 ${selectedTutorId === tutor.tutorId && selectedShiftId === tutor.shiftId
                                   ? 'bg-primary/10 border-primary'
                                   : 'bg-white hover:bg-gray-50'}`}
-                              onClick={() => {
+                              onClick={(e) => {
+                                // e.preventDefault(); // 一時的にコメントアウト
                                 // 講師カードがクリックされたら即座に予約を追加
                                 if (!selectedStudentId || !selectedSubject || !selectedDate || !selectedTimeSlot) {
                                   toast({
@@ -1098,6 +1178,8 @@ export default function BookingPage() {
                                     description: "生徒、科目、日時をすべて選択してください",
                                     variant: "destructive"
                                   });
+                                  {/* BookingPage Render: Missing info for tutor card click.*/}
+                                  {/* {console.warn("BookingPage Render: Missing info for tutor card click.")} */}
                                   return;
                                 }
 
@@ -1118,9 +1200,11 @@ export default function BookingPage() {
                                 }]);
 
                                 // 選択をリセット
-                                setSelectedTutorId(null); // これらはもう不要だが、後のために残すか検討
-                                setSelectedShiftId(null); // これらはもう不要だが、後のために残すか検討
+                                setSelectedTutorId(null);
+                                setSelectedShiftId(null);
                                 setSelectedTimeSlot(null);
+                                {/* BookingPage Render: Tutor card clicked, booking added and selections reset.*/}
+                                {/* {console.log("BookingPage Render: Tutor card clicked, booking added and selections reset.")} */}
                               }}
                             >
                               <div className="font-medium text-gray-900">{tutor.name}</div>
@@ -1150,6 +1234,8 @@ export default function BookingPage() {
                               <p>選択した日時・科目に予約可能な講師がいません。別の日時や科目を選択してください。</p>
                             </div>
                           </div>
+                          {/* BookingPage Render: No available tutors.*/}
+                          {/* {console.log("BookingPage Render: No available tutors.")} */}
                         </div>
                       )}
                     </div>
@@ -1159,6 +1245,8 @@ export default function BookingPage() {
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600">カレンダーから日付を選択してください</p>
+                  {/* BookingPage Render: No date selected for time slot section.*/}
+                  {/* {console.log("BookingPage Render: No date selected for time slot section.")} */}
                 </div>
               )}
             </Card>
@@ -1175,6 +1263,8 @@ export default function BookingPage() {
                 {selectedBookings.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-gray-600">授業が選択されていません</p>
+                    {/* BookingPage Render: No bookings selected yet.*/}
+                    {/* {console.log("BookingPage Render: No bookings selected yet.")} */}
                   </div>
                 ) : (
                   selectedBookings.map((booking, index) => (
@@ -1205,7 +1295,10 @@ export default function BookingPage() {
                         variant="ghost"
                         size="icon"
                         className="text-gray-500 hover:text-red-500"
-                        onClick={() => removeBooking(index)}
+                        onClick={(e) => {
+                          // e.preventDefault(); // 一時的にコメントアウト
+                          removeBooking(index);
+                        }}
                       >
                         <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1221,16 +1314,22 @@ export default function BookingPage() {
                 // チケット数チェック
                 let hasEnoughTickets = true;
                 let ticketErrorMessage = "";
+                {/* BookingPage Render: Checking ticket count. Selected bookings length:*/}
+                {/* {console.log("BookingPage Render: Checking ticket count. Selected bookings length:", selectedBookings.length)} */}
+                {/* BookingPage Render: Current User Role:*/}
+                {/* {console.log("BookingPage Render: Current User Role:", currentUserRole, "Selected Student:", selectedStudent, "Parent Profile:", parentProfile)} */}
 
                 // 生徒が選択されていて、その生徒のチケット情報がある場合
                 if (selectedStudentId && students) {
-                  const selectedStudent = students.find(s => s.id === selectedStudentId);
-                  if (selectedStudent && 'ticketCount' in selectedStudent) {
-                    const studentTicketCount = (selectedStudent as any).ticketCount;
+                  const selectedStudentCheck = students.find(s => s.id === selectedStudentId);
+                  if (selectedStudentCheck && 'ticketCount' in selectedStudentCheck) {
+                    const studentTicketCount = (selectedStudentCheck as any).ticketCount;
                     // 生徒のチケットが予約数より少ない場合
                     if (studentTicketCount < selectedBookings.length) {
                       hasEnoughTickets = false;
-                      ticketErrorMessage = `${selectedStudent.last_name} ${selectedStudent.first_name}のチケットが不足しています（残り${studentTicketCount}枚、必要${selectedBookings.length}枚）`;
+                      ticketErrorMessage = `${selectedStudentCheck.last_name} ${selectedStudentCheck.first_name}のチケットが不足しています（残り${studentTicketCount}枚、必要${selectedBookings.length}枚）`;
+                      {/* BookingPage Render: Student ticket shortage detected.*/}
+                      {/* {console.log("BookingPage Render: Student ticket shortage detected.", ticketErrorMessage)} */}
                     }
                   }
                 }
@@ -1240,11 +1339,15 @@ export default function BookingPage() {
                   if (selectedStudent.ticketCount < selectedBookings.length) {
                     hasEnoughTickets = false;
                     ticketErrorMessage = `${selectedStudent.last_name} ${selectedStudent.first_name}のチケットが不足しています（残り${selectedStudent.ticketCount}枚、必要${selectedBookings.length}枚）`;
+                    {/* BookingPage Render: Current student ticket shortage detected.*/}
+                    {/* {console.log("BookingPage Render: Current student ticket shortage detected.", ticketErrorMessage)} */}
                   }
                 } else if (currentUserRole === 'parent' && parentProfile && parentProfile.ticketCount < selectedBookings.length) {
                   // 保護者アカウントでログインしている場合、保護者のチケット数を使用
                   hasEnoughTickets = false;
                   ticketErrorMessage = `チケットが不足しています（残り${parentProfile.ticketCount}枚、必要${selectedBookings.length}枚）`;
+                  {/* BookingPage Render: Parent ticket shortage detected.*/}
+                  {/* {console.log("BookingPage Render: Parent ticket shortage detected.", ticketErrorMessage)} */}
                 }
 
                 if (!hasEnoughTickets) {
