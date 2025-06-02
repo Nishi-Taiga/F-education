@@ -429,6 +429,22 @@ export default function DashboardPage() {
                    </Button>
                  </Card>
               </div>
+              <div className="mt-6 grid gap-6 md:grid-cols-2">
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">授業予約</h3>
+                  <p className="text-sm text-gray-600 mb-4">生徒の授業を予約・確認できます。</p>
+                  <Button onClick={() => router.push('/search-tutors')} className="w-full">
+                    <Calendar className="mr-2 h-4 w-4" /> 授業を予約する
+                  </Button>
+                </Card>
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">レポート確認</h3>
+                  <p className="text-sm text-gray-600 mb-4">生徒の授業レポートを確認できます。</p>
+                  <Button variant="outline" onClick={() => router.push('/reports')} className="w-full">
+                    <FileText className="mr-2 h-4 w-4 text-gray-600" /> 授業レポートを見る
+                  </Button>
+                </Card>
+              </div>
             </Card>
 
             <div className="md:col-span-2">

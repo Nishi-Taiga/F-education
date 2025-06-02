@@ -129,6 +129,26 @@ export function CommonHeader({
                           設定
                       </DropdownMenuItem>
                   </>
+              ) : user?.role === 'student' ? (
+                  <>
+                       <DropdownMenuItem onClick={() => navigate("/dashboard")}> 
+                          <Home className="h-4 w-4 mr-2" />
+                          ダッシュボード
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/search-tutors")}> 
+                          <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+                          授業予約
+                      </DropdownMenuItem>
+                       <DropdownMenuItem onClick={() => navigate("/reports")}> 
+                          <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                          授業レポート
+                      </DropdownMenuItem>
+                      {/* 生徒用の設定ページがあれば追加 */}
+                      <DropdownMenuItem onClick={() => navigate("/dashboard/student/profile")}> 
+                          <Settings className="h-4 w-4 mr-2" />
+                          設定
+                      </DropdownMenuItem>
+                  </>
               ) : (
                   // ロールが不明または未認証の場合のメニュー（例: ホーム、ログインなど）
                    <>
