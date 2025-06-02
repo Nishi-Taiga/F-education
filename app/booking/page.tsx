@@ -11,6 +11,7 @@ import { format, parse } from "date-fns";
 import { ja } from "date-fns/locale";
 import { ArrowLeft, Calendar, Loader2, User, BookOpen, GraduationCap, Info } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { UserRole } from "@/hooks/use-auth";
 
 // Replit版から移植した型定義
 type Student = {
@@ -19,6 +20,7 @@ type Student = {
   last_name: string;
   grade: string;
   ticketCount?: number;
+  parent_id?: number;
 };
 
 type Booking = {
@@ -269,6 +271,14 @@ export default function BookingPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
   const [availableTutors, setAvailableTutors] = useState<any[]>([]);
+  const [currentTutorId, setCurrentTutorId] = useState<number | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const selectedTutorIdRef = useRef<number | undefined>(undefined);
+  const selectedTutorShiftIdRef = useRef<number | undefined>(undefined);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [currentStudentId, setCurrentStudentId] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null);
 
   const timeSlotSectionRef = useRef<HTMLDivElement>(null);
 
@@ -284,82 +294,122 @@ export default function BookingPage() {
   };
 
   // ユーザー情報を取得
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setIsLoading(true);
+  const fetchUserData = async () => {
+    setIsLoading(true);
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          router.push('/');
-          return;
-        }
-        // ここでsession.userを直接使う
-        setUser(session.user);
+      if (sessionError || !session) {
+        console.error("セッション取得エラー:", sessionError);
+        toast({ title: "エラー", description: "認証情報の取得に失敗しました", variant: "destructive" });
+        router.push('/auth');
+        return;
+      }
 
-        // 保護者プロフィール取得を追加
-        const { data: parentData, error: parentError } = await supabase
+      const authUid = session.user.id;
+
+      let profileId: number | null = null;
+      let role: UserRole | null = null;
+      let studentProfileData: Student | null = null; // 生徒詳細情報を格納
+
+      // 1. 生徒プロフィールを最初にチェック
+      const { data: studentProfile, error: studentError } = await supabase
+        .from('student_profile')
+        .select('id, first_name, last_name, grade, student_tickets(quantity)')
+        .eq('user_id', authUid)
+        .single();
+
+      if (studentProfile) {
+        profileId = studentProfile.id;
+        role = 'student';
+        studentProfileData = {
+          id: studentProfile.id,
+          first_name: studentProfile.first_name,
+          last_name: studentProfile.last_name,
+          grade: studentProfile.grade,
+          ticketCount: studentProfile.student_tickets[0]?.quantity || 0,
+          parent_id: studentProfile.parent_id,
+        };
+      } else {
+        // 2. 生徒でなければ、保護者プロフィールをチェック
+        const { data: parentProfile, error: parentError } = await supabase
           .from('parent_profile')
-          .select('*')
-          .eq('user_id', session.user.id)
+          .select('id, role')
+          .eq('user_id', authUid)
           .single();
-        if (!parentError && parentData) {
-          setParentProfile(parentData);
-        }
-        // 生徒アカウントの場合は初期設定
-        if (session.user.role === 'student') {
-          if (session.user.student_id) {
-            console.log("生徒ID設定:", session.user.student_id);
-            setSelectedStudentId(session.user.student_id);
-            setStudentSchoolLevel("junior_high");
-          } else {
-            console.log("生徒IDがありません。フォールバックを使用します");
-            setStudentSchoolLevel("junior_high");
+
+        if (parentProfile) {
+          profileId = parentProfile.id;
+          role = parentProfile.role as UserRole;
+        } else {
+          // 3. 保護者でなければ、講師プロフィールをチェック
+          const { data: tutorProfile, error: tutorError } = await supabase
+            .from('tutor_profile')
+            .select('id')
+            .eq('user_id', authUid)
+            .single();
+
+          if (tutorProfile) {
+            profileId = tutorProfile.id;
+            role = 'tutor';
           }
         }
-
-      } catch (error) {
-        console.error("データ取得エラー:", error);
-      } finally {
-        setIsLoading(false);
       }
-    };
 
-    fetchUserData();
-  }, [router]);
-
-  // 生徒情報を取得
-  useEffect(() => {
-    const fetchStudents = async () => {
-      if (!user || user.role === 'student' || !parentProfile) return;
-      setIsLoadingStudents(true);
-      try {
-        const { data: studentsData, error: studentsError } = await supabase
-          .from('student_profile')
-          .select('*')
-          .eq('parent_id', parentProfile.id);
-        if (!studentsError && studentsData) {
-          // 生徒ごとにstudent_ticketsからチケット数を取得
-          const studentsWithTickets = await Promise.all(studentsData.map(async student => {
-            const { data: ticketsData } = await supabase
-              .from('student_tickets')
-              .select('quantity')
-              .eq('student_id', student.id)
-            return {
-              ...student,
-              ticketCount: ticketsData ? ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0
-            };
-          }));
-          setStudents(studentsWithTickets);
-        }
-      } catch (error) {
-        console.error("生徒情報取得エラー:", error);
-      } finally {
-        setIsLoadingStudents(false);
+      if (!profileId || !role) {
+        console.error("プロフィールが見つかりません");
+        toast({ title: "エラー", description: "ユーザープロフィールが見つかりませんでした", variant: "destructive" });
+        router.push('/auth');
+        return;
       }
-    };
-    fetchStudents();
-  }, [user, parentProfile]);
+
+      setCurrentUserId(profileId);
+      setCurrentUserRole(role);
+
+      if (role === 'parent') {
+        await fetchStudents(profileId); // 保護者の場合は生徒リストを取得
+      } else if (role === 'student' && studentProfileData) {
+        setSelectedStudent(studentProfileData); // ログイン中の生徒を選択済みに設定
+        setCurrentStudentId(studentProfileData.id); // 予約用IDを設定
+        setStudents([studentProfileData]); // 生徒リストを自分のみに設定（UI表示のため）
+      }
+
+    } catch (error) {
+      console.error("データ取得エラー:", error);
+      toast({ title: "エラー", description: "データの読み込み中に予期せぬエラーが発生しました", variant: "destructive" });
+      router.push('/auth');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchStudents = async (parentId: number) => {
+    setIsLoadingStudents(true);
+    try {
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('student_profile')
+        .select('*')
+        .eq('parent_id', parentId);
+      if (!studentsError && studentsData) {
+        // 生徒ごとにstudent_ticketsからチケット数を取得
+        const studentsWithTickets = await Promise.all(studentsData.map(async student => {
+          const { data: ticketsData } = await supabase
+            .from('student_tickets')
+            .select('quantity')
+            .eq('student_id', student.id)
+          return {
+            ...student,
+            ticketCount: ticketsData ? ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0
+          };
+        }));
+        setStudents(studentsWithTickets);
+      }
+    } catch (error) {
+      console.error("生徒情報取得エラー:", error);
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  };
 
   // 生徒選択時の処理（保護者アカウント）
   useEffect(() => {
@@ -540,19 +590,11 @@ export default function BookingPage() {
       // Create an array of booking data to send to the mutation
       for (const booking of selectedBookings) {
         // 予約に使用する parent_id を取得
-        let bookingParentId = null;
-        if (user?.role !== 'student' && parentProfile) {
-          // 保護者の場合
-          bookingParentId = parentProfile.id;
-        } else if (user?.role === 'student' && students.length > 0) {
-          // 生徒の場合、自身の parent_id を取得 (生徒プロフィールに parent_id がある想定)
-          // 注意: 現在の students 型定義に parent_id はありませんが、
-          // データベーススキーマには student_profile に parent_id があるため、
-          // 実際には生徒プロフィールから取得可能と仮定します。
-          const student = students.find(s => s.id === booking.student_id);
-          if (student && 'parent_id' in student) {
-            bookingParentId = (student as any).parent_id;
-          }
+        let bookingParentId: number | null = null;
+        if (currentUserRole === 'parent' && currentUserId) {
+          bookingParentId = currentUserId;
+        } else if (currentUserRole === 'student' && selectedStudent) {
+          bookingParentId = selectedStudent.parent_id || null;
         }
 
         if (bookingParentId === null) {
@@ -613,16 +655,11 @@ export default function BookingPage() {
         const newTicketCount = Math.max(0, currentTicketCount - lessonsBookedCount);
 
         // チケット消費を行う生徒の parent_id を取得
-        let studentParentId = null;
-        if (user?.role !== 'student' && parentProfile) {
-           // 保護者の場合
-           studentParentId = parentProfile.id;
-        } else if (user?.role === 'student' && students.length > 0) {
-           // 生徒の場合、自身の parent_id を取得
-           const student = students.find(s => s.id === studentId);
-           if (student && 'parent_id' in student) {
-             studentParentId = (student as any).parent_id;
-           }
+        let studentParentId: number | null = null;
+        if (currentUserRole === 'parent' && currentUserId) {
+           studentParentId = currentUserId;
+        } else if (currentUserRole === 'student' && selectedStudent) {
+           studentParentId = selectedStudent.parent_id || null;
         }
 
         // student_tickets テーブルに新しいレコードを挿入
