@@ -272,6 +272,7 @@ export default function DashboardPage() {
       console.log("loadStudentData: authId is null, exiting.");
       setIsLoadingBookings(false);
       setIsStudentDataLoaded(true);
+      setIsDataLoaded(true);
       return null;
     }
 
@@ -281,7 +282,7 @@ export default function DashboardPage() {
       .eq('user_id', authId)
       .single();
 
-    console.log("生徒プロフィール取得結果", studentProfile, profileError);
+    console.log("loadStudentData: 生徒プロフィール取得結果", studentProfile, profileError);
 
     if (!studentProfile || profileError) {
       console.error('生徒プロフィール取得エラー', profileError);
