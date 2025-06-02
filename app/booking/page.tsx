@@ -19,6 +19,8 @@ type Student = {
   last_name: string;
   grade: string;
   ticketCount?: number;
+  user_id?: string;
+  parent_id?: number;
 };
 
 type Booking = {
@@ -294,7 +296,6 @@ export default function BookingPage() {
           router.push('/');
           return;
         }
-        // ここでsession.userを直接使う
         setUser(session.user);
 
         // 保護者プロフィール取得を追加
@@ -306,14 +307,35 @@ export default function BookingPage() {
         if (!parentError && parentData) {
           setParentProfile(parentData);
         }
-        // 生徒アカウントの場合は初期設定
+
+        // 生徒アカウントの場合、自身の生徒プロフィールを読み込む
         if (session.user.role === 'student') {
-          if (session.user.student_id) {
-            console.log("生徒ID設定:", session.user.student_id);
-            setSelectedStudentId(session.user.student_id);
-            setStudentSchoolLevel("junior_high");
+          const { data: studentData, error: studentError } = await supabase
+            .from('student_profile')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single();
+
+          if (!studentError && studentData) {
+            // 生徒のチケット数を取得
+            const { data: ticketsData } = await supabase
+              .from('student_tickets')
+              .select('quantity')
+              .eq('student_id', studentData.id);
+
+            const ticketCount = ticketsData ? ticketsData.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0;
+            const studentWithTickets: Student = {
+                ...studentData as Student,
+                ticketCount: ticketCount
+            };
+
+            setStudents([studentWithTickets]); // 自身の生徒情報を配列としてセット
+            setSelectedStudentId(studentWithTickets.id); // 自身を自動選択
+            setStudentSchoolLevel(getSchoolLevelFromGrade(studentWithTickets.grade));
+            console.log("生徒としてログインし、自身の生徒情報を設定しました:", studentWithTickets);
           } else {
-            console.log("生徒IDがありません。フォールバックを使用します");
+            console.warn("生徒としてログインしましたが、生徒プロフィールが見つかりません:", studentError);
+            // フォールバックとして中学生用の科目を設定
             setStudentSchoolLevel("junior_high");
           }
         }
@@ -331,7 +353,9 @@ export default function BookingPage() {
   // 生徒情報を取得
   useEffect(() => {
     const fetchStudents = async () => {
-      if (!user || user.role === 'student' || !parentProfile) return;
+      // 生徒ロールの場合は、すでにfetchUserDataで自身の生徒情報をセットしているので何もしない
+      if (!user || user.role === 'student') return;
+
       setIsLoadingStudents(true);
       try {
         const { data: studentsData, error: studentsError } = await supabase
@@ -540,18 +564,16 @@ export default function BookingPage() {
       // Create an array of booking data to send to the mutation
       for (const booking of selectedBookings) {
         // 予約に使用する parent_id を取得
-        let bookingParentId = null;
+        let bookingParentId: number | null = null;
         if (user?.role !== 'student' && parentProfile) {
           // 保護者の場合
           bookingParentId = parentProfile.id;
         } else if (user?.role === 'student' && students.length > 0) {
-          // 生徒の場合、自身の parent_id を取得 (生徒プロフィールに parent_id がある想定)
-          // 注意: 現在の students 型定義に parent_id はありませんが、
-          // データベーススキーマには student_profile に parent_id があるため、
-          // 実際には生徒プロフィールから取得可能と仮定します。
-          const student = students.find(s => s.id === booking.student_id);
-          if (student && 'parent_id' in student) {
-            bookingParentId = (student as any).parent_id;
+          // 生徒の場合、自身の parent_id を取得
+          // students[0] がログインしている生徒自身の情報になる想定
+          const loggedInStudent = students[0];
+          if (loggedInStudent && loggedInStudent.parent_id) {
+            bookingParentId = loggedInStudent.parent_id;
           }
         }
 
@@ -613,15 +635,15 @@ export default function BookingPage() {
         const newTicketCount = Math.max(0, currentTicketCount - lessonsBookedCount);
 
         // チケット消費を行う生徒の parent_id を取得
-        let studentParentId = null;
+        let studentParentId: number | null = null;
         if (user?.role !== 'student' && parentProfile) {
            // 保護者の場合
            studentParentId = parentProfile.id;
         } else if (user?.role === 'student' && students.length > 0) {
            // 生徒の場合、自身の parent_id を取得
-           const student = students.find(s => s.id === studentId);
-           if (student && 'parent_id' in student) {
-             studentParentId = (student as any).parent_id;
+           const loggedInStudent = students[0];
+           if (loggedInStudent && loggedInStudent.parent_id) {
+             studentParentId = loggedInStudent.parent_id;
            }
         }
 
