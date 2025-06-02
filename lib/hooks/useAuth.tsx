@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 // ユーザーの型定義
 export type UserProfile = {
-  id: string;
+  id: number;
   auth_user_id: string;
   email: string;
   first_name?: string;
