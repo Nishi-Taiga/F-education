@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '@/types/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { format, addDays, subDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { CalendarView } from '@/components/calendar-view';
@@ -40,7 +40,6 @@ type DashboardProps = {
 // ダッシュボードコンポーネント
 export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, availableTickets }: DashboardProps) => {
   const router = useRouter();
-  const supabase = createClientComponentClient<Database>();
   const { toast } = useToast();
   
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -378,7 +377,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
                       <BookingCard
                         key={booking.id}
                         booking={booking}
-                        onClick={() => handleBookingSelect(booking)}
+                        userRole={userProfile?.role}
                       />
                     ))
                   ) : (
@@ -409,7 +408,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
                       <BookingCard
                         key={booking.id}
                         booking={booking}
-                        onClick={() => handleBookingSelect(booking)}
+                        userRole={userProfile?.role}
                         onViewReport={booking.reportId ? () => handleViewReport(booking) : undefined}
                       />
                     ))
@@ -432,7 +431,7 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
                       <BookingCard
                         key={booking.id}
                         booking={booking}
-                        onClick={() => handleBookingSelect(booking)}
+                        userRole={userProfile?.role}
                       />
                     ))
                   ) : (
@@ -542,6 +541,20 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
               </CardFooter>
             </Card>
           )}
+
+          {userProfile?.role === 'student' && (
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">予約・レポート</h2>
+              <div className="flex flex-col space-y-4">
+                <Button onClick={() => router.push('/search-tutors')} className="w-full">
+                  <Calendar className="mr-2 h-4 w-4" /> 授業を予約する
+                </Button>
+                <Button onClick={() => router.push('/reports')} className="w-full">
+                  <FileText className="mr-2 h-4 w-4" /> レポート一覧を見る
+                </Button>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
 
@@ -587,21 +600,6 @@ export const Dashboard = ({ userProfile, students, tutorProfile, parentProfile, 
             router.push(`/report-edit?bookingId=${selectedBooking.id}`);
           } : undefined}
         />
-      )}
-
-      {userProfile?.role === 'student' && (
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">予約・レポート</h2>
-          <div className="flex flex-col space-y-4">
-            <Button onClick={() => router.push('/search-tutors')} className="w-full">
-              <Calendar className="mr-2 h-4 w-4" /> 授業を予約する
-            </Button>
-            {/* レポート確認ボタンを追加 */}
-            <Button onClick={() => router.push('/reports')} className="w-full">
-              <FileText className="mr-2 h-4 w-4" /> レポート一覧を見る
-            </Button>
-          </div>
-        </Card>
       )}
     </div>
   );
