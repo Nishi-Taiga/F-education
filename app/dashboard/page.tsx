@@ -531,25 +531,49 @@ export default function DashboardPage() {
       </main>
 
       {/* フッターボタン */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 flex justify-around items-center">
+      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 flex justify-around items-center z-10">
         {user?.role === 'parent' && (
           <>
-            <Button variant="ghost" onClick={() => router.push('/buy-tickets')}>チケット購入</Button>
-            <Button variant="ghost" onClick={() => router.push('/search-tutors')}>授業予約</Button>
-            <Button variant="ghost" onClick={() => router.push('/reports')}>授業レポート</Button>
+            <Button variant="outline" onClick={() => router.push('/tickets')} className="flex flex-col items-center text-center">
+              <Ticket className="h-5 w-5" />
+              <span>チケット購入</span>
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/search-tutors')} className="flex flex-col items-center text-center">
+              <Calendar className="h-5 w-5" />
+              <span>授業予約</span>
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/reports')} className="flex flex-col items-center text-center">
+              <FileText className="h-5 w-5" />
+              <span>授業レポート</span>
+            </Button>
           </>
         )}
         {user?.role === 'student' && (
           <>
-            <Button variant="ghost" onClick={() => router.push('/search-tutors')}>授業予約</Button>
-            <Button variant="ghost" onClick={() => router.push('/reports')}>授業レポート</Button>
+            <Button variant="outline" onClick={() => router.push('/search-tutors')} className="flex flex-col items-center text-center">
+              <Calendar className="h-5 w-5" />
+              <span>授業予約</span>
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/reports')} className="flex flex-col items-center text-center">
+              <FileText className="h-5 w-5" />
+              <span>授業レポート</span>
+            </Button>
           </>
         )}
         {user?.role === 'tutor' && (
           <>
-            <Button variant="ghost" onClick={() => router.push('/shifts')}>シフト管理</Button>
-            <Button variant="ghost" onClick={() => setIsReportModalOpen(true)}>新規レポート</Button>
-            <Button variant="ghost" onClick={() => router.push('/reports?role=tutor')}>過去レポート</Button>
+            <Button variant="outline" onClick={() => router.push('/tutor/schedule')} className="flex flex-col items-center text-center">
+              <Calendar className="h-5 w-5" />
+              <span>シフト管理</span>
+            </Button>
+            <Button variant="outline" onClick={() => setIsReportModalOpen(true)} className="flex flex-col items-center text-center">
+              <FileText className="h-5 w-5" />
+              <span>新規レポート</span>
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/reports?role=tutor')} className="flex flex-col items-center text-center">
+              <FileText className="h-5 w-5" />
+              <span>過去レポート</span>
+            </Button>
           </>
         )}
       </footer>
