@@ -315,7 +315,7 @@ export default function ParentProfileEdit() {
         console.log(`Linking auth user ${newAuthUserId} to student profile ${student.id}`);
         const { error: profileUpdateError } = await supabase
           .from('student_profile')
-          .update({ auth_user_id: newAuthUserId })
+          .update({ user_id: newAuthUserId })
           .eq('id', student.id);
 
         if (profileUpdateError) {
