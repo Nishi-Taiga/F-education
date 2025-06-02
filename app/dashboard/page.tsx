@@ -52,6 +52,9 @@ export default function DashboardPage() {
       .order('date', { ascending: true })
       .order('time_slot', { ascending: true });
 
+    console.log('fetchBookingsForParent API call result - Data:', bookingsData);
+    console.log('fetchBookingsForParent API call result - Error:', bookingsError);
+
     if (!bookingsError && bookingsData) {
       console.log('Fetched bookingsData for parent:', bookingsData.length, 'bookings:', bookingsData);
       const formattedBookings = bookingsData.map(booking => ({
@@ -215,6 +218,7 @@ export default function DashboardPage() {
       setIsLoadingBookings(false);
       if (role === 'parent') setIsParentDataLoaded(true);
       if (role === 'tutor') setIsTutorDataLoaded(true);
+      setIsDataLoaded(true);
       return null;
     }
 
