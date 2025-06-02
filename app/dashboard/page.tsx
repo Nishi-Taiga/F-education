@@ -347,44 +347,72 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    console.log("Dashboard useEffect running.", { user, isAuthLoadingFromHook, isParentDataLoaded, isTutorDataLoaded, isStudentDataLoaded });
+    console.log("Dashboard useEffect: user state changed.", user);
 
-    if (!isAuthLoadingFromHook && user && user.auth_id) {
-      if (user.role === 'parent' && !isParentDataLoaded) {
-        console.log("useEffect: Loading parent data...");
-        loadParentOrTutorData(user.auth_id, 'parent');
-      } else if (user.role === 'tutor' && !isTutorDataLoaded) {
-        console.log("useEffect: Loading tutor data...");
-        loadParentOrTutorData(user.auth_id, 'tutor');
-      } else if (user.role === 'student' && !isStudentDataLoaded) {
-        console.log("useEffect: Loading student data...");
-        loadStudentData(user.auth_id);
-      } else if (user.role && (isParentDataLoaded || isTutorDataLoaded || isStudentDataLoaded)) {
-        console.log("useEffect: Data already loaded for role:", user.role);
+    const initialLoad = async () => {
+      if (!user) {
+        console.log("User is null, redirecting to auth.");
+        // 認証されていない場合はログインページへリダイレクト
+        router.push('/auth');
+        setIsAuthenticated(false);
         setIsInitialLoadingComplete(true);
-      } else if (!user.role) {
-        console.warn("useEffect: User object found but role is missing.", user);
-        setIsInitialLoadingComplete(true);
+        return;
       }
-    } else if (!isAuthLoadingFromHook && !user) {
-      console.log("useEffect: Auth loading complete, but no user found. User is not authenticated.");
+
+      setIsAuthenticated(true);
+      console.log("User is authenticated.");
+
+      // ユーザーのロールに基づいてデータをロード
+      if (user.role === 'parent') {
+        // 保護者の場合、保護者プロフィールをロードし、生徒と予約を取得
+        const parentId = await loadParentOrTutorData(user.auth_id, 'parent');
+        // loadParentOrTutorData の中で fetchBookingsForParent が呼ばれる
+        setIsDataLoaded(true);
+      } else if (user.role === 'tutor') {
+        // 講師の場合、講師プロフィールをロードし、予約を取得
+        const tutorId = await loadParentOrTutorData(user.auth_id, 'tutor');
+        // loadParentOrTutorData の中で fetchBookingsForTutor が呼ばれる
+        setIsDataLoaded(true);
+      } else if (user.role === 'student') {
+        // 生徒の場合、生徒プロフィールをロードし、予約を取得
+        const studentProfileId = await loadStudentData(user.auth_id);
+        // loadStudentData の中で fetchBookingsForStudent が呼ばれる
+        setIsDataLoaded(true);
+      } else {
+        console.error("Unknown user role:", user.role);
+        toast({
+          title: "エラー",
+          description: "未知のユーザーロールです。",
+          variant: "destructive",
+        });
+        setIsDataLoaded(true);
+      }
       setIsInitialLoadingComplete(true);
-      setIsLoadingBookings(false);
+    };
+
+    // user オブジェクトが確定したら初期ロードを実行
+    // user の変更、または isAuthLoadingFromHook が false になったタイミングで実行
+    // ただし、isLoadingBookings が true の間は再実行しないようにする
+    // isDataLoaded が true になったら初期ロードは完了とみなす
+    if (user && !isDataLoaded && !isLoadingBookings) {
+       console.log("Executing initialLoad due to user change.", { user, isDataLoaded, isLoadingBookings });
+       initialLoad();
+    } else if (!user && !isAuthLoadingFromHook && isAuthenticated) {
+       // ログアウトなどによりユーザーが null になった場合
+       console.log("User is null and auth loading is complete, redirecting.");
+       router.push('/auth');
+       setIsAuthenticated(false);
+       setIsDataLoaded(false); // データをリセット
+       setBookings([]); // 予約リストをクリア
+       setIsInitialLoadingComplete(true);
+    } else if (!user && isAuthLoadingFromHook && !isInitialLoadingComplete) {
+      // アプリケーション起動直後などで認証情報ロード中の場合
+      console.log("User is null, auth loading in progress.", { user, isAuthLoadingFromHook, isAuthenticated, isInitialLoadingComplete });
+    } else if (user && isDataLoaded) {
+       console.log("Initial data load already complete for user.", user);
     }
 
-    if (!isAuthLoadingFromHook) {
-      if (user?.role === 'parent' && isParentDataLoaded) {
-        setIsInitialLoadingComplete(true);
-      } else if (user?.role === 'tutor' && isTutorDataLoaded) {
-        setIsInitialLoadingComplete(true);
-      } else if (user?.role === 'student' && isStudentDataLoaded) {
-        setIsInitialLoadingComplete(true);
-      } else if (!user) {
-        setIsInitialLoadingComplete(true);
-      }
-    }
-
-  }, [user, isAuthLoadingFromHook, isParentDataLoaded, isTutorDataLoaded, isStudentDataLoaded, loadParentOrTutorData, loadStudentData]);
+  }, [user, isAuthLoadingFromHook, isDataLoaded, router, toast, isLoadingBookings, isAuthenticated]);
 
   const isDashboardLoading = isAuthLoadingFromHook || (user?.role === 'parent' && !isParentDataLoaded) || (user?.role === 'tutor' && !isTutorDataLoaded) || (user?.role === 'student' && !isStudentDataLoaded);
 
