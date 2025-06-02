@@ -85,183 +85,140 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log("useAuth queryFn: Session found, fetching profile for user ID:", userId);
 
         // まずusersテーブルからユーザーのロールを取得する
+        let userRole: UserRole | undefined;
         const { data: basicUserData, error: basicUserError } = await supabase
           .from('users')
           .select('role') // ロールのみを選択
           .eq('auth_user_id', userId)
           .maybeSingle();
 
-        let userRole: UserRole | undefined;
         if (basicUserError) {
           console.error("useAuth queryFn: Error fetching basic user data:", basicUserError);
           // エラーが発生した場合は、ロール不明として処理を続行
           userRole = undefined; // ロールを未定義とする
         } else {
-          userRole = basicUserData?.role as UserRole | undefined;
-          console.log("useAuth queryFn: Determined user role:", userRole);
+           userRole = basicUserData?.role as UserRole | undefined;
+           console.log("useAuth queryFn: Determined user role:", userRole);
         }
+
 
         let userProfile: User | null = null;
 
-        // 取得したロールに基づいて、該当するプロフィールテーブルのみを優先的に問い合わせる
+        // ロールに基づいてプロフィールを取得する順序を変更
+        // usersテーブルからのロール取得に失敗した場合も、全てのプロフィールタイプを試行するフォールバックロジックを維持
         if (userRole === 'student') {
-          // 生徒プロファイル
+          // 1. 生徒プロファイル (生徒としてログインしている可能性が高い場合)
           const { data: student, error: studentError } = await supabase
             .from('student_profile')
-            .select('id, first_name, last_name, email, role') // 必要に応じて他のフィールドも追加
+            .select('*') // すべてのカラムを選択
             .eq('user_id', userId)
             .maybeSingle();
-          if (studentError) { console.error("useAuth queryFn: Error fetching student_profile:", studentError); }
-          if (student) {
-            console.log("useAuth queryFn: Student profile found:", student);
-            userProfile = {
-              id: student.id,
-              auth_id: userId,
-              displayName: `${student.last_name || ''} ${student.first_name || ''}`.trim(),
-              username: student.email || userEmail || '',
-              firstName: student.first_name,
-              lastName: student.last_name,
-              role: 'student',
-              email: student.email || userEmail || '',
-              profileCompleted: true // student_profile が存在すれば完了とみなす
-            };
+
+          if (!studentError && student) {
+            userProfile = { ...student, role: 'student', auth_id: userId, email: userEmail };
+            console.log("useAuth queryFn: Student profile found:", userProfile);
+          } else {
+            console.error("useAuth queryFn: Error fetching student_profile:", studentError);
           }
-        } else if (userRole === 'parent') {
-          // 保護者プロファイル
+        }
+
+        // ロールがstudentでない、またはstudentプロファイルが見つからなかった場合
+        if (!userProfile) {
+          // 2. 保護者プロファイル
           const { data: parent, error: parentError } = await supabase
             .from('parent_profile')
-            .select('id, name, email, role') // 必要に応じて他のフィールドも追加
+            .select('*') // すべてのカラムを選択
             .eq('user_id', userId)
             .maybeSingle();
-          if (parentError) { console.error("useAuth queryFn: Error fetching parent_profile:", parentError); }
-          if (parent) {
-            console.log("useAuth queryFn: Parent profile found:", parent);
-            userProfile = {
-              id: parent.id,
-              auth_id: userId,
-              displayName: parent.name || '',
-              username: parent.email || userEmail || '',
-              firstName: undefined,
-              lastName: undefined,
-              role: 'parent',
-              email: parent.email || userEmail || '',
-              profileCompleted: true // parent_profile が存在すれば完了とみなす
-            };
+
+          if (!parentError && parent) {
+            userProfile = { ...parent, role: 'parent', auth_id: userId, email: userEmail };
+            console.log("useAuth queryFn: Parent profile found (fallback):", userProfile);
+          } else {
+            console.error("useAuth queryFn: Error fetching parent_profile (fallback):", parentError);
           }
-        } else if (userRole === 'tutor') {
-           // 講師プロファイル
+        }
+
+        // 上記いずれでも見つからなかった場合
+        if (!userProfile && userRole !== 'student') {
+           // 3. 講師プロファイル (ロールがtutorの場合、またはロール不明の場合)
            const { data: tutor, error: tutorError } = await supabase
              .from('tutor_profile')
-             .select('id, first_name, last_name, email, profile_completed') // 必要に応じて他のフィールドも追加
+             .select('*') // すべてのカラムを選択
              .eq('user_id', userId)
              .maybeSingle();
-           if (tutorError) { console.error("useAuth queryFn: Error fetching tutor_profile:", tutorError); }
-           if (tutor) {
-             console.log("useAuth queryFn: Tutor profile found:", tutor);
-             userProfile = {
-               id: tutor.id,
-               auth_id: userId,
-               displayName: `${tutor.last_name || ''} ${tutor.first_name || ''}`.trim(),
-               username: tutor.email || userEmail || '',
-               firstName: tutor.first_name,
-               lastName: tutor.last_name,
-               role: 'tutor',
-               email: tutor.email || userEmail || '',
-               profileCompleted: tutor.profile_completed ?? false
-             };
-           }
+
+            if (!tutorError && tutor) {
+              userProfile = { ...tutor, role: 'tutor', auth_id: userId, email: userEmail };
+              console.log("useAuth queryFn: Tutor profile found (fallback):", userProfile);
+            } else {
+              console.error("useAuth queryFn: Error fetching tutor_profile (fallback):", tutorError);
+            }
         }
 
-        // 取得したロールのプロフィールが見つからなかった場合、またはロールが不明な場合に、
-        // 念のため他のプロフィールテーブルも確認するフォールバックロジック
         if (!userProfile) {
           console.log("useAuth queryFn: Profile not found for determined role or role is unknown. Checking other profiles as fallback...");
+           // ロールが不明または取得に失敗し、かつ上記の順序でプロフィールが見つからなかった場合、全てのプロフィールタイプを再確認
 
-          // まず講師プロファイルを確認 (ロールが不明な場合や間違っている場合に備えて)
-          const { data: tutor, error: tutorError } = await supabase
-            .from('tutor_profile')
-            .select('id, first_name, last_name, email, role') // ロールも含めて取得
-            .eq('user_id', userId)
-            .maybeSingle();
-          if (tutorError) { console.error("useAuth queryFn: Error fetching tutor_profile (fallback):", tutorError); }
-          if (tutor) {
-            console.log("useAuth queryFn: Tutor profile found (fallback):", tutor);
-            userProfile = {
-              id: tutor.id,
-              auth_id: userId,
-              displayName: `${tutor.last_name || ''} ${tutor.first_name || ''}`.trim(),
-              username: tutor.email || userEmail || '',
-              firstName: tutor.first_name,
-              lastName: tutor.last_name,
-              role: tutor.role as UserRole || 'tutor', // フォールバックではテーブルのroleカラムも確認
-              email: tutor.email || userEmail || '',
-              profileCompleted: tutor.profile_completed ?? false
-            };
-          }
-        }
-
-        if (!userProfile) {
-          // 次に保護者プロファイルを確認
-          const { data: parent, error: parentError } = await supabase
-            .from('parent_profile')
-            .select('id, name, email, role') // ロールも含めて取得
-            .eq('user_id', userId)
-            .maybeSingle();
-          if (parentError) { console.error("useAuth queryFn: Error fetching parent_profile (fallback):", parentError); }
-          if (parent) {
-            console.log("useAuth queryFn: Parent profile found (fallback):", parent);
-            userProfile = {
-              id: parent.id,
-              auth_id: userId,
-              displayName: parent.name || '',
-              username: parent.email || userEmail || '',
-              firstName: undefined,
-              lastName: undefined,
-              role: parent.role as UserRole || 'parent', // フォールバックではテーブルのroleカラムも確認
-              email: parent.email || userEmail || '',
-              profileCompleted: true
-            };
-          }
-        }
-
-        if (!userProfile) {
-          // 最後に生徒プロファイルを確認
+          // 生徒プロファイル再確認
           const { data: student, error: studentError } = await supabase
             .from('student_profile')
-            .select('id, first_name, last_name, email, role') // ロールも含めて取得
+            .select('*')
             .eq('user_id', userId)
             .maybeSingle();
-          if (studentError) { console.error("useAuth queryFn: Error fetching student_profile (fallback):", studentError); }
-          if (student) {
-            console.log("useAuth queryFn: Student profile found (fallback):", student);
-            userProfile = {
-              id: student.id,
-              auth_id: userId,
-              displayName: `${student.last_name || ''} ${student.first_name || ''}`.trim(),
-              username: student.email || userEmail || '',
-              firstName: student.first_name,
-              lastName: student.last_name,
-              role: student.role as UserRole || 'student', // フォールバックではテーブルのroleカラムも確認
-              email: student.email || userEmail || '',
-              profileCompleted: true
-            };
+
+          if (!studentError && student) {
+            userProfile = { ...student, role: 'student', auth_id: userId, email: userEmail };
+            console.log("useAuth queryFn: Student profile found (fallback):", userProfile);
           }
+
+           // 保護者プロファイル再確認
+          if (!userProfile) {
+             const { data: parent, error: parentError } = await supabase
+               .from('parent_profile')
+               .select('*')
+               .eq('user_id', userId)
+               .maybeSingle();
+
+             if (!parentError && parent) {
+               userProfile = { ...parent, role: 'parent', auth_id: userId, email: userEmail };
+               console.log("useAuth queryFn: Parent profile found (fallback):", userProfile);
+             } else {
+              console.error("useAuth queryFn: Error fetching parent_profile (fallback):", parentError);
+            }
+          }
+
+           // 講師プロファイル再確認
+          if (!userProfile) {
+             const { data: tutor, error: tutorError } = await supabase
+               .from('tutor_profile')
+               .select('*')
+               .eq('user_id', userId)
+               .maybeSingle();
+
+             if (!tutorError && tutor) {
+               userProfile = { ...tutor, role: 'tutor', auth_id: userId, email: userEmail };
+               console.log("useAuth queryFn: Tutor profile found (fallback):", userProfile);
+             } else {
+               console.error("useAuth queryFn: Error fetching tutor_profile (fallback):", tutorError);
+             }
+          }
+
         }
 
-        // 最終的なプロフィールを返す
+
         if (userProfile) {
-           console.log("useAuth queryFn: Final user profile:", userProfile);
-           return userProfile;
+          console.log("useAuth queryFn: Final user profile:", userProfile);
+          // プロファイル情報とauth_idを統合して返す
+          return userProfile;
+        } else {
+          console.warn("useAuth queryFn: No profile found for user ID:", userId);
+          return null; // プロファイルが見つからなかった場合
         }
 
-        // どれにも該当しなければnull
-        console.log("useAuth queryFn: No profile found for user ID:", userId);
-        return null;
-      } catch (error: any) {
-        console.error("useAuth queryFn: Error in user query:", error);
-        // エラー発生時も null を返すことで、ダッシュボード側でエラーハンドリングまたはリダイレクトを行う
-        // useQuery がエラーをセットするため、ここでは throw しない
-        return null;
+      } catch (error) {
+        console.error("useAuth queryFn: Unexpected error:", error);
+        return null; // エラー時はnullを返す
       }
     },
     staleTime: 5 * 60 * 1000,
