@@ -97,18 +97,9 @@ export function CommonHeader({
                           <Calendar className="h-4 w-4 mr-2 text-blue-600" />
                           シフト管理
                       </DropdownMenuItem>
-                       <DropdownMenuItem onClick={() => navigate("/reports/new")}> 
-                          <FileText className="h-4 w-4 mr-2 text-green-600" />
-                          新規レポート
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/reports")}> 
+                      <DropdownMenuItem onClick={() => navigate("/reports?role=tutor")}>
                           <FileText className="h-4 w-4 mr-2 text-gray-600" />
                           過去レポート
-                      </DropdownMenuItem>
-                       {/* 講師用の設定ページがあれば追加 */}
-                      <DropdownMenuItem onClick={() => navigate("/dashboard/tutor/profile")}> 
-                        <Settings className="h-4 w-4 mr-2" />
-                        設定
                       </DropdownMenuItem>
                   </>
               ) : user?.role === 'parent' ? (
@@ -121,17 +112,13 @@ export function CommonHeader({
                           <Ticket className="h-4 w-4 mr-2 text-green-600" />
                           チケット購入
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/search-tutors")}> 
+                      <DropdownMenuItem onClick={() => navigate("/booking")}>
                           <Calendar className="h-4 w-4 mr-2 text-blue-600" />
                           授業予約
                       </DropdownMenuItem>
                        <DropdownMenuItem onClick={() => navigate("/reports")}> 
                           <FileText className="h-4 w-4 mr-2 text-gray-600" />
                           授業レポート
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/dashboard/parent/profile")}> 
-                          <Settings className="h-4 w-4 mr-2" />
-                          設定
                       </DropdownMenuItem>
                   </>
               ) : user?.role === 'student' ? (
@@ -140,7 +127,7 @@ export function CommonHeader({
                           <Home className="h-4 w-4 mr-2" />
                           ダッシュボード
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/search-tutors")}>
+                      <DropdownMenuItem onClick={() => navigate("/booking")}>
                           <Calendar className="h-4 w-4 mr-2 text-blue-600" />
                           授業予約
                       </DropdownMenuItem>
