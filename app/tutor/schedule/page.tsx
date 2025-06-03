@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CommonHeader } from '@/components/common-header';
 
 // シフト情報の型定義
 type Shift = {
@@ -71,15 +72,6 @@ export default function TutorSchedulePage() {
     // 今日の日付から直近の日曜日を計算
     return startOfWeek(new Date(), { weekStartsOn: 0 });
   });
-  
-  // 新規レポート作成モーダルの状態管理
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [selectedReservation, setSelectedReservation] = useState<any>(null);
-  const [reservations, setReservations] = useState<any[]>([]);
-  
-  // レポートの状態管理
-  const [reportContent, setReportContent] = useState('');
-  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   
   // 講師プロフィール情報を取得
   useEffect(() => {
@@ -392,98 +384,6 @@ const saveAllPendingShifts = async () => {
   }
 };
   
-  // 予約されている授業データを取得
-  const fetchReservations = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('reservations')
-        .select('*')
-        .eq('tutor_id', tutorProfile.id);
-
-      if (error) throw error;
-      setReservations(data || []);
-      return data;
-    } catch (error) {
-      console.error('Error fetching reservations:', error);
-      setReservations([]);
-      return [];
-    }
-  };
-
-  // モーダルを開く
-  const openReportModal = async () => {
-    const reservations = await fetchReservations();
-    if (reservations.length === 0) {
-      toast({
-        title: '予約がありません',
-        description: 'レポートを作成できる予約がありません。',
-      });
-      return;
-    }
-    setIsReportModalOpen(true);
-  };
-
-  // モーダルを閉じる
-  const closeReportModal = () => {
-    setIsReportModalOpen(false);
-    setSelectedReservation(null);
-  };
-
-  // レポートを送信
-  const submitReport = async () => {
-    if (!selectedReservation) {
-      toast({
-        title: 'エラー',
-        description: '予約を選択してください',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (!reportContent.trim()) {
-      toast({
-        title: 'エラー',
-        description: 'レポート内容を入力してください',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmittingReport(true);
-
-    try {
-      const { error } = await supabase
-        .from('reports')
-        .insert([{
-          tutor_id: tutorProfile.id,
-          reservation_id: selectedReservation.id,
-          content: reportContent,
-          created_at: new Date().toISOString(),
-        }]);
-
-      if (error) throw error;
-
-      toast({
-        title: '成功',
-        description: 'レポートを作成しました',
-      });
-      
-      // フォームをリセット
-      setReportContent('');
-      setSelectedReservation(null);
-      closeReportModal();
-    } catch (error) {
-      console.error('レポート作成エラー:', error);
-      toast({
-        title: 'エラー',
-        description: 'レポートの作成に失敗しました',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmittingReport(false);
-    }
-  };
-  
   // 読み込み中の表示
   if (isLoading) {
     return (
@@ -523,283 +423,206 @@ const saveAllPendingShifts = async () => {
   const formattedToday = format(today, 'yyyy-MM-dd');
   
   return (
-    <div className="container py-8">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
-        <h1 className="text-xl md:text-2xl font-bold">シフト登録</h1>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={() => router.push('/dashboard')}
-            className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
-          >
-            <Home className="h-3 w-3 md:h-4 md:w-4" />
-            <span className="hidden md:inline">ホームに戻る</span>
-            <span className="inline md:hidden">ホーム</span>
-          </Button>
-          <Button
-            variant="default"
-            onClick={openReportModal}
-            className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
-          >
-            新規レポート作成
-          </Button>
-        </div>
-      </div>
-      
-      {/* 新規レポート作成モーダル */}
-      <Dialog open={isReportModalOpen} onOpenChange={closeReportModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg">レポート作成</DialogTitle>
-            <DialogDescription>
-              予約された授業のレポートを作成します
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="reservation">予約選択</Label>
-              <select
-                id="reservation"
-                className="w-full p-2 border rounded"
-                onChange={(e) => setSelectedReservation(JSON.parse(e.target.value))}
-                disabled={isSubmittingReport}
-              >
-                <option value="">選択してください</option>
-                {reservations.map((reservation) => (
-                  <option key={reservation.id} value={JSON.stringify(reservation)}>
-                    {format(parseISO(reservation.date), 'yyyy-MM-dd')} - {reservation.time_slot}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="report-content">レポート内容</Label>
-              <textarea
-                id="report-content"
-                className="w-full p-2 border rounded min-h-[120px]"
-                placeholder="授業内容や生徒の様子などを記入"
-                value={reportContent}
-                onChange={(e) => setReportContent(e.target.value)}
-                disabled={isSubmittingReport}
-              />
-            </div>
-            
-            <div className="flex justify-end gap-2 pt-2">
-              <Button 
-                variant="outline" 
-                onClick={closeReportModal}
-                disabled={isSubmittingReport}
-              >
-                キャンセル
-              </Button>
-              <Button 
-                onClick={submitReport}
-                disabled={isSubmittingReport || !selectedReservation || !reportContent.trim()}
-              >
-                {isSubmittingReport ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : '送信'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      <Card>
-        <CardContent className="pt-6">
-          {/* 週の選択 */}
-          <div className="flex items-center justify-between mb-6">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={goToPreviousWeek}
-              className="h-8 px-2 text-xs md:text-sm"
-            >
-              <ChevronLeft className="h-3 w-3 md:h-4 md:w-4 mr-0.5 md:mr-1" />
-              <span className="hidden md:inline">前の週</span>
-              <span className="inline md:hidden">前週</span>
-            </Button>
-            
-            <div className="text-center mx-1">
-              <h3 className="text-sm md:text-lg font-medium">
-                <span className="hidden md:inline">
-                  {format(weekStart, 'yyyy年M月d日', { locale: ja })} 〜{" "}
-                  {format(addDays(weekStart, 6), 'M月d日', { locale: ja })}
-                </span>
-                <span className="inline md:hidden">
-                  {format(weekStart, 'M/d', { locale: ja })} 〜{" "}
-                  {format(addDays(weekStart, 6), 'M/d', { locale: ja })}
-                </span>
-              </h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={goToCurrentWeek} 
-                className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1 h-6 md:h-8 px-2"
-              >
-                今週
-              </Button>
-            </div>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={goToNextWeek}
-              className="h-8 px-2 text-xs md:text-sm"
-            >
-              <span className="hidden md:inline">次の週</span>
-              <span className="inline md:hidden">次週</span>
-              <ChevronRight className="h-3 w-3 md:h-4 md:w-4 ml-0.5 md:ml-1" />
-            </Button>
-          </div>
-          
-          {isLoadingShifts ? (
-            <div className="py-12 flex justify-center items-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span className="ml-3">シフトデータを読み込み中...</span>
-            </div>
-          ) : shiftsError ? (
-            <div className="py-8 text-center">
-              <p className="text-red-500 mb-4">{shiftsError}</p>
-              <Button onClick={() => setShiftsError(null)}>再試行</Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] border-collapse">
-                <thead>
-                  <tr>
-                    <th className="p-2 text-left font-medium"></th>
-                    {weekShifts.map((day) => {
-                      const date = parseISO(day.date);
-                      const dayNum = getDay(date);
-                      const isPast = parseISO(day.date) < subDays(new Date(), 1);
-                      let textColorClass = "";
-                      
-                      // 土曜日は青、日曜日は赤、過去の日付はグレー
-                      if (isPast) {
-                        textColorClass = "text-gray-400"; // 過去日付のグレーアウト
-                      } else if (dayNum === 6) { // 土曜日
-                        textColorClass = "text-blue-600"; // 土曜日は青色に
-                      } else if (dayNum === 0) { // 日曜日
-                        textColorClass = "text-red-600"; // 日曜日は赤色に
-                      }
-                      
-                      return (
-                        <th 
-                          key={day.date} 
-                          className={`p-2 text-center font-medium ${textColorClass} ${
-                            day.date === formattedToday ? "bg-primary/10" : ""
-                          } ${
-                            isPast ? "bg-gray-50" : "" // 過去日付の背景も軽くグレーアウト
-                          }`}
-                        >
-                          <div>{day.formattedDate}</div>
-                          <div className="text-sm">({day.dayOfWeek})</div>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {timeSlots.map((timeSlot) => (
-                    <tr key={timeSlot} className="border-t">
-                      <td className="p-2 font-medium">{timeSlot}</td>
-                      {weekShifts.map((day) => {
-                        const date = parseISO(day.date);
-                        const isPast = parseISO(day.date) < subDays(new Date(), 1);
-                        
-                        const shiftInfo = day.shifts[timeSlot];
-                        
-                        // シフトが変更待ちかどうかを確認
-                        const isPending = pendingShifts.some(
-                          shift => shift.date === day.date && shift.time_slot === timeSlot
-                        );
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <CommonHeader title="シフト管理" showBackButton={true} backTo="/dashboard" />
 
-                        // 現在の可否状態を確認（保留中の変更があればそれを優先）
-                        const isAvailable = pendingShifts.find(
-                          shift => shift.date === day.date && shift.time_slot === timeSlot
-                        )?.is_available ?? (shiftInfo?.isAvailable ?? false);
-                        
-                        return (
-                          <td 
-                            key={`${day.date}-${timeSlot}`} 
-                            className={`p-2 text-center ${
-                              day.date === formattedToday ? "bg-primary/10" : ""
-                            } ${
-                              isPending ? "bg-yellow-50" : ""
-                            } ${
-                              isPast ? "bg-gray-50 text-gray-400" : "" // 過去日付の背景と文字をグレーアウト
-                            }`}
-                          >
-                            <div className="flex flex-col items-center">
-                              <Switch
-                                checked={isAvailable}
-                                onCheckedChange={() => 
-                                  handleShiftToggle(
-                                    day.date, 
-                                    timeSlot, 
-                                    isAvailable
-                                  )
-                                }
-                                disabled={isPast || isSaving}
-                                className={isAvailable ? "data-[state=checked]:bg-blue-500" : ""} // 可能時（ON時）は青く表示
-                              />
-                              
-                              <div className={`text-xs mt-1 ${
-                                isAvailable 
-                                  ? "font-medium text-blue-600" // 可能時は青くハイライト
-                                  : "text-muted-foreground"
-                              } ${
-                                isPending ? "font-medium text-yellow-600" : ""
-                              } ${
-                                isPast ? "text-gray-400" : "" // 過去日付はグレーアウト
-                              }`}>
-                                {isAvailable ? "可能" : "不可"}
-                                {isPending && " (未保存)"}
-                              </div>
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          
-          <div className="mt-6 flex justify-end">
-            <Button
-              variant="default"
-              onClick={saveAllPendingShifts}
-              disabled={pendingShifts.length === 0 || isSaving}
-              className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
-            >
-              {isSaving ? (
-                <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin" />
+      <main className="flex-1 py-8 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto">
+          <Card>
+            <CardContent className="pt-6">
+              {/* 週の選択 */}
+              <div className="flex items-center justify-between mb-6">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={goToPreviousWeek}
+                  className="h-8 px-2 text-xs md:text-sm"
+                >
+                  <ChevronLeft className="h-3 w-3 md:h-4 md:w-4 mr-0.5 md:mr-1" />
+                  <span className="hidden md:inline">前の週</span>
+                  <span className="inline md:hidden">前週</span>
+                </Button>
+                
+                <div className="text-center mx-1">
+                  <h3 className="text-sm md:text-lg font-medium">
+                    <span className="hidden md:inline">
+                      {format(weekStart, 'yyyy年M月d日', { locale: ja })} 〜{" "}
+                      {format(addDays(weekStart, 6), 'M月d日', { locale: ja })}
+                    </span>
+                    <span className="inline md:hidden">
+                      {format(weekStart, 'M/d', { locale: ja })} 〜{" "}
+                      {format(addDays(weekStart, 6), 'M/d', { locale: ja })}
+                    </span>
+                  </h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={goToCurrentWeek} 
+                    className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1 h-6 md:h-8 px-2"
+                  >
+                    今週
+                  </Button>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={goToNextWeek}
+                  className="h-8 px-2 text-xs md:text-sm"
+                >
+                  <span className="hidden md:inline">次の週</span>
+                  <span className="inline md:hidden">次週</span>
+                  <ChevronRight className="h-3 w-3 md:h-4 md:w-4 ml-0.5 md:ml-1" />
+                </Button>
+              </div>
+              
+              {isLoadingShifts ? (
+                <div className="py-12 flex justify-center items-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-3">シフトデータを読み込み中...</span>
+                </div>
+              ) : shiftsError ? (
+                <div className="py-8 text-center">
+                  <p className="text-red-500 mb-4">{shiftsError}</p>
+                  <Button onClick={() => setShiftsError(null)}>再試行</Button>
+                </div>
               ) : (
-                <Save className="h-3 w-3 md:h-4 md:w-4" />
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[700px] border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="p-2 text-left font-medium"></th>
+                        {weekShifts.map((day) => {
+                          const date = parseISO(day.date);
+                          const dayNum = getDay(date);
+                          const isPast = parseISO(day.date) < subDays(new Date(), 1);
+                          let textColorClass = "";
+                          
+                          // 土曜日は青、日曜日は赤、過去の日付はグレー
+                          if (isPast) {
+                            textColorClass = "text-gray-400"; // 過去日付のグレーアウト
+                          } else if (dayNum === 6) { // 土曜日
+                            textColorClass = "text-blue-600"; // 土曜日は青色に
+                          } else if (dayNum === 0) { // 日曜日
+                            textColorClass = "text-red-600"; // 日曜日は赤色に
+                          }
+                          
+                          return (
+                            <th 
+                              key={day.date} 
+                              className={`p-2 text-center font-medium ${textColorClass} ${
+                                day.date === formattedToday ? "bg-primary/10" : ""
+                              } ${
+                                isPast ? "bg-gray-50" : "" // 過去日付の背景も軽くグレーアウト
+                              }`}
+                            >
+                              <div>{day.formattedDate}</div>
+                              <div className="text-sm">({day.dayOfWeek})</div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {timeSlots.map((timeSlot) => (
+                        <tr key={timeSlot} className="border-t">
+                          <td className="p-2 font-medium">{timeSlot}</td>
+                          {weekShifts.map((day) => {
+                            const date = parseISO(day.date);
+                            const isPast = parseISO(day.date) < subDays(new Date(), 1);
+                            
+                            const shiftInfo = day.shifts[timeSlot];
+                            
+                            // シフトが変更待ちかどうかを確認
+                            const isPending = pendingShifts.some(
+                              shift => shift.date === day.date && shift.time_slot === timeSlot
+                            );
+
+                            // 現在の可否状態を確認（保留中の変更があればそれを優先）
+                            const isAvailable = pendingShifts.find(
+                              shift => shift.date === day.date && shift.time_slot === timeSlot
+                            )?.is_available ?? (shiftInfo?.isAvailable ?? false);
+                            
+                            return (
+                              <td 
+                                key={`${day.date}-${timeSlot}`} 
+                                className={`p-2 text-center ${
+                                  day.date === formattedToday ? "bg-primary/10" : ""
+                                } ${
+                                  isPending ? "bg-yellow-50" : ""
+                                } ${
+                                  isPast ? "bg-gray-50 text-gray-400" : "" // 過去日付の背景と文字をグレーアウト
+                                }`}
+                              >
+                                <div className="flex flex-col items-center">
+                                  <Switch
+                                    checked={isAvailable}
+                                    onCheckedChange={() => 
+                                      handleShiftToggle(
+                                        day.date, 
+                                        timeSlot, 
+                                        isAvailable
+                                      )
+                                    }
+                                    disabled={isPast || isSaving}
+                                    className={isAvailable ? "data-[state=checked]:bg-blue-500" : ""} // 可能時（ON時）は青く表示
+                                  />
+                                  
+                                  <div className={`text-xs mt-1 ${
+                                    isAvailable 
+                                      ? "font-medium text-blue-600" // 可能時は青くハイライト
+                                      : "text-muted-foreground"
+                                  } ${
+                                    isPending ? "font-medium text-yellow-600" : ""
+                                  } ${
+                                    isPast ? "text-gray-400" : "" // 過去日付はグレーアウト
+                                  }`}>
+                                    {isAvailable ? "可能" : "不可"}
+                                    {isPending && " (未保存)"}
+                                  </div>
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
-              <span className="hidden md:inline">変更を保存</span>
-              <span className="inline md:hidden">保存</span>
-              {pendingShifts.length > 0 && <span className="font-medium">({pendingShifts.length})</span>}
-            </Button>
-          </div>
-          
-          <div className="mt-6">
-            <Separator className="my-4" />
-            <div className="text-xs md:text-sm text-muted-foreground space-y-1">
-              <p>※ 過去の日付のシフトは変更できません</p>
-              <p>※ 変更は「保存」ボタンを押すまで反映されません</p>
-              <p>※ 黄色でハイライトされている項目は未保存の変更です</p>
-              <p className="hidden md:block">※ 既に予約が入っている時間帯は、予約をキャンセルしない限りシフトを変更できません</p>
-              <p className="block md:hidden">※ 予約済みの時間帯は変更できません</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              
+              <div className="mt-6 flex justify-end">
+                <Button
+                  variant="default"
+                  onClick={saveAllPendingShifts}
+                  disabled={pendingShifts.length === 0 || isSaving}
+                  className="text-xs md:text-sm flex items-center gap-1 md:gap-2 h-8 md:h-10 px-2 md:px-4"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-3 w-3 md:h-4 md:w-4" />
+                  )}
+                  <span className="hidden md:inline">変更を保存</span>
+                  <span className="inline md:hidden">保存</span>
+                  {pendingShifts.length > 0 && <span className="font-medium">({pendingShifts.length})</span>}
+                </Button>
+              </div>
+              
+              <div className="mt-6">
+                <Separator className="my-4" />
+                <div className="text-xs md:text-sm text-muted-foreground space-y-1">
+                  <p>※ 過去の日付のシフトは変更できません</p>
+                  <p>※ 変更は「保存」ボタンを押すまで反映されません</p>
+                  <p>※ 黄色でハイライトされている項目は未保存の変更です</p>
+                  <p className="hidden md:block">※ 既に予約が入っている時間帯は、予約をキャンセルしない限りシフトを変更できません</p>
+                  <p className="block md:hidden">※ 予約済みの時間帯は変更できません</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     </div>
   );
 }

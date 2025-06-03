@@ -294,7 +294,6 @@ return (
         <div className="container mx-auto p-4 md:py-8">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-2xl md:text-3xl font-bold">レポート一覧</h1>
-            <Button onClick={() => router.push('/dashboard')} variant="outline">戻る</Button>
           </div>
           
           <Card className="mb-6">
