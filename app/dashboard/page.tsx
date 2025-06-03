@@ -435,7 +435,7 @@ export default function DashboardPage() {
       return;
     }
 
-    let resolvedParentId = parentId; // まずは渡された parentId を使用
+    let resolvedParentId: number | null = parentId === undefined ? null : parentId; // undefinedの場合にnullに変換
 
     // parentId が null の場合、student_profile から取得を試みる
     if (resolvedParentId === null && studentId) {
