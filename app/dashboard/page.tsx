@@ -85,7 +85,7 @@ export default function DashboardPage() {
             tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
             studentId: booking.student_id?.toString(),
             tutorId: booking.tutor_id?.toString(),
-            parentId: booking.parent_id,
+            parentId: booking.parent_id || null,
           });
           setShowCancelModal(true);
         },
@@ -170,7 +170,7 @@ export default function DashboardPage() {
             tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
             studentId: booking.student_id?.toString(),
             tutorId: booking.tutor_id?.toString(),
-            parentId: booking.parent_id,
+            parentId: booking.parent_id || null,
           });
           setShowCancelModal(true);
         },
@@ -213,33 +213,36 @@ export default function DashboardPage() {
 
     if (!bookingsError && bookingsData) {
       console.log('Fetched bookingsData for student:', bookingsData.length, 'bookings:', bookingsData);
-      const formattedBookings = bookingsData.map(booking => ({
-        id: booking.id.toString(),
-        date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'),
-        startTime: booking.time_slot.split(' - ')[0],
-        endTime: booking.time_slot.split(' - ')[1],
-        status: booking.status,
-        subject: booking.subject,
-        studentId: booking.student_id?.toString(),
-        tutorId: booking.tutor_id?.toString(),
-        studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
-        tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
-        onCancelClick: () => {
-          setBookingToCancel({
-            id: booking.id.toString(),
-            date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'),
-            startTime: booking.time_slot.split(' - ')[0],
-            endTime: booking.time_slot.split(' - ')[1],
-            subject: booking.subject,
-            studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
-            tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
-            studentId: booking.student_id?.toString(),
-            tutorId: booking.tutor_id?.toString(),
-            parentId: booking.parent_id,
-          });
-          setShowCancelModal(true);
-        },
-      }));
+      const formattedBookings = bookingsData.map(booking => {
+        console.log(`Mapping booking ID: ${booking.id}, parent_id from DB: ${booking.parent_id}`);
+        return {
+          id: booking.id.toString(),
+          date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'),
+          startTime: booking.time_slot.split(' - ')[0],
+          endTime: booking.time_slot.split(' - ')[1],
+          status: booking.status,
+          subject: booking.subject,
+          studentId: booking.student_id?.toString(),
+          tutorId: booking.tutor_id?.toString(),
+          studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
+          tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
+          onCancelClick: () => {
+            setBookingToCancel({
+              id: booking.id.toString(),
+              date: new Date(booking.date + 'T' + booking.time_slot.split(' - ')[0] + ':00'),
+              startTime: booking.time_slot.split(' - ')[0],
+              endTime: booking.time_slot.split(' - ')[1],
+              subject: booking.subject,
+              studentName: booking.student_profile ? `${booking.student_profile.last_name} ${booking.student_profile.first_name}` : '生徒',
+              tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
+              studentId: booking.student_id?.toString(),
+              tutorId: booking.tutor_id?.toString(),
+              parentId: booking.parent_id || null,
+            });
+            setShowCancelModal(true);
+          },
+        };
+      });
       setBookings(formattedBookings);
       console.log('Bookings state updated for student:', formattedBookings);
     }
@@ -397,9 +400,11 @@ export default function DashboardPage() {
     return studentProfile.id;
   };
 
-  const handleCancelBooking = async (bookingId: string, studentId: string, parentId: number) => {
+  const handleCancelBooking = async (bookingId: string, studentId: string, parentId: number | null) => {
     setShowCancelModal(false);
     setBookingToCancel(null);
+
+    console.log("handleCancelBooking: Initial parentId:", parentId);
 
     const { error: deleteError } = await supabase
       .from('bookings')
@@ -416,12 +421,45 @@ export default function DashboardPage() {
       return;
     }
 
+    let resolvedParentId = parentId; // まずは渡された parentId を使用
+
+    // parentId が null の場合、student_profile から取得を試みる
+    if (resolvedParentId === null && studentId) {
+      console.log("Parent ID is null, attempting to fetch from student_profile for studentId:", studentId);
+      const { data: studentProfileData, error: studentProfileError } = await supabase
+        .from('student_profile')
+        .select('parent_id')
+        .eq('id', parseInt(studentId))
+        .single();
+
+      console.log("handleCancelBooking: student_profile query result:", { data: studentProfileData, error: studentProfileError });
+
+      if (!studentProfileError && studentProfileData) {
+        resolvedParentId = studentProfileData.parent_id; // student_profile から parent_id を取得
+        console.log("handleCancelBooking: Resolved parentId from student_profile:", resolvedParentId);
+      } else if (studentProfileError) {
+        console.error("handleCancelBooking: Failed to fetch parent_id from student_profile:", studentProfileError);
+      }
+    }
+
+    console.log("handleCancelBooking: Final resolvedParentId before ticket insert:", resolvedParentId);
+
+    if (resolvedParentId === null || resolvedParentId === undefined) {
+      console.error("チケット返却に必要な親IDが最終的に取得できませんでした。");
+      toast({
+        title: 'チケット返却の失敗',
+        description: '親IDが特定できませんでした。システム管理者にお問い合わせください。',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const { error: ticketInsertError } = await supabase
       .from('student_tickets')
       .insert({
         student_id: studentId,
         quantity: 1,
-        parent_id: parentId,
+        parent_id: resolvedParentId, // 解決された parentId を使用
       });
 
     if (ticketInsertError) {
