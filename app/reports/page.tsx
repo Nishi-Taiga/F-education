@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { DatePicker } from "@/components/ui/datepicker";
+import { CommonHeader } from "@/components/common-header";
 
 // レポートの型
 type Report = {
@@ -285,246 +286,254 @@ if (isLoading) {
 }
 
 return (
-  <div className="container mx-auto p-4 md:py-8">
-    <div className="flex justify-between items-center mb-8">
-      <h1 className="text-2xl md:text-3xl font-bold">レポート一覧</h1>
-      <Button onClick={() => router.push('/dashboard')} variant="outline">戻る</Button>
-    </div>
-    
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>レポート検索・フィルタ</CardTitle>
-        <CardDescription>条件を指定してレポートを絞り込みできます</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Select value={selectedStudentId.toString()} onValueChange={(value) => setSelectedStudentId(value === "all" ? "all" : parseInt(value))}>
-              <SelectTrigger>
-                <SelectValue placeholder="生徒名で絞り込み" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">すべての生徒</SelectItem>
-                {studentsList.map(student => (
-                  <SelectItem key={student.id} value={student.id.toString()}>{student.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-              <SelectTrigger>
-                <SelectValue placeholder="科目で絞り込み" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">すべての科目</SelectItem>
-                {subjectsList.map(subject => (
-                  <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <DatePicker date={selectedDate} setDate={setSelectedDate} />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-    
-    <Card>
-      <CardHeader>
-        <CardTitle>レポート一覧</CardTitle>
-        <CardDescription>
-          {filteredReports.length > 0 
-            ? `${filteredReports.length}件のレポートがあります` 
-            : "該当するレポートがありません"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="table" className="w-full">          
-          <TabsContent value="table">
-            {filteredReports.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>日付</TableHead>
-                      <TableHead>時間</TableHead>
-                      <TableHead>科目</TableHead>
-                      <TableHead>{userRole === 'tutor' ? '生徒' : '講師'}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredReports.map((report) => (
-                      <TableRow key={report.id}>
-                        <TableCell>
-                          {report.date && format(new Date(report.date), 'yyyy/MM/dd')}
-                        </TableCell>
-                        <TableCell>
-                          {report.time_slot ? report.time_slot : "-"}
-                        </TableCell>
-                        <TableCell>{report.subject || "-"}</TableCell>
-                        <TableCell>
-                          {userRole === 'tutor' ? 
-                           (report.student_profile ? `${report.student_profile.last_name} ${report.student_profile.first_name}` : "不明") 
-                           : 
-                           (report.tutor_profile ? `${report.tutor_profile.last_name} ${report.tutor_profile.first_name}` : "不明")}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewReport(report)}
-                            disabled={!(report.lesson_reports && report.lesson_reports.length > 0)}
-                          >
-                            詳細
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                該当するレポートがありません
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="cards">
-            {filteredReports.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredReports.map((report) => (
-                  <Card key={report.id} className="overflow-hidden">
-                    <CardHeader className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-base">
-                            {report.date && format(new Date(report.date), 'yyyy/MM/dd')}
-                          </CardTitle>
-                          <CardDescription>
-                            {report.time_slot ? report.time_slot : "-"}
-                          </CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <div className="mb-4">
-                        <p className="text-sm font-medium text-gray-500">科目</p>
-                        <p>{report.subject || "-"}</p>
-                      </div>
-                      <div className="mb-4">
-                        <p className="text-sm font-medium text-gray-500">
-                          {userRole === 'tutor' ? '生徒' : '講師'}
-                        </p>
-                        <p>
-                          {userRole === 'tutor' ? 
-                           (report.student_profile ? `${report.student_profile.last_name} ${report.student_profile.first_name}` : "不明") 
-                           : 
-                           (report.tutor_profile ? `${report.tutor_profile.last_name} ${report.tutor_profile.first_name}` : "不明")}
-                        </p>
-                      </div>
+  <div className="flex flex-col min-h-screen bg-gray-50">
+    <CommonHeader title="授業レポート" showBackButton={true} backTo="/dashboard" />
 
-                      {report.lesson_reports && report.lesson_reports.length > 0 ? (
-                         <div className="mb-4">
-                           <p className="text-sm font-medium text-gray-500">レポート内容</p>
-                           <div className="text-sm line-clamp-2 whitespace-pre-line">{report.lesson_reports[0].unit_content || report.lesson_reports[0].message_content || report.lesson_reports[0].goal_content || "-"}</div>
+    <main className="flex-1 py-8 px-4 md:px-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="container mx-auto p-4 md:py-8">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold">レポート一覧</h1>
+            <Button onClick={() => router.push('/dashboard')} variant="outline">戻る</Button>
+          </div>
+          
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>レポート検索・フィルタ</CardTitle>
+              <CardDescription>条件を指定してレポートを絞り込みできます</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Select value={selectedStudentId.toString()} onValueChange={(value) => setSelectedStudentId(value === "all" ? "all" : parseInt(value))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="生徒名で絞り込み" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">すべての生徒</SelectItem>
+                      {studentsList.map(student => (
+                        <SelectItem key={student.id} value={student.id.toString()}>{student.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="科目で絞り込み" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">すべての科目</SelectItem>
+                      {subjectsList.map(subject => (
+                        <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <DatePicker date={selectedDate} setDate={setSelectedDate} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>レポート一覧</CardTitle>
+              <CardDescription>
+                {filteredReports.length > 0 
+                  ? `${filteredReports.length}件のレポートがあります` 
+                  : "該当するレポートがありません"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="table" className="w-full">          
+                <TabsContent value="table">
+                  {filteredReports.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>日付</TableHead>
+                            <TableHead>時間</TableHead>
+                            <TableHead>科目</TableHead>
+                            <TableHead>{userRole === 'tutor' ? '生徒' : '講師'}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredReports.map((report) => (
+                            <TableRow key={report.id}>
+                              <TableCell>
+                                {report.date && format(new Date(report.date), 'yyyy/MM/dd')}
+                              </TableCell>
+                              <TableCell>
+                                {report.time_slot ? report.time_slot : "-"}
+                              </TableCell>
+                              <TableCell>{report.subject || "-"}</TableCell>
+                              <TableCell>
+                                {userRole === 'tutor' ? 
+                                 (report.student_profile ? `${report.student_profile.last_name} ${report.student_profile.first_name}` : "不明") 
+                                 : 
+                                 (report.tutor_profile ? `${report.tutor_profile.last_name} ${report.tutor_profile.first_name}` : "不明")}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewReport(report)}
+                                  disabled={!(report.lesson_reports && report.lesson_reports.length > 0)}
+                                >
+                                  詳細
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      該当するレポートがありません
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="cards">
+                  {filteredReports.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredReports.map((report) => (
+                        <Card key={report.id} className="overflow-hidden">
+                          <CardHeader className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <CardTitle className="text-base">
+                                  {report.date && format(new Date(report.date), 'yyyy/MM/dd')}
+                                </CardTitle>
+                                <CardDescription>
+                                  {report.time_slot ? report.time_slot : "-"}
+                                </CardDescription>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-0">
+                            <div className="mb-4">
+                              <p className="text-sm font-medium text-gray-500">科目</p>
+                              <p>{report.subject || "-"}</p>
+                            </div>
+                            <div className="mb-4">
+                              <p className="text-sm font-medium text-gray-500">
+                                {userRole === 'tutor' ? '生徒' : '講師'}
+                              </p>
+                              <p>
+                                {userRole === 'tutor' ? 
+                                 (report.student_profile ? `${report.student_profile.last_name} ${report.student_profile.first_name}` : "不明") 
+                                 : 
+                                 (report.tutor_profile ? `${report.tutor_profile.last_name} ${report.tutor_profile.first_name}` : "不明")}
+                              </p>
+                            </div>
+
+                            {report.lesson_reports && report.lesson_reports.length > 0 ? (
+                               <div className="mb-4">
+                                 <p className="text-sm font-medium text-gray-500">レポート内容</p>
+                                 <div className="text-sm line-clamp-2 whitespace-pre-line">{report.lesson_reports[0].unit_content || report.lesson_reports[0].message_content || report.lesson_reports[0].goal_content || "-"}</div>
+                               </div>
+                            ) : (
+                                 <p className="text-gray-500">レポート内容がありません</p>
+                            )}
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full mt-2"
+                              onClick={() => handleViewReport(report)}
+                              disabled={!(report.lesson_reports && report.lesson_reports.length > 0)}
+                            >
+                              詳細を見る
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      該当するレポートがありません
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+          
+          {/* レポート詳細モーダル */}
+          {showReportModal && selectedReport && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-semibold">レポート詳細</h3>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8" 
+                    onClick={handleCloseReportModal}
+                  >
+                    ✕
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">生徒</p>
+                    <p>{selectedReport.student_profile ? `${selectedReport.student_profile.last_name} ${selectedReport.student_profile.first_name}` : "不明"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">日付</p>
+                    <p>
+                      {selectedReport.date && 
+                        format(new Date(selectedReport.date), 'yyyy年MM月dd日 (EEE)', { locale: ja })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">科目</p>
+                    <p>{selectedReport.subject || "-"}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  {selectedReport.lesson_reports && selectedReport.lesson_reports.length > 0 && selectedReport.report_status !== "none" ? (
+                     <>
+                         <div>
+                             <h4 className="text-base font-medium mb-2">単元</h4>
+                             <div className="bg-gray-50 p-4 rounded-md whitespace-pre-line">
+                                 {selectedReport.lesson_reports[0].unit_content || "-"}
+                             </div>
                          </div>
-                      ) : (
-                           <p className="text-gray-500">レポート内容がありません</p>
-                      )}
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-2"
-                        onClick={() => handleViewReport(report)}
-                        disabled={!(report.lesson_reports && report.lesson_reports.length > 0)}
-                      >
-                        詳細を見る
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                          <div>
+                             <h4 className="text-base font-medium mb-2">伝言事項</h4>
+                             <div className="bg-gray-50 p-4 rounded-md whitespace-pre-line">
+                                 {selectedReport.lesson_reports[0].message_content || "-"}
+                             </div>
+                         </div>
+                          <div>
+                             <h4 className="text-base font-medium mb-2">来週までの課題</h4>
+                             <div className="bg-gray-50 p-4 rounded-md whitespace-pre-line">
+                                 {selectedReport.lesson_reports[0].goal_content || "-"}
+                             </div>
+                         </div>
+                     </>
+                  ) : (
+                     <p className="text-gray-500">レポート内容がありません</p>
+                  )}
+                </div>
+                
+                <div className="mt-6 flex justify-end">
+                  <Button onClick={handleCloseReportModal}>閉じる</Button>
+                </div>
               </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                該当するレポートがありません
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
-    
-    {/* レポート詳細モーダル */}
-    {showReportModal && selectedReport && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-xl font-semibold">レポート詳細</h3>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8" 
-              onClick={handleCloseReportModal}
-            >
-              ✕
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <p className="text-sm font-medium text-gray-500">生徒</p>
-              <p>{selectedReport.student_profile ? `${selectedReport.student_profile.last_name} ${selectedReport.student_profile.first_name}` : "不明"}</p>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">日付</p>
-              <p>
-                {selectedReport.date && 
-                  format(new Date(selectedReport.date), 'yyyy年MM月dd日 (EEE)', { locale: ja })}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">科目</p>
-              <p>{selectedReport.subject || "-"}</p>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            {selectedReport.lesson_reports && selectedReport.lesson_reports.length > 0 && selectedReport.report_status !== "none" ? (
-               <>
-                   <div>
-                       <h4 className="text-base font-medium mb-2">単元</h4>
-                       <div className="bg-gray-50 p-4 rounded-md whitespace-pre-line">
-                           {selectedReport.lesson_reports[0].unit_content || "-"}
-                       </div>
-                   </div>
-                    <div>
-                       <h4 className="text-base font-medium mb-2">伝言事項</h4>
-                       <div className="bg-gray-50 p-4 rounded-md whitespace-pre-line">
-                           {selectedReport.lesson_reports[0].message_content || "-"}
-                       </div>
-                   </div>
-                    <div>
-                       <h4 className="text-base font-medium mb-2">来週までの課題</h4>
-                       <div className="bg-gray-50 p-4 rounded-md whitespace-pre-line">
-                           {selectedReport.lesson_reports[0].goal_content || "-"}
-                       </div>
-                   </div>
-               </>
-            ) : (
-               <p className="text-gray-500">レポート内容がありません</p>
-            )}
-          </div>
-          
-          <div className="mt-6 flex justify-end">
-            <Button onClick={handleCloseReportModal}>閉じる</Button>
-          </div>
+          )}
         </div>
       </div>
-    )}
+    </main>
   </div>
 );
 }

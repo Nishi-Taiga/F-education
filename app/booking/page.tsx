@@ -11,6 +11,7 @@ import { format, parse } from "date-fns";
 import { ja } from "date-fns/locale";
 import { ArrowLeft, Calendar, Loader2, User, BookOpen, GraduationCap, Info } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { CommonHeader } from "@/components/common-header";
 
 // Replit版から移植した型定義
 type Student = {
@@ -758,30 +759,11 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 screen-container">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <div className="flex items-center">
-            <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.push("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl md:text-3xl font-bold text-primary bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">F education</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700">{user?.displayName || user?.username}</span>
-          </div>
-        </div>
-      </header>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <CommonHeader title="授業予約" showBackButton={true} backTo="/dashboard" />
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto">
-        <div className="mb-4">
-          <h2 className="text-xl font-bold text-gray-900">授業予約</h2>
-          <p className="mt-1 text-sm text-gray-600">希望する日時を選択してください</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <main className="flex-1 py-8 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto grid gap-8 md:grid-cols-2">
           {/* Calendar for booking */}
           <div className="lg:col-span-2">
             <Card className="p-3">

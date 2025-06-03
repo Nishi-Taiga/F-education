@@ -120,6 +120,10 @@ export function CommonHeader({
                           <FileText className="h-4 w-4 mr-2 text-gray-600" />
                           授業レポート
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/dashboard/parent/profile")}> 
+                          <Settings className="h-4 w-4 mr-2" />
+                          設定
+                      </DropdownMenuItem>
                   </>
               ) : user?.role === 'student' ? (
                   <>
