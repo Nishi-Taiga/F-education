@@ -17,6 +17,19 @@ import { ReportCreationModal } from "@/components/report-creation-modal";
 import { ReportEditModal } from "@/components/report-edit-modal";
 import { format } from "date-fns";
 
+interface CancelBookingDetails {
+  id: string;
+  date: Date;
+  startTime: string;
+  endTime: string;
+  subject: string;
+  studentName?: string;
+  tutorName?: string;
+  studentId?: string;
+  tutorId?: string;
+  parentId: number | null; // Explicitly define it as number | null
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -25,7 +38,7 @@ export default function DashboardPage() {
   const [bookings, setBookings] = useState([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [bookingToCancel, setBookingToCancel] = useState<any>(null);
+  const [bookingToCancel, setBookingToCancel] = useState<CancelBookingDetails | null>(null);
   const [currentParentId, setCurrentParentId] = useState<number | null>(null);
   const [currentStudentProfileId, setCurrentStudentProfileId] = useState<number | null>(null);
   const [totalTickets, setTotalTickets] = useState<number | null>(null);
@@ -85,7 +98,7 @@ export default function DashboardPage() {
             tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
             studentId: booking.student_id?.toString(),
             tutorId: booking.tutor_id?.toString(),
-            parentId: booking.parent_id || null,
+            parentId: typeof booking.parent_id === 'number' ? booking.parent_id : null,
           });
           setShowCancelModal(true);
         },
@@ -170,7 +183,7 @@ export default function DashboardPage() {
             tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
             studentId: booking.student_id?.toString(),
             tutorId: booking.tutor_id?.toString(),
-            parentId: booking.parent_id || null,
+            parentId: typeof booking.parent_id === 'number' ? booking.parent_id : null,
           });
           setShowCancelModal(true);
         },
@@ -214,6 +227,7 @@ export default function DashboardPage() {
     if (!bookingsError && bookingsData) {
       console.log('Fetched bookingsData for student:', bookingsData.length, 'bookings:', bookingsData);
       const formattedBookings = bookingsData.map(booking => {
+        console.log(`Raw booking object for ID: ${booking.id}`, booking);
         console.log(`Mapping booking ID: ${booking.id}, parent_id from DB: ${booking.parent_id}`);
         return {
           id: booking.id.toString(),
@@ -237,7 +251,7 @@ export default function DashboardPage() {
               tutorName: booking.tutor_profile ? `${booking.tutor_profile.last_name} ${booking.tutor_profile.first_name}` : '講師',
               studentId: booking.student_id?.toString(),
               tutorId: booking.tutor_id?.toString(),
-              parentId: booking.parent_id || null,
+              parentId: typeof booking.parent_id === 'number' ? booking.parent_id : null,
             });
             setShowCancelModal(true);
           },
@@ -766,6 +780,7 @@ export default function DashboardPage() {
             <Button variant="outline" onClick={() => setShowCancelModal(false)}>キャンセルしない</Button>
             <Button variant="destructive" onClick={() => {
                 if (bookingToCancel) {
+                    console.log("Calling handleCancelBooking with parentId:", bookingToCancel.parentId);
                     handleCancelBooking(
                         bookingToCancel.id,
                         bookingToCancel.studentId,
